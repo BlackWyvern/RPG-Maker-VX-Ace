@@ -1,0 +1,801 @@
+=begin
+#===============================================================================
+  Black Wyvern Arts - RPGM-X Battle Stats
+  Author: Black Wyvern
+  Created: 02/13/16
+  Updated: 02/19/16
+  Version: 1.0
+#===============================================================================
+  *** Only for RPG Maker VX Ace. ***
+  ------------------------------------------------------------------------------
+  To install this script, open up your script editor and copy/paste this script
+  to an open slot below ▼ Materials but above ▼ Main. Remember to save.
+  
+  Terms of use:
+    1. Give credit where credit is due.
+    2. You may use my code in anything you like. Commercial, non-commercial.
+    3. If you edit my code in any way, please link back to the original source.
+    4. Support is always appreciated in form of gold, sacrificial virgins,
+        large quantaties of bacon (or other cooked meats), or free games.
+          I can be contacted at LuneTheWyvern@Gmail.com
+
+  Description:
+    This script adds a variety of sub-parameters from the old
+    Yanfly 6 Engine. It impliments their use, but NOT their inherent gain.
+    You can call any of these values in equations, scripts, ect..
+    -- actor.msp for example.
+    
+    Also, allows for the use of skills that generate a
+    shield over actor's HP.
+    
+    SP    Shield Point                    Current/max Shield HP, absorbs all HP
+    MSP   Max Shield Point                  damage except direct HP loss
+    DEX   Dexterity                       Empty Handler
+    FOC   Focus                           Empty Handler
+    PDM   Physical Damage Mastery         Reduces Damage Variance
+    MDM   Magic Damage Mastery            As Above
+    ARP   Armor Penetration               Pierces enemy DEF and PDR as a %
+    MRP   Magic Resistance Penetration    As Above
+    TPR   TP Cost Reduction               Reduces TP Costs
+    CTS   Critical Severity               Increases critical damage (Def: 300%)
+  
+  Configuration:
+    Options below allow for customization.
+  
+  Instructions:
+    To assign a skill/item the ability to grant a sheild, add any variant of
+    <SP SKILL> or <sp_skill>
+    to its notetag options. It will then use the formula box to calculate the
+    shield values.
+
+  Dependencies:
+    - Some other script that can assign stat growth to subparameters.
+    -- I am currently using a modified Stats and Formulas v 1.0 by Vlue.
+    - Some other script that can assign parameters to items/armours/weapons.
+    -- It's not that I'm lazy. I just haven't figured out how to do that yet.
+
+  Optional:
+    - None
+  
+  Compatability:
+    - Yanfly Battle Engine
+    - Yanfly Lunatic States
+    - BWA RPGM-X Sleeker Gauges, Place this below Sleeker Gauges
+  
+  Credits:
+    - Yanfly :: YEA Engine 6 - Battle Stats
+#===============================================================================
+=end
+
+active = true # Turns the script on or off.
+if ($Global_Enable.nil? && active) || ($Global_Enable && active)
+($imported||={})["RPGM-X_Stats"]=[true,1.0]
+
+#===============================================================================
+# SP Gauge Colors
+# -- Windowskin colors to use for the SP Gauge.
+#===============================================================================
+module BWX
+  module Vars
+    SP_GAUGE_COLOR1 = 30
+    SP_GAUGE_COLOR2 = 31
+  end
+end
+
+#===============================================================================
+# YEA BATTLE MODULE
+# -- Adds rules for SP Popups (Only if using YEA Battle Engine)
+#===============================================================================
+if $imported["YEA-BattleEngine"]
+module YEA
+  module BATTLE
+    MSG_SP_DAMAGE = false         # Show SP damage to target.
+    
+    POPUP_SETTINGS = POPUP_SETTINGS.merge({
+      :tp_dmg     => "-%s Tp",    # SprintF for MP damage.
+      :tp_heal    => "+%s Tp",    # SprintF for MP healing.
+    })
+    POPUP_RULES = POPUP_RULES.merge({
+      # Type     => [ Zoom1, Zoom2, Sz, Bold, Italic, Red, Grn, Blu, Font]
+      "SP_DMG"   => [   2.0,   1.0, 36, true,  false, 175, 175, 175, DEFAULT], 
+      "SP_HEAL"  => [   2.0,   1.0, 36, true,  false, 175, 175, 175, DEFAULT],
+    })
+  end
+end
+end
+
+#===============================================================================
+# Vocab
+#===============================================================================
+module Vocab
+  def self.sp;          "Shield";     end   # SP
+  def self.sp_a;        "Sp";         end   # SP (short)
+
+  def self.yparam(param_id)
+    case param_id
+    when 0 ; "Dexterity"
+    when 1 ; "Focus"
+    when 2 ; "Physical Damage Mastery"
+    when 3 ; "Magical Damage Mastery"
+    when 4 ; "Armour Penetration"
+    when 5 ; "Magic Penetration"
+    when 6 ; "Wp Cost"
+    when 7 ; "Critical Severity"
+    end
+  end
+end
+
+#===============================================================================
+# Sleeker Gauges Compatability
+#===============================================================================
+if $imported["RPGM-X_Gauges"]
+module BWX
+  module SleekGauges
+  #=============================================================================
+  # SPColor
+  # -- Color for SP gauges
+  #=============================================================================
+    def SP_Colors(position, rate)
+      case position
+      when 1; return Color.new(90+(70*rate),90+(70*rate),90+(70*rate),192)
+      when 2; return Color.new(115+(105*rate),115+(105*rate),115+(105*rate),192)
+      end
+    end
+  
+  #=============================================================================
+  # Param Color
+  # -- Color for Param gauges
+  #=============================================================================
+    alias Param_Base Param_Color
+    def Param_Color(param_id, position)
+      case param_id
+      when 8; return position == 1 ? text_color(14) : text_color(22)   # DEX
+      when 9; return position == 1 ? text_color(15) : text_color(23)   # FOC
+      end
+      Param_Base(param_id, position)
+    end
+  end
+end
+include BWX::SleekGauges
+end
+
+#===============================================================================
+#   ►►► WARNING: YOU PROBABLY SHOULDN'T EDIT ANYTHING BELOW THIS POINT ◄◄◄
+#   ►►►  CUZ YEAH, THERE'S NOTHING REALLY CONFIGURABLE, AND IT DOESN'T ◄◄◄
+#   ►►►              LIKE IT WHEN YOU TOUCH IT THAT WAY.               ◄◄◄
+#===============================================================================
+
+#===============================================================================
+# Data Manager
+#===============================================================================
+module DataManager
+  #=============================================================================
+  # Alias: Load Database
+  #=============================================================================
+  class <<self; alias bs_load_database load_database; end
+  def self.load_database
+    bs_load_database
+    load_notetags_bs
+    bs_find_objs
+  end
+  
+  #=============================================================================
+  # Find Objects
+  #=============================================================================
+  def self.bs_find_objs
+    groups = [$data_enemies, $data_classes]
+    for group in groups
+      for obj in group
+        next if obj.nil?
+        obj.bs_fix_params
+      end
+    end
+  end
+  
+  #=============================================================================
+  # Load Notetags
+  #=============================================================================
+  def self.load_notetags_bs
+    groups = [$data_skills, $data_items]
+    for group in groups
+      for obj in group
+        next if obj.nil?
+        obj.load_notetags_bs
+      end
+    end
+  end
+end
+
+#===============================================================================
+# RPG::UsableItem
+#===============================================================================
+class RPG::UsableItem < RPG::BaseItem
+  #=============================================================================
+  # Load Notetags
+  #=============================================================================
+  def load_notetags_bs
+    self.note.split(/[\r\n]+/).each { |line|
+      case line
+      when /<(?:SP_SKILL|sp skill)>/i
+        @damage.type = 7
+      end
+    }
+  end
+end
+
+#===============================================================================
+# RPG::Skill
+#===============================================================================
+class RPG::Skill < RPG::UsableItem
+  #=============================================================================
+  #  Load Notetags
+  #=============================================================================
+  def load_notetags_bs
+    self.note.split(/[\r\n]+/).each { |line|
+      case line
+      when /<(?:SP_SKILL|sp skill)>/i
+        @damage.type = 7
+      end
+    }
+  end
+end
+
+#===============================================================================
+# RPG::UsableItem::Damage
+#===============================================================================
+class RPG::UsableItem::Damage
+  #=============================================================================
+  #  To SP?
+  #  -- Adds switch for SP directed effects.
+  #=============================================================================
+  def to_sp?
+    [7].include?(@type)
+  end
+  
+  #=============================================================================
+  #  Recover?
+  #  -- Adds Type 7 Damage (SP Gain) as a recovery flag.
+  #=============================================================================
+  def recover?
+    [3,4,7].include?(@type)
+  end
+
+  #=============================================================================
+  #  Eval
+  #  -- Replaces every vanilla instance of Def with adjusted Penetration
+  #=============================================================================
+  def eval(a, b, v)
+    @formula = @formula.gsub(/b.def/) {"(b.def * (1-a.arp))"}
+    @formula = @formula.gsub(/b.mdf/) {"(b.mfd * (1-a.mrp))"}
+    [Kernel.eval(@formula), 0].max * sign rescue 0
+  end
+end
+
+#===============================================================================
+# RPG::Class
+# -- Pushes the new parameters to actors and sets their default values.
+#===============================================================================
+class RPG::Class < RPG::BaseItem
+  def bs_fix_params
+    @features.push(RPG::BaseItem::Feature.new(24, 2, 0.0))
+    @features.push(RPG::BaseItem::Feature.new(24, 3, 0.0))
+    @features.push(RPG::BaseItem::Feature.new(24, 4, 0.0))
+    @features.push(RPG::BaseItem::Feature.new(24, 5, 0.0))
+    @features.push(RPG::BaseItem::Feature.new(24, 7, 3.0))
+  end
+end
+
+#===============================================================================
+# RPG::Enemy
+# -- Pushes the new parameters to enemies and sets their default values.
+#===============================================================================
+class RPG::Enemy < RPG::BaseItem
+  def bs_fix_params
+    @features.push(RPG::BaseItem::Feature.new(24, 2, 0.0))
+    @features.push(RPG::BaseItem::Feature.new(24, 3, 0.0))
+    @features.push(RPG::BaseItem::Feature.new(24, 4, 0.0))
+    @features.push(RPG::BaseItem::Feature.new(24, 5, 0.0))
+    @features.push(RPG::BaseItem::Feature.new(24, 7, 3.0))
+  end
+end
+
+#===============================================================================
+# Game Battler Base
+#===============================================================================
+class Game_BattlerBase
+  attr_reader   :sp                       # SP
+  attr_reader   :msp                      # MSP
+  
+  FEATURE_YPARAM        = 24              # Yf-Parameter
+  
+  def dex;  yparam(0);  end               # DEX   Dexterity
+  def foc;  yparam(1);  end               # FOC   Focus
+  def pdm;  yparam(2);  end               # PDM   Physical Damage Mastery
+  def mdm;  yparam(3);  end               # MDM   Magic Damage Mastery
+  def arp;  yparam(4);  end               # ARP   Armor Penetration
+  def mrp;  yparam(5);  end               # MRP   Magic Resistance Penetration.
+  def tpr;  yparam(6);  end               # TPR   TP Cost Reduction.
+  def cts;  yparam(7);  end               # CTS   Critical Severity
+  
+  #=============================================================================
+  # Alias: Initialize
+  #=============================================================================
+  alias bs_init initialize
+  def initialize
+    bs_init
+    @sp = @msp = 0
+  end
+
+  #=============================================================================
+  # Get Yan-Parameter
+  #=============================================================================
+  def yparam(param_id)
+    features_sum(FEATURE_YPARAM, param_id)
+  end
+  
+  #=============================================================================
+  # Caculate Skill TP Cost
+  #=============================================================================
+  def skill_tp_cost(skill)
+    (skill.tp_cost * tpr).round
+  end
+
+  #=============================================================================
+  # Caculate Skill MP Cost
+  #=============================================================================
+  def skill_mp_cost(skill)
+    (skill.mp_cost * mcr).round
+  end
+  
+  #=============================================================================
+  # Change SP
+  #=============================================================================
+  def sp=(sp)
+    @sp = sp
+    refresh
+  end
+  
+  #=============================================================================
+  # Change Max SP
+  #=============================================================================
+  def msp=(msp)
+    @msp = msp
+    refresh
+  end
+  
+  #=============================================================================
+  # Alias: Refresh
+  #=============================================================================
+  alias bs_ref refresh
+  def refresh
+    bs_ref
+    @sp = [[@sp, @msp].min, 0].max
+  end
+
+  #=============================================================================
+  # SP Rate
+  #=============================================================================
+  def sp_rate
+    @msp > 0 ? @sp.to_f / @msp : 0
+  end
+  
+  #=============================================================================
+  # Alias: Make Damage Popups (Only if using YEA Battle Engine)
+  #=============================================================================
+  if $imported["YEA-BattleEngine"]
+  alias fbe_mdp make_damage_popups
+  def make_damage_popups(user)
+    if @result.sp_damage != 0
+      setting = :sp_dmg  if @result.sp_damage > 0
+      setting = :sp_heal if @result.sp_damage < 0
+      rules = "SP_DMG"   if @result.sp_damage > 0
+      rules = "SP_HEAL"  if @result.sp_damage < 0
+      value = @result.sp_damage.abs
+      text = sprintf(YEA::BATTLE::POPUP_SETTINGS[setting], value.group)
+      create_popup(text, rules)
+    end
+    fbe_mdp(user)
+  end
+  end
+  
+  #=============================================================================
+  # Overwrite: Make Miss Popups
+  #=============================================================================
+  def make_miss_popups(user, item)
+    return if dead?
+    if @result.missed
+      text = YEA::BATTLE::POPUP_SETTINGS[:missed]
+      rules = "DEFAULT"
+      create_popup(text, rules)
+    end
+    if @result.evaded
+      text = YEA::BATTLE::POPUP_SETTINGS[:evaded]
+      rules = "DEFAULT"
+      create_popup(text, rules)
+    end
+    if @result.hit? && !@result.success
+      text = YEA::BATTLE::POPUP_SETTINGS[:failed]
+      rules = "DEFAULT"
+      create_popup(text, rules)
+    end
+    if @result.hit? && item.damage.to_hp?
+      if(@result.hp_damage == 0 && @result.sp_damage == 0)
+        text = YEA::BATTLE::POPUP_SETTINGS[:nulled]
+        rules = "DEFAULT"
+        create_popup(text, rules)
+      end
+    end
+  end
+end
+
+#===============================================================================
+# Game Battler
+#===============================================================================
+class Game_Battler < Game_BattlerBase
+  #=============================================================================
+  # Calculate Damage
+  # -- Added Armour and Magic Pen to formulas.
+  #=============================================================================
+  def make_damage_value(user, item)
+    value = item.damage.eval(user, self, $game_variables)
+    value *= item_element_rate(user, item)
+    value *= (pdr + user.arp).clamp 0,1 if item.physical?
+    value *= (mdr + user.mrp).clamp 0,1 if item.magical?
+    value *= rec if item.damage.recover?
+    value = apply_critical(user, value) if @result.critical
+    value = apply_variance(user, item, value, item.damage.variance)
+    value = apply_guard(value)
+    @result.make_damage(value.to_i, item)
+  end
+  
+  #=============================================================================
+  # Apply Critical
+  # -- Replaced to use Critical Severity
+  #=============================================================================
+  def apply_critical(user, damage)
+    damage * user.cts
+  end
+  
+  #=============================================================================
+  # Apply Variance
+  # -- Now can lessen/eliminate damage variance with Damage Mastery
+  #=============================================================================
+  def apply_variance(user, item, damage, variance)
+    variance *= 1-user.pdm if item.physical?
+    variance *= 1-user.mdm if item.magical?
+    amp = [damage.abs * variance / 100, 0].max.to_i
+    var = rand(amp + 1) + rand(amp + 1) - amp
+    damage >= 0 ? damage + var : damage - var
+  end
+  
+  #=============================================================================
+  # Damage Processing
+  # -- HP Damage will now be absorbed by Shield, if it exists.
+  #=============================================================================
+  def execute_damage(user)
+    on_damage(@result.hp_damage) if @result.hp_damage > 0
+    self.msp = -@result.sp_damage if self.msp < -@result.sp_damage
+    
+    if @result.hp_damage > 0 && self.sp > 0
+      if self.sp >= @result.hp_damage
+        @result.sp_damage = @result.hp_damage
+        @result.hp_damage = 0
+      else
+        @result.sp_damage = self.sp
+        @result.hp_damage -= self.sp
+      end
+    end
+
+    self.hp -= @result.hp_damage
+    self.sp -= @result.sp_damage
+    self.mp -= @result.mp_damage
+    user.hp += @result.hp_drain
+    user.mp += @result.mp_drain
+    make_damage_popups(user) if $imported["YEA-BattleEngine"]
+  end
+  
+  #=============================================================================
+  # Alias: Execute Damage (Only if YEA - Lunatic States is used.)
+  #=============================================================================
+  if $imported["YEA-LunaticStates"]
+    alias game_battler_execute_damage_lsta execute_damage
+    def execute_damage(user)
+      for state in states; run_lunatic_states(:react); end
+      game_battler_execute_damage_lsta(user)
+      @result.restore_damage if $imported["YEA-BattleEngine"]
+      for state in states; run_lunatic_states(:shock); end
+      return unless $imported["YEA-BattleEngine"]
+      @result.store_damage
+      @result.clear_damage_values
+    end
+  end
+  
+  #=============================================================================
+  # Item Test
+  # -- Disalows Shield Skills if provided shield is less than current.
+  #=============================================================================
+  def item_test(user, item)
+    return false if item.for_dead_friend? != dead?
+    return true if $game_party.in_battle
+    return true if item.for_opponent?
+    return true if item.damage.recover? && item.damage.to_hp? && hp<mhp && hp>0
+    return true if item.damage.recover? && item.damage.to_mp? && mp < mmp
+    value = item.damage.eval(user, self, $game_variables)
+    return true if item.damage.recover? && item.damage.to_sp? && sp < -value
+    return true if item_has_any_valid_effects?(user, item)
+    return false
+  end
+end
+
+#===============================================================================
+# Game Action Result
+#===============================================================================
+class Game_ActionResult
+  attr_accessor :sp_damage                # SP damage
+  #=============================================================================
+  # Alias: Clear Damage Values
+  #=============================================================================
+  alias cdv clear_damage_values
+  def clear_damage_values
+    cdv
+    @sp_damage = 0
+  end
+
+  #=============================================================================
+  # Make Damage
+  #=============================================================================
+  def make_damage(value, item)
+    @critical = false if value == 0
+    @sp_damage = value if item.damage.to_sp?
+    @hp_damage = value if item.damage.to_hp?
+    @mp_damage = value if item.damage.to_mp?
+    @mp_damage = [@battler.mp, @mp_damage].min
+    @hp_drain = @hp_damage if item.damage.drain?
+    @mp_drain = @mp_damage if item.damage.drain?
+    @hp_drain = [@battler.hp, @hp_drain].min
+    @success = true if item.damage.to_hp? || @mp_damage != 0 || @sp_damage != 0
+  end
+
+  #=============================================================================
+  # Get Text for SP Damage
+  #=============================================================================
+  def sp_damage_text
+    if @sp_damage > 0
+      fmt = @battler.actor? ? Vocab::ActorDamage : Vocab::EnemyDamage
+      sprintf(fmt, @battler.name, @sp_damage)
+    elsif @sp_damage < 0
+      fmt = @battler.actor? ? Vocab::ActorRecovery : Vocab::EnemyRecovery
+      sprintf(fmt, @battler.name, Vocab::sp, -sp_damage)
+    else
+      fmt = @battler.actor? ? Vocab::ActorNoDamage : Vocab::EnemyNoDamage
+      sprintf(fmt, @battler.name)
+    end
+  end
+  
+  if $imported["YEA-BattleEngine"]
+  #=============================================================================
+  # Clear Stored Damage (Only if using YEA Battle Engine)
+  #=============================================================================
+    alias csd clear_stored_damage
+    def clear_stored_damage
+      csd
+      @stored_sp_damage = 0
+    end
+  
+  #=============================================================================
+  # Store Damage (Only if using YEA Battle Engine)
+  #=============================================================================
+    alias sd store_damage
+    def store_damage
+      sd
+      @stored_sp_damage += @sp_damage
+    end
+  
+  #=============================================================================
+  # Restore Damage (Only if using YEA Battle Engine)
+  #=============================================================================
+    alias rd restore_damage
+    def restore_damage
+      @sp_damage = @stored_sp_damage
+      rd
+    end
+  end
+end
+
+#===============================================================================
+# Window Battle Log 
+#===============================================================================
+class Window_BattleLog < Window_Selectable
+  #=============================================================================
+  # Display SP Damage
+  #=============================================================================
+  def display_damage(target, item)
+    if target.result.missed
+      display_miss(target, item)
+    elsif target.result.evaded
+      display_evasion(target, item)
+    else
+      display_hp_damage(target, item)
+      display_mp_damage(target, item)
+      display_tp_damage(target, item)
+      display_sp_damage(target, item)
+    end
+  end
+  
+  #=============================================================================
+  # Display SP Damage
+  #=============================================================================
+  def display_sp_damage(target, item)
+    return if target.result.sp_damage == 0 && item &&
+      (!item.damage.to_sp? && !$imported["YEA-BattleEngine"])
+    if target.result.sp_damage > 0
+      target.perform_damage_effect
+    end
+    Sound.play_recovery if target.result.sp_damage < 0
+    if $imported["YEA-BattleEngine"]
+      return unless (YEA::BATTLE::MSG_SP_DAMAGE)
+    end
+    add_text(target.result.sp_damage_text)
+    wait
+  end
+end
+
+#===============================================================================
+# Window Base
+#===============================================================================
+class Window_Base < Window
+  #=============================================================================
+  # Draw Actor SP (Only if using RPGM-X Sleeker Gauges)
+  #=============================================================================
+  if $imported["RPGM-X_Gauges"]
+    def draw_actor_sp(actor, x, y, width = 124, pos = :def,
+          height = BWX::Vars::BARHEIGHT, notext = false)
+      style=BWX::Vars::MULTIPLESTYLE ? BWX::Vars::SP_STYLE : BWX::Vars::DEFSTYLE
+      rate = actor.sp_rate
+      draw_gauge(x,y,width, rate, SP_Colors(1,rate), SP_Colors(2,rate),
+        pos, style, height)
+      @gauges[[x,y]].type("sp")
+      @gauges[[x,y]].set_extra(Vocab::sp_a,actor.sp,actor.msp,pos) unless notext
+    end
+  else
+  #=============================================================================
+  # SP Guage Colors (Vanilla)
+  #=============================================================================
+    def sp_gauge_color1; text_color(BWX::Vars::SP_GAUGE_COLOR1); end;
+    def sp_gauge_color2; text_color(BWX::Vars::SP_GAUGE_COLOR2); end;
+  #=============================================================================
+  # SP Color (Vanilla)
+  #=============================================================================
+    def sp_color(actor)
+      return normal_color if actor.sp == 0
+      return crisis_color if actor.sp < actor.msp / 4
+      return normal_color
+    end
+  #=============================================================================
+  # Draw Actor SP (Vanilla)
+  #=============================================================================
+    def draw_actor_sp(actor, x, y, width = 124)
+      draw_gauge(x, y, width, actor.sp_rate, sp_gauge_color1, sp_gauge_color2)
+      change_color(system_color)
+      draw_text(x, y, 30, line_height, Vocab::sp_a)
+      draw_current_and_max_values(x, y, width, actor.sp, actor.msp,
+      sp_color(actor), normal_color)
+    end
+  end
+  #=============================================================================
+  # Alias: Draw Actor Simple Status (Vanilla)
+  #=============================================================================
+  if !$imported["YEA-CoreEngine"]
+    alias dass draw_actor_simple_status
+    def draw_actor_simple_status(actor, x, y)
+      dass(actor, x, y)
+      draw_actor_sp(actor, x + 120, y + line_height * 3)
+    end
+  #=============================================================================
+  # Alias: Draw Actor Simple Status (Yanfly) -/+ Sleeker Gauges
+  #=============================================================================
+  else
+    if !$imported["RPGM-X_Gauges"]
+      alias dass draw_actor_simple_status
+      def draw_actor_simple_status(actor, dx, dy)
+        dy -= line_height/2 + 4
+        dass(actor, dx, dy)
+        dw = contents.width - dx - 124
+        draw_actor_sp(actor, dx + 120, dy + line_height * 3, dw) if actor.sp > 0
+      end
+    else
+      def draw_actor_simple_status(actor, x, y)
+        yrel = y-line_height*0.5-5
+        xrel = x
+        dw = contents.width - x - 124
+        draw_actor_name(  actor,  xrel,       yrel)
+        draw_actor_level( actor,  xrel,       yrel+=18)
+        draw_actor_xp(    actor,  xrel,       yrel+=36, 120)
+        draw_actor_icons( actor,  xrel,       yrel+=16)
+        draw_actor_class( actor,  xrel+=120,  yrel-=70, 300)
+        draw_actor_mp(    actor,  xrel+6,     yrel+=38, dw, :down)
+        draw_actor_hp(    actor,  xrel,       yrel-=9, dw, :up)
+        draw_actor_tp(    actor,  xrel+6,     yrel+=48, dw, :down)
+        draw_actor_sp(    actor,  xrel,       yrel-=9, dw, :up)
+      end
+    end
+  end
+end
+
+#===============================================================================
+# Window BattleStatus
+#===============================================================================
+class Window_BattleStatus < Window_Selectable
+  unless $imported["YEA-BattleEngine"]
+  #=============================================================================
+  # Draw Gauge Area (with TP) (Vanilla)
+  #=============================================================================
+    def draw_gauge_area_with_tp(rect, actor)
+      y += 10 if $imported["RPGM-X_Gauges"]
+      draw_actor_hp(actor, rect.x + 0, rect.y, 72) if actor.sp == 0
+      draw_actor_sp(actor, rect.x + 0, rect.y, 72) unless actor.sp == 0
+      draw_actor_mp(actor, rect.x + 82, rect.y, 64)
+      draw_actor_tp(actor, rect.x + 156, rect.y, 64)
+    end
+  #=============================================================================
+  # Draw Gauge Area (without TP) (Vanilla)
+  #=============================================================================
+    def draw_gauge_area_without_tp(rect, actor)
+      y += 10 if $imported["RPGM-X_Gauges"]
+      draw_actor_hp(actor, rect.x + 0, rect.y, 134) if actor.sp == 0
+      draw_actor_sp(actor, rect.x + 0, rect.y, 134) unless actor.sp == 0
+      draw_actor_mp(actor, rect.x + 144,  rect.y, 76)
+    end
+  end
+  
+  if $imported["RPGM-X_Gauges"] && $imported["YEA-BattleEngine"]
+  #=============================================================================
+  # Draw SP? (Only if using RPGM-X Sleeker Gauges & YEA Battle Engine)
+  #=============================================================================
+    def draw_sp?(actor)
+      return true if actor.sp > 0
+      return false
+    end
+  #=============================================================================
+  # Draw Actor SP (Only if using RPGM-X Sleeker Gauges & YEA Battle Engine)
+  #=============================================================================
+    def draw_actor_sp(actor, dx, dy, width = 124, pos = :def)
+      @DisplayWindow.draw_actor_sp(actor, dx, dy, width, pos, 8)
+    end
+  #=============================================================================
+  # Draw Item (Only if using RPGM-X Sleeker Gauges & YEA Battle Engine)
+  #=============================================================================
+    def draw_item(index)
+      return if index.nil?
+      clear_item(index)
+      rect = item_rect(index)
+      @DisplayWindow.contents.clear_rect(rect) if @DisplayWindow
+      actor = battle_members[index]
+      return if actor.nil?
+      draw_actor_face(actor, rect.x+2, rect.y+2, actor.alive?)
+      draw_actor_name(actor, rect.x, rect.y, rect.width-8)
+      draw_actor_action(actor, rect.x, rect.y)
+      draw_actor_icons(actor, rect.x, line_height*1, rect.width)
+      gx = YEA::BATTLE::BATTLESTATUS_HPGAUGE_Y_PLUS
+      contents.font.size = YEA::BATTLE::BATTLESTATUS_TEXT_FONT_SIZE
+      if (draw_tp?(actor) && draw_mp?(actor))
+        dw = rect.width/2 - 2
+        draw_actor_tp(actor, rect.x+8, line_height*3, dw, :down)
+        dw = rect.width/2 - 2
+        draw_actor_mp(actor, rect.x+rect.width/2+6, line_height*3, dw, :down)
+      elsif (draw_tp?(actor) && !draw_mp?(actor))
+        draw_actor_tp(actor, rect.x+8, line_height*3, rect.width-4, :down)
+      elsif (!draw_tp?(actor) && draw_mp?(actor))
+        draw_actor_mp(actor, rect.x+8, line_height*3, rect.width-4, :down)
+      end
+      draw_actor_sp(
+        actor,rect.x+2,line_height*3-9,rect.width-4, :up) if draw_sp?(actor)
+      draw_actor_hp(
+        actor,rect.x+2,line_height*3-9,rect.width-4, :up) if !draw_sp?(actor)
+    end
+  end
+end
+#===============================================================================
+# EOF
+#===============================================================================
+end # End Activation Handler
