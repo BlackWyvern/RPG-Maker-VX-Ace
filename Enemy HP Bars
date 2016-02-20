@@ -1,0 +1,515 @@
+=begin
+#===============================================================================
+  Black Wyvern Arts - RPGMaker-X Enemy HP Bars
+  Author: Black Wyvern
+  Created: 09/16/13
+  Updated: 02/19/16
+  Version: 1.0
+#===============================================================================
+  *** Only for RPG Maker VX Ace. ***
+  ------------------------------------------------------------------------------
+  To install this script, open up your script editor and copy/paste this script
+  to an open slot below ▼ Materials but above ▼ Main. Remember to save.
+  
+  Terms of use:
+    1. Give credit where credit is due.
+    2. You may use my code in anything you like. Commercial, non-commercial.
+    3. If you edit my code in any way, please link back to the original source.
+    4. Support is always appreciated in form of gold, sacrificial virgins,
+        large quantaties of bacon (or other cooked meats), or free games.
+          I can be contacted at LuneTheWyvern@Gmail.com
+
+  Description:
+    Shows HP Bars for enemies whilst in combat. Allows you to customize HP bar
+    apperance for mobs and bosses individually.
+  
+  Configuration:
+    Options below allow for customization.
+    
+  Instructions: Plug 'n' Play
+    If you want to signify that a monster is a boss type, then place
+      <boss gauge>
+    in it's notebox.
+  
+  Dependencies:
+    - Yanfly Battle Ace, Place this script under Yan's.
+      I don't know enough about how the base system works to make it vanilla.
+      Sorry. :C Working on it slowly.
+  
+  Optional:
+    - BWA RPGM-X Sleeker Gauges, Place this below SG, it makes it look bettter.
+
+  Compatability:
+    - Yanfly AOE Targeting
+
+  Credits:
+    - Yanfly :: Enemy HP Bars / AoE Targeting Support
+#===============================================================================
+=end
+
+active = true # Turns the script on or off.
+#==============================================================================
+# Version Checking
+# -- Just making sure you have the battle engine installed.
+# -- You probably shouldn't poke at this bit.
+#==============================================================================
+Req = $imported["YEA-BattleEngine"].nil?
+if Req
+  title = "RPM-X Monster HP Bars"
+  error = "This script requires/must be placed below" +
+    "\nYanfly Battle Engine\n" +
+    "This script will not be activated."
+  msgbox(sprintf(title+"\n"+error))
+  active = false
+end
+
+if ($Global_Enable.nil? && active) || ($Global_Enable && active)
+  ($imported||={})["RPGM-X_Mob_HP_Bars"]=[true,1.0]
+  # ^ Signifies that the script is installed to other scripts.
+  
+#===============================================================================
+# BWX Monster HP Gauge Vocabulary
+# -- These variables control the bar apperance.
+# -- Edit them as needed.
+#===============================================================================
+module BWX
+  module Vars
+    MHPB_WIDTH = 128    # Width of Monster HP Bars
+    MHPB_BWMOD = 2.5    # Modifier for width when it's a Boss type.
+    MHPB_SEEMP = true   # Show enemy MP gauge.
+    MHPB_BOSMP = false  # Show the boss' MP gauge. (respects SEEMP)
+
+    MHPB_DYNCO = true   # If you want colors to change based on current HP.
+    MHPB_CSKIN = ""     # If you use MBHP_DYNCO, enter the name of your
+                        #   windowskin to correctly grab color values.
+                        # Leave blank to use the default 'window'.
+                        # (Will use windowskin defined in RPGM-X Core)
+
+    MONSTER_FULL  = 20  # Window color for high HP          Def: 20
+    MON_DYN_FULL  = 28  # Window color for dynamic high HP  Def: 28
+    MONSTER_EMPT  = 21  # Window color for low HP           Def: 21
+    MON_DYN_EMPT  = 29  # Window color for dynamic low HP   Def: 29
+    BOSS_FULL     = 18  # As above                          Def: 18
+    BOSS_DYN_FULL = 3   # ^                                 Def: 3
+    BOSS_EMPT     = 2   # ^                                 Def: 2
+    BOSS_DYN_EMPT = 11  # ^                                 Def: 11
+    
+    # (Only if using RPGM-X Sleeker Gauges)
+    MOBHEIGHT        = 8     # How tall the enemy gauges are.
+    MOBSTYLE         = "||"  # Style of the gauge.
+    # Bar style will be overridden to DEFSTYLE unless MULTIPLESTYLE is set to
+    # true in Sleeker Gauges!
+  end
+end
+
+#===============================================================================
+#   ►►► WARNING: YOU PROBABLY SHOULDN'T EDIT ANYTHING BELOW THIS POINT ◄◄◄
+#   ►►►  CUZ YEAH, THERE'S NOTHING REALLY CONFIGURABLE, AND IT DOESN'T ◄◄◄
+#   ►►►              LIKE IT WHEN YOU TOUCH IT THAT WAY.               ◄◄◄
+#===============================================================================
+
+#===============================================================================
+# Data Manager (Loads notecards)
+#===============================================================================
+module DataManager
+  class << self
+    alias rpm_def_ldb load_database
+  end
+  
+  #=============================================================================
+  # Load Database
+  #=============================================================================
+  def self.load_database
+    rpm_def_ldb
+    rpmx_hpb_nt
+  end
+  
+  #=============================================================================
+  # Search for Enemies in DB
+  #=============================================================================
+  def self.rpmx_hpb_nt
+    groups = [$data_enemies]
+    for group in groups
+      for obj in group
+        next if obj.nil?
+        obj.rpmx_hpb_nt
+      end
+    end
+  end
+end
+
+#===============================================================================
+# RPG::Enemy (Reads notecards)
+#===============================================================================
+class RPG::Enemy < RPG::BaseItem
+  attr_accessor :boss_gauge
+  #=============================================================================
+  # Define Search Param
+  #=============================================================================
+  def rpmx_hpb_nt
+    @boss_gauge = false
+    self.note.split(/[\r\n]+/).each { |line|; case line
+      when /<(?:BOSS_GAUGE|boss gauge)>/i; @boss_gauge = true; end;}
+  end
+  
+  #=============================================================================
+  # Define Accessor: Boss Gauge
+  #=============================================================================
+  def boss_gauge
+    return @boss_gauge
+  end
+end
+
+#===============================================================================
+# Sprite Battler
+#===============================================================================
+class Sprite_Battler < Sprite_Base
+  
+  #=============================================================================
+  # Alias: Initialize
+  #=============================================================================
+  alias sb_init initialize
+  def initialize(viewport, battler = nil)
+    sb_init(viewport, battler)
+    return if @battler.nil? || @battler.actor?
+    @mb_vp = Monster_Bar_Viewport.new(@battler)
+  end
+  
+  #=============================================================================
+  # Alias: Dispose
+  #=============================================================================
+  alias sb_disp dispose
+  def dispose
+    sb_disp
+    @mb_vp.dispose unless @mb_vp.nil?
+  end
+  
+  #=============================================================================
+  # Alias: Update
+  #=============================================================================
+  alias sb_update update
+  def update
+    sb_update
+    @mb_vp.update unless @mb_vp.nil?
+  end
+  
+  #=============================================================================
+  # Update Gauge Values
+  #=============================================================================
+  def update_gauge_values
+    @mb_vp.update_gauge_values unless @mb_vp.nil?
+  end
+end
+
+#===============================================================================
+# Game Battler Base
+#===============================================================================
+class Game_BattlerBase
+  attr_accessor :hidden
+  #=============================================================================
+  # Alias: Refresh
+  #=============================================================================
+  alias gbb_ref refresh
+  def refresh
+    gbb_ref
+    return if actor? || !SceneManager.scene_is?(Scene_Battle)
+    sprite.update_gauge_values
+  end
+end
+
+#===============================================================================
+# Game_Battler
+#===============================================================================
+class Game_Battler < Game_BattlerBase
+  #=============================================================================
+  # Alias: hp=
+  #=============================================================================
+  alias gb_hpE hp=
+  def hp=(value)
+    gb_hpE(value)
+    return if actor? || value == 0 || !SceneManager.scene_is?(Scene_Battle)
+    sprite.update_gauge_values
+  end
+end
+
+#===============================================================================
+# Window_Base
+#===============================================================================
+if $imported["RPGM-X_Gauges"]
+class Window_Base < Window
+  #=============================================================================
+  # Draw Enemy HP
+  #=============================================================================
+  def draw_enemy_hp(x, y, width, rate, color1, color2)
+    style=BWX::Vars::MULTIPLESTYLE ? BWX::Vars::MOBSTYLE : BWX::Vars::DEFSTYLE
+    draw_gauge(x, y, width, rate, color1, color2,
+      :def, style, BWX::Vars::MOBHEIGHT)
+    @gauges[[x,y]].type("mb_hp")
+  end
+  
+  #=============================================================================
+  # Draw Enemy Boss HP
+  #=============================================================================
+  def draw_enemy_boss_hp(x, y, width, rate, color1, color2)
+    style=BWX::Vars::MULTIPLESTYLE ? BWX::Vars::MOBSTYLE : BWX::Vars::DEFSTYLE
+    draw_gauge(x, y, width, rate, color1, color2, 
+      :def, style, BWX::Vars::MOBHEIGHT)
+    @gauges[[x,y]].type("mb_bhp")
+  end
+  
+  #=============================================================================
+  # Draw Enemy MP
+  #=============================================================================
+  def draw_enemy_mp(x, y, width, rate, color1, color2)
+    style=BWX::Vars::MULTIPLESTYLE ? BWX::Vars::MOBSTYLE : BWX::Vars::DEFSTYLE
+    draw_gauge(x, y, width, rate, color1, color2,
+     :def, style, BWX::Vars::MOBHEIGHT)
+    @gauges[[x,y]].type("mp")
+  end
+end
+end
+
+#===============================================================================
+# BWX Monster HP Bar Definitions
+#===============================================================================
+module BWX_MHPBarDefinitions
+  #=============================================================================
+  # Boss HPColors
+  #=============================================================================
+  def MBHP_Colors(position, rate)
+    case position
+    when 1; return Auto_Color(
+      WS_ColorIDX(BWX::Vars::BOSS_EMPT),
+      WS_ColorIDX(BWX::Vars::BOSS_DYN_EMPT),rate)
+    when 2; return Auto_Color(
+      WS_ColorIDX(BWX::Vars::BOSS_FULL),
+      WS_ColorIDX(BWX::Vars::BOSS_DYN_FULL),rate)
+    end
+  end
+  
+  #=============================================================================
+  # Monster HPColors
+  #=============================================================================
+  def MHP_Colors(position, rate)
+    case position
+    when 1; return Auto_Color(
+      WS_ColorIDX(BWX::Vars::MONSTER_EMPT),
+      WS_ColorIDX(BWX::Vars::MON_DYN_EMPT),rate)
+    when 2; return Auto_Color(
+      WS_ColorIDX(BWX::Vars::MONSTER_FULL),
+      WS_ColorIDX(BWX::Vars::MON_DYN_FULL),rate)
+    end
+  end
+
+  #=============================================================================
+  # Window Skin Color Index
+  #=============================================================================
+  def WS_ColorIDX(index) 
+    name = BWX::Vars::MHPB_CSKIN
+    if !(defined? BWX::Vars::WNDSKN).nil?
+      name = BWX::Vars::WNDSKN
+    else
+      name = "Window" if BWX::Vars::MHPB_CSKIN == ""
+    end
+    windowskin = Cache.system(name)
+    x = 64 + (index % 8) * 8
+    y = 96 + (index / 8) * 8
+    return windowskin.get_pixel(x, y)
+  end
+  
+  #=============================================================================
+  # Auto Color (If not imported from Core)
+  #=============================================================================
+  if (defined? Auto_Color).nil?
+    def Auto_Color(gradient1,gradient2,rate)
+      acol = Color.new
+      acol.red    = (1-rate)*gradient2.red +    rate*gradient1.red
+      acol.green  = (1-rate)*gradient2.green +  rate*gradient1.green
+      acol.blue   = (1-rate)*gradient2.blue +   rate*gradient1.blue
+      acol.alpha  = (1-rate)*gradient2.alpha +  rate*gradient1.alpha
+      return acol
+    end
+  end
+end
+include BWX_MHPBarDefinitions
+
+#===============================================================================
+# Sleeker Gauges Compatibility
+#===============================================================================
+if $imported["RPGM-X_Gauges"]
+class Sleek_Gauge
+  #=============================================================================
+  # Alias: Refresh
+  #=============================================================================
+  alias ehpb_refresh refresh
+  def refresh
+    case @type
+    when "mb_hp"
+      @color1 = MHP_Colors(1,@cur_rate)
+      @color2 = MHP_Colors(2,@cur_rate)
+    when "mb_bhp"
+      @color1 = MBHP_Colors(1,@cur_rate)
+      @color2 = MBHP_Colors(2,@cur_rate)
+    when "mb_mp"
+      @color1 = MMP_Colors(1,@cur_rate)
+      @color2 = MMP_Colors(2,@cur_rate)
+    end
+    ehpb_refresh
+  end
+end
+end
+
+#===============================================================================
+# Monster_Bar_Window
+#===============================================================================
+class Monster_Bar_Window < Window_Base
+  #=============================================================================
+  # Draw Gauges
+  #=============================================================================
+  def DrawGauges(width, hp_rate, mp_rate, boss)
+    if BWX::Vars::MHPB_DYNCO
+      if boss
+        hpcolor1 = MBHP_Colors(1,hp_rate)
+        hpcolor2 = MBHP_Colors(2,hp_rate)
+      else
+        hpcolor1 = MHP_Colors(1,hp_rate)
+        hpcolor2 = MHP_Colors(2,hp_rate)
+      end
+    else
+      if boss
+        hpcolor1 = text_color(BWX::Vars::BOSS_FULL)
+        hpcolor2 = text_color(BWX::Vars::BOSS_EMPT)
+      else
+        hpcolor1 = text_color(BWX::Vars::MONSTER_FULL)
+        hpcolor2 = text_color(BWX::Vars::MONSTER_EMPT)
+      end
+    end
+    
+    mpcolor1 = mp_gauge_color1
+    mpcolor2 = mp_gauge_color2
+    height = BWX::Vars::MOBHEIGHT
+
+    if !$imported["RPGM-X_Gauges"].nil?
+      if (BWX::Vars::MHPB_SEEMP && !boss) || (boss && BWX::Vars::MHPB_BOSMP)
+        draw_enemy_mp(height/2-1, height-1,
+          width, mp_rate , mpcolor1, mpcolor2)
+      end
+      draw_enemy_hp(-3, height/2-3,
+        width, hp_rate , hpcolor1, hpcolor2) unless boss
+      draw_enemy_boss_hp(-3, height/2-3,
+        width, hp_rate , hpcolor1, hpcolor2) if boss
+    else
+      if (BWX::Vars::MHPB_SEEMP && !boss) || (boss && BWX::Vars::MHPB_BOSMP)
+        draw_gauge(6, -1, width, mp_rate, mpcolor1, mpcolor2)
+      end
+      draw_gauge(0, -9, width, hp_rate, hpcolor1, hpcolor2)
+    end
+  end
+end
+
+#===============================================================================
+# HP Bar Viewport
+#===============================================================================
+class Monster_Bar_Viewport < Viewport
+  #=============================================================================
+  # Initialize
+  #=============================================================================
+  def initialize(battlerID)
+    @target = battlerID
+    @IsBoss = @target.enemy.boss_gauge
+    @gw = BWX::Vars::MHPB_WIDTH
+    @gw *= BWX::Vars::MHPB_BWMOD if @IsBoss
+    @gh = BWX::Vars::MOBHEIGHT
+
+    @DisplayWindow = Monster_Bar_Window.new(0, 0, @gw+@gh*2+15, @gh*5+6)
+    @DisplayWindow.opacity = 0
+    @visible_counter = 0
+    update_position
+  end
+  
+  #=============================================================================
+  # Dispose
+  #=============================================================================
+  def dispose
+    @DisplayWindow.dispose
+    super
+  end
+  
+  #=============================================================================
+  # Update
+  #=============================================================================
+  def update
+    @DisplayWindow.visible = gauge_visible?
+    
+    return unless @DisplayWindow.visible
+    @visible_counter -= 1
+
+    return if
+      @current_hp == @target.hp &&
+      @current_mhp == @target.mhp &&
+      @visible_counter == 0
+    @current_hp = @target.hp
+    @current_mhp = @target.mhp
+    
+    @DisplayWindow.contents.clear
+    @DisplayWindow.DrawGauges(@gw,@target.hp_rate,@target.mp_rate,@IsBoss)
+    @DisplayWindow.update
+  end
+  
+  #=============================================================================
+  # Gauge Visible?
+  #=============================================================================
+  def gauge_visible?
+    return false if is_it_dead_yet?
+    return true if @visible_counter > 0
+    if SceneManager.scene_is?(Scene_Battle)
+      return false if SceneManager.scene.enemy_window.nil?
+      unless @target.dead?
+        if SceneManager.scene.enemy_window.active
+          return true if SceneManager.scene.enemy_window.enemy == @target
+          return true if SceneManager.scene.enemy_window.select_all?
+          return true if highlight_aoe?
+        end
+      end
+    end
+    return false
+  end
+  
+  #=============================================================================
+  # Highlight AoE (If using YEA Area of Effect)
+  #=============================================================================
+  def highlight_aoe?
+    return false unless $imported["YEA-AreaofEffect"]
+    return false if @battler.enemy? && @battler.hidden
+    return SceneManager.scene.enemy_window.hightlight_aoe?(@battler)
+  end
+  
+  #=============================================================================
+  # Update Gauge Values
+  #=============================================================================
+  def update_gauge_values
+    @visible_counter = 60
+  end
+  
+  #=============================================================================
+  # Is It Dead Yet?
+  #=============================================================================
+  def is_it_dead_yet?
+    return @target.dead? ? true : false
+  end
+  
+  #=============================================================================
+  # Update Position
+  #=============================================================================
+  def update_position
+    dx = @target.screen_x - (@gw+36) / 2
+    dh = @DisplayWindow.height/7
+    dy = [@target.screen_y, Graphics.height - dh - 120].min
+    @DisplayWindow.x = dx
+    @DisplayWindow.y = dy-10
+  end
+end
+#===============================================================================
+# EOF
+#===============================================================================
+end # End Activation Handler
