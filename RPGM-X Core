@@ -1,0 +1,568 @@
+=begin
+#===============================================================================
+  Black Wyvern Arts - RPGMaker-X Core
+  Author: Black Wyvern
+  Created: 9/01/13
+  Updated: 02/19/16
+  Version: 1.5
+#===============================================================================
+  *** Only for RPG Maker VX Ace. ***
+  ------------------------------------------------------------------------------
+  To install this script, open up your script editor and copy/paste this script
+  to an open slot below ▼ Materials but above ▼ Main. Remember to save.
+  
+  Terms of use:
+    1. Give credit where credit is due.
+    2. You may use my code in anything you like. Commercial, non-commercial.
+    3. If you edit my code in any way, please link back to the original source.
+    4. Support is always appreciated in form of gold, sacrificial virgins,
+        large quantaties of bacon (or other cooked meats), or free games.
+          I can be contacted at LuneTheWyvern@Gmail.com
+
+  Description:
+    RPGMaker-X Core System. Changes/Unifies settings set by default and Yanfly
+    scripts (All optionally of course) and adds definitions for RPGM-X Scripts.
+  
+  Configuration:
+    Options below allow for customization. (They're fairly self-explanitory)
+    -- If you are not using a windowskin I developed, it is recommended not to
+       use the MASTER_OCOLOR setting, as it would look all sorts of wierd.
+  
+  Instructions: Plug 'n' Play
+    This needs to be located above any other RPGM-X scripts that depend on it.
+    If you are using Yanfly Engine, this will need to be placed below it.
+  
+  Optional:
+    - None
+  
+  Dependencies:
+    - None
+  
+  Compatability:
+    - Yanfly Engine Ace + Battle Engine
+
+  Credits:
+    - KiloZapit :: Word Wrap
+      http://www.rpgmakervxace.net/topic/6964-word-wrapping-message-boxes/
+#===============================================================================
+=end
+
+if true # Turns the script on or off.
+  ($imported||={})["BWA_RPGM-X"]=[true,1.5]
+  # ^ Signifies that the script is installed to other scripts.
+
+#===============================================================================
+# Variable Module
+# -- These variables control many of the default settings of the game itself.
+# -- Edit them as needed.
+#===============================================================================
+
+$Global_Enable = true   # Master enable switch for RPGM-X scripts.
+$Dump_Includes = false  # Dumps a list of imported scripts at boot.
+                        # Add "Dumpinc() if $Dump_Includes" to Main.
+$Rapid_Debug = true    # Makes my life easier. Doesn't do anything for you.
+
+module BWX
+  module Vars
+    #===========================================================================
+    # Master Control Switches
+    #===========================================================================
+    MASTER_RESIZE = true  # Resize the Game Window (May require modified DLL)
+    MASTER_OVFONT = true  # Override default Font settings
+    MASTER_OCOLOR = true  # Overrude default Color settings
+    MASTER_WINDOW = true  # Override default Window settings
+    
+    #===========================================================================
+    # Default Screen Width/Height
+    # -- Only in effect if MASTER_RESIZE == true
+    #===========================================================================
+    DSW_INT   = 1024
+    DSH_INT   = 768
+    
+    #===========================================================================
+    # Default Text Settings
+    # -- Only in effect if MASTER_OVFONT == true
+    #===========================================================================
+    DFL_ARRAY = [       # Font_List
+      "Myriad Pro",
+      "Palatino Linotype",
+      "Neuton",
+      "VL Gothic",
+      "Verdana"]
+    DFS_INT   = 18      # Font_Size
+    DFB_BOOL  = false   # Font_Bold
+    DFI_BOOL  = false   # Font_Italic
+    DFS_BOOL  = true    # Font_Shadowed
+    DFO_BOOL  = true    # Font_Outlined
+    UNIFYFNT  = true    # Automatically overrides some YEA font defaults
+
+    # Default Font (Outline) Color
+    DFC_COL   = COLS.g(201) rescue Color.new(255, 255, 255, 255)
+    DFOC_COL  = COLS.g(200) rescue Color.new(0, 0, 0, 128)
+
+    # Generate font settings array (You shouldn't need to poke at this.)
+    BWX_FONT  = [
+      DFL_ARRAY,  DFS_INT,  DFC_COL,  DFB_BOOL,
+      DFI_BOOL,   DFS_BOOL, DFO_BOOL, DFOC_COL]
+
+    #===========================================================================
+    # Default Window Settings
+    # -- Only in effect if MASTER_WINDOW == true
+    #===========================================================================
+    MSGWW     = true            # Enable/Disable Word Wrap
+    WNDSKN    = "Windowskin2"   # Window Skin Name (Blank if default)
+    IS_COLS   = 3               # Number of colums to display in item/skill
+                                # windows. Default is 2. May want to put it
+                                # there if you aren't upscaling your rez.
+    
+    #===========================================================================
+    # Default Color Settings
+    # -- Only in effect if MASTER_OCOLOR == true
+    #===========================================================================
+    COLORS    = {
+      :normal     =>  0,   # Default:  0
+      :system     =>  1,   # Default: 16
+      :crisis     =>  2,   # Default: 17
+      :knockout   =>  3,   # Default: 18
+      :gauge_back => 30,   # Default: 19
+      :hp_gauge1  => 24,   # Default: 20
+      :hp_gauge2  => 25,   # Default: 21
+      :mp_gauge1  => 26,   # Default: 22
+      :mp_gauge2  => 27,   # Default: 23
+      :mp_cost    =>  4,   # Default: 23
+      :power_up   =>  6,   # Default: 24
+      :power_down =>  7,   # Default: 25
+      :tp_gauge1  => 28,   # Default: 28
+      :tp_gauge2  => 29,   # Default: 29
+      :tp_cost    =>  5,   # Default: 29
+      :sp_gauge1  => 30,   # Default: NA
+      :sp_gauge2  => 31,   # Default: NA
+    }
+  end
+end
+
+#===============================================================================
+# Vocab Module
+# -- Just defines the display name, and shorthand for various variables.
+# -- You can change these to whatever you want.
+#===============================================================================
+module Vocab
+  def self.xp;    "Expertise";  end   # XP
+  def self.xp_a;  "Ex";         end   # XP (short)
+
+  def self.xparam(id)
+    case id
+    when 0 ; "Hit Chance"
+    when 1 ; "Evasion Chance"
+    when 2 ; "Critical Chance"
+    when 3 ; "Critical Evasion"
+    when 4 ; "Magic Evasion"
+    when 5 ; "Magic Reflection"
+    when 6 ; "Counter Attack"
+    when 7 ; "Hp Regen / Turn"
+    when 8 ; "Mp Regen / Turn"
+    when 9 ; "Wp Regen / Turn"
+    end
+  end
+  
+  def self.sparam(id)
+    case id
+    when 0 ; "Threat Modifier"
+    when 1 ; "Guard Power"
+    when 2 ; "Healing Power"
+    when 3 ; "Consumable Power"
+    when 4 ; "Mana Cost"
+    when 5 ; "Wp Restore Power"
+    when 6 ; "Phys Damage Rate"
+    when 7 ; "Mag Damage Rate"
+    when 8 ; "Terrain Damage Rate"
+    when 9 ; "Expertise Boost"
+    end
+  end
+end
+
+#===============================================================================
+#   ►►► WARNING: YOU PROBABLY SHOULDN'T EDIT ANYTHING BELOW THIS POINT ◄◄◄
+#   ►►►  CUZ YEAH, THERE'S NOTHING REALLY CONFIGURABLE, AND IT DOESN'T ◄◄◄
+#   ►►►              LIKE IT WHEN YOU TOUCH IT THAT WAY.               ◄◄◄
+#===============================================================================
+
+#===============================================================================
+# Default Definitions
+# -- Defines the default values for RPM.
+#===============================================================================
+if BWX::Vars::MASTER_RESIZE
+  Graphics.resize_screen(BWX::Vars::DSW_INT,BWX::Vars::DSH_INT)
+  $ScreenRez = Rect.new(0, 0, Graphics.width, Graphics.height)
+end
+
+if BWX::Vars::MASTER_OVFONT
+  Font.default_name       = BWX::Vars::BWX_FONT[0]
+  Font.default_size       = BWX::Vars::BWX_FONT[1]
+  Font.default_color      = BWX::Vars::BWX_FONT[2]
+  Font.default_bold       = BWX::Vars::BWX_FONT[3]
+  Font.default_italic     = BWX::Vars::BWX_FONT[4]
+  Font.default_shadow     = BWX::Vars::BWX_FONT[5]
+  Font.default_outline    = BWX::Vars::BWX_FONT[6]
+  Font.default_out_color  = BWX::Vars::BWX_FONT[7]
+end
+
+#===============================================================================
+# Override Definitions
+# -- Nuke ALL the settings! \o.
+#===============================================================================
+if BWX::Vars::UNIFYFNT
+  if defined?(YEA); module YEA
+    if defined?(CORE); module CORE
+      FONT_NAME           = BWX::Vars::BWX_FONT[0]
+      FONT_SIZE           = BWX::Vars::BWX_FONT[1]
+      FONT_COLOUR         = BWX::Vars::BWX_FONT[2]
+      FONT_BOLD           = BWX::Vars::BWX_FONT[3]
+      FONT_ITALIC         = BWX::Vars::BWX_FONT[4]
+      FONT_SHADOW         = BWX::Vars::BWX_FONT[5]
+      FONT_OUTLINE        = BWX::Vars::BWX_FONT[6]
+      FONT_OUTLINE_COLOUR = BWX::Vars::BWX_FONT[7]
+    end; end
+
+    if defined?(BATTLE); module BATTLE
+      DEFAULT             = BWX::Vars::BWX_FONT[0]
+      BATTLESTATUS_NAME_FONT_SIZE = BWX::Vars::BWX_FONT[1]
+      BATTLESTATUS_TEXT_FONT_SIZE = BWX::Vars::BWX_FONT[1]
+    end; end
+  end; end
+end
+
+#===============================================================================
+# Debug Module
+# -- I use this module to monitor output from my scripts if they asplode.
+# -- You shouldn't need to edit this for any real reason.
+#===============================================================================
+module BWX
+  module Debug
+    #===========================================================================
+    # Debug Dialog
+    #===========================================================================
+    def Debug(type, title, value, fatal=false, backtrack=false, extra="")
+      header = "BWA RPGM-X Debug Module\n"
+      
+      if type == ""; type = "Unknown"
+      elsif type.downcase == "version"
+        type = "Core Version Error"
+      end
+
+      msg = "Fatal " + type + " Error" if fatal
+      msg = type unless fatal
+      
+      msg += "\n" + title.to_s if title !=""
+      
+      msg += "\nValue: " + value.to_s if value != ""
+      
+      if backtrack
+        msg += "\nCall Backtrace:"
+        i=0;  while i<=2
+          unless caller[i].nil?
+            info = caller[i].split(":")
+            script = $RGSS_SCRIPTS[info[0][1,4].to_i][1]
+            line = info[1].to_s
+            code = info[2].to_s[3..-1]
+            msg += "\n-- "+code+" in "+script+" on line "+line; i+=1
+          else
+            msg += "\nBase"; break
+          end
+        end
+        msg += "\n"
+      end
+      
+      msg += "\nProgram will now close." if fatal
+      msg += "\n\n" + extra if extra != ""
+      msgbox(sprintf(header+msg))
+      exit if fatal
+    end
+    
+    #===========================================================================
+    # Display Dialog
+    #===========================================================================
+    def Display(msg="derp")
+      msgbox(sprintf(msg.to_s)) rescue msgbox(msg.to_s)
+    end
+    
+    #===========================================================================
+    # Dump Included Files
+    #===========================================================================
+    def Dumpinc
+      incdump = "BWA-RPM Debug Module\nList of $imported scripts.\n\n"
+      $imported.keys.each do |i|
+        incdump+=i.to_s + " | "
+      end
+      msgbox(sprintf(incdump))
+    end
+  end
+end
+include BWX::Debug
+
+#===============================================================================
+# Numeric Module
+# -- Yanfly's Digit Grouping.
+# -- Clamp value. (Min/Max values)
+# -- Rounding, with significant figures.
+# -- Sign logic
+#===============================================================================
+class Numeric  
+  def group
+    return self.to_s
+    self.to_s.gsub(/(\d)(?=\d{3}+(?:\.|$))(\d{3}\..*)?/,'\1,\2')
+  end unless method_defined? :group
+  
+  def clamp min, max
+    self < min ? min : (self > max ? max : self)
+  end unless method_defined? :clamp
+  
+  def round_to(places)
+    power = 10.0**places
+    (self * power).round / power
+  end unless method_defined? :round_to
+  
+  def negative?
+    self < 0
+  end unless method_defined? :negative?
+
+  def positive?
+    self > 0
+  end unless method_defined? :positive?
+  
+  def percent
+    (self * 100).round
+  end unless method_defined? :percent
+end 
+
+#===============================================================================
+# Game Actor
+# -- XP Rate for gauge calculations.
+#===============================================================================
+class Game_Actor < Game_Battler
+  #=============================================================================
+  # XP Rate
+  #=============================================================================
+  def xp_rate
+    a = xp_in_level
+    b = xp_to_next
+    return a / b if b > 0
+    return 1 unless b > 0
+  end
+  
+  #=============================================================================
+  # XP To Next Level
+  #=============================================================================
+  def xp_to_next
+    return next_level_exp - current_level_exp if level != max_level
+    return 0 if level == max_level
+  end
+  #=============================================================================
+  # XP Into This Level
+  #=============================================================================
+  def xp_in_level
+    exp - current_level_exp
+  end
+end
+
+#===============================================================================
+# Window Base
+# -- Color Definitions
+# -- Windowskin Control
+# -- KilloZapit's Wordwrap (Refer to #KZ Word Wrap)
+#===============================================================================
+class Window_Base < Window
+  #=============================================================================
+  # Color Definitions
+  #=============================================================================
+  if BWX::Vars::MASTER_OCOLOR
+    def normal_color;      text_color(BWX::Vars::COLORS[:normal]);      end;
+    def system_color;      text_color(BWX::Vars::COLORS[:system]);      end;
+    def crisis_color;      text_color(BWX::Vars::COLORS[:crisis]);      end;
+    def knockout_color;    text_color(BWX::Vars::COLORS[:knockout]);    end;
+    def gauge_back_color;  text_color(BWX::Vars::COLORS[:gauge_back]);  end;
+    def hp_gauge_color1;   text_color(BWX::Vars::COLORS[:hp_gauge1]);   end;
+    def hp_gauge_color2;   text_color(BWX::Vars::COLORS[:hp_gauge2]);   end;
+    def mp_gauge_color1;   text_color(BWX::Vars::COLORS[:mp_gauge1]);   end;
+    def mp_gauge_color2;   text_color(BWX::Vars::COLORS[:mp_gauge2]);   end;
+    def mp_cost_color;     text_color(BWX::Vars::COLORS[:mp_cost]);     end;
+    def power_up_color;    text_color(BWX::Vars::COLORS[:power_up]);    end;
+    def power_down_color;  text_color(BWX::Vars::COLORS[:power_down]);  end;
+    def tp_gauge_color1;   text_color(BWX::Vars::COLORS[:tp_gauge1]);   end;
+    def tp_gauge_color2;   text_color(BWX::Vars::COLORS[:tp_gauge2]);   end;
+    def tp_cost_color;     text_color(BWX::Vars::COLORS[:tp_cost]);     end;
+  end
+  
+  if BWX::Vars::MASTER_WINDOW
+  #=============================================================================
+  # Alias: Initialize
+  #=============================================================================
+  alias rpm_initialize initialize
+  def initialize(x, y, width, height)
+    rpm_initialize(x, y, width, height)
+    self.windowskin = Cache.system(BWX::Vars::WNDSKN)
+  end
+
+  if BWX::Vars::MSGWW
+  #=============================================================================
+  # Alias: Process Character
+  #=============================================================================
+  alias_method :process_character_kz_window_base, :process_character
+  def process_character(c, text, pos)
+    c = ' ' if @convert_newlines && c == "\n"
+    if @wordwrap && c =~ /[ \t]/
+      c = '' if @collapse_whitespace && @lastc =~ /[\s\n\f]/
+      if pos[:x] + get_next_word_size(c, text) > contents.width - @right_margin
+        process_new_line(text, pos)
+      else
+        process_normal_character(c, pos)
+      end
+      @lastc = c
+    else
+      @lastc = c
+      process_character_kz_window_base(c, text, pos)
+    end
+  end
+
+  #=============================================================================
+  # Alias: Next Word Size
+  #=============================================================================
+  def get_next_word_size(c, text)
+    nextword = text.split(/[\s\n\f]/, 2)[0]
+    if nextword
+      icons = 0
+      if nextword =~ /\e/i
+        nextword = nextword.split(/\e[oOcC]+\[\d*\]/).join
+        nextword = nextword.split(/\e[\.\|\^<>!]/).join
+        nextword = nextword.split(/\e[^iIhH]+/, 2)[0]
+        nextword.gsub!(/\e[iIhH]+\[[\d,]*\]/) do
+          icons += 1
+          ''
+        end if nextword
+      end
+      wordsize=(nextword ? text_size(c + nextword).width : text_size( c ).width)
+      wordsize += icons * 24
+    else
+      wordsize = text_size( c ).width
+    end
+    return wordsize
+  end
+
+  #=============================================================================
+  # Alias: Process Escape Character (Word Wrap)
+  #=============================================================================
+  alias_method :process_escape_character_kz, :process_escape_character
+  def process_escape_character(code, text, pos)
+    case code.upcase
+    when 'WW';  @wordwrap = true
+    when 'NW';  @wordwrap = false
+    when 'WS';  @convert_newlines = true
+    when 'NL';  @convert_newlines = false
+    when 'CS';  @collapse_whitespace = true
+    when 'PRE'; @collapse_whitespace = false
+    when 'BR';  process_new_line(text, pos)
+      @lastc = "\n"
+    when 'RM';  @right_margin = obtain_escape_param(text)
+    else
+      process_escape_character_kz(code, text, pos)
+    end
+    if pos[:x] + get_next_word_size('', text) > contents.width
+      process_new_line(text, pos)
+    end
+  end
+
+  #=============================================================================
+  # Alias: Process Normal Character (Lone Wolf)
+  #=============================================================================
+  alias :process_normal_character_vxa :process_normal_character
+  def process_normal_character(c, pos)
+    return unless c >= ' '
+    process_normal_character_vxa(c, pos)
+  end unless method_defined? :process_normal_character
+  end # Wordwrap Flag
+  end # Window Flag
+end
+
+if BWX::Vars::MASTER_WINDOW
+#===============================================================================
+# Window Skill List
+#===============================================================================
+class Window_SkillList < Window_Selectable
+  #=============================================================================
+  # Max Number of Colums
+  #=============================================================================
+  def col_max
+    BWX::Vars::IS_COLS
+  end
+end
+
+#===============================================================================
+# Window Item List
+#===============================================================================
+class Window_ItemList < Window_Selectable
+  #=============================================================================
+  # Max Number of Colums
+  #=============================================================================
+  def col_max
+    BWX::Vars::IS_COLS
+  end
+end
+end # Window Flag
+
+#===============================================================================
+# Game Interpreter Event Script Error
+#===============================================================================
+class Game_Interpreter
+  def command_355
+    script = @list[@index].parameters[0] + "\n"
+    while next_event_code == 655
+      @index += 1
+      script += @list[@index].parameters[0] + "\n"
+    end
+    eval(script) rescue
+      Debug("Event Script","Unknown method called in map event.",
+        "MAP EVENT ERROR",script,true,false)
+  end
+end
+
+#===============================================================================
+# Yanfly Battle Engine Bugfixes
+#===============================================================================
+if $imported["YEA-BattleEngine"]
+class Game_Actor < Game_Battler
+  #=============================================================================
+  # Draw Mp?
+  # -- Fixes instances where would crash when you have empty skills learned.
+  # -- Also improves logic for drawing MP Gauge
+  #=============================================================================
+  def draw_mp?
+    return true unless draw_tp?
+    for skill in skills
+      next unless skill != nil
+      next unless added_skill_types.include?(skill.stype_id)
+      if skill.mp_cost > 0
+        return true if self.mmp > 0
+      end
+    end
+    return false
+  end
+
+  #=============================================================================
+  # Draw Tp?
+  # -- Fixes instances where would crash when you have empty skills learned.
+  #=============================================================================
+  def draw_tp?
+    return false unless $data_system.opt_display_tp
+    for skill in skills
+      next unless skill != nil
+      next unless added_skill_types.include?(skill.stype_id)
+      return true if skill.tp_cost > 0
+    end
+    return false
+  end
+end
+end
+#===============================================================================
+# EOF
+#===============================================================================
+end # End Activation Handler
