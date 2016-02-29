@@ -1,4 +1,4 @@
-# Black Wyvern Arts RPGM-eXperemental
+# Black Wyvern Arts RPGM-eXperimental
 Various scripts I've coded up for RPG Maker VX Ace
 
 Terms of use:
