@@ -3,7 +3,7 @@
   Black Wyvern Arts - RPGMaker-X Enemy HP Bars
   Author: Black Wyvern
   Created: 09/16/13
-  Updated: 02/19/16
+  Updated: 02/19/29
   Version: 1.0
 #===============================================================================
   *** Only for RPG Maker VX Ace. ***
@@ -78,6 +78,7 @@ module BWX
     MHPB_BWMOD = 2.5    # Modifier for width when it's a Boss type.
     MHPB_SEEMP = true   # Show enemy MP gauge.
     MHPB_BOSMP = false  # Show the boss' MP gauge. (respects SEEMP)
+    MHPB_SWHIT = true   # Show the chance to hit target with selected skill.
 
     MHPB_DYNCO = true   # If you want colors to change based on current HP.
     MHPB_CSKIN = ""     # If you use MBHP_DYNCO, enter the name of your
@@ -243,7 +244,7 @@ class Window_Base < Window
   def draw_enemy_hp(x, y, width, rate, color1, color2)
     style=BWX::Vars::MULTIPLESTYLE ? BWX::Vars::MOBSTYLE : BWX::Vars::DEFSTYLE
     draw_gauge(x, y, width, rate, color1, color2,
-      :def, style, BWX::Vars::MOBHEIGHT)
+      :def, false, style, BWX::Vars::MOBHEIGHT)
     @gauges[[x,y]].type("mb_hp")
   end
   
@@ -253,7 +254,7 @@ class Window_Base < Window
   def draw_enemy_boss_hp(x, y, width, rate, color1, color2)
     style=BWX::Vars::MULTIPLESTYLE ? BWX::Vars::MOBSTYLE : BWX::Vars::DEFSTYLE
     draw_gauge(x, y, width, rate, color1, color2, 
-      :def, style, BWX::Vars::MOBHEIGHT)
+      :def, false, style, BWX::Vars::MOBHEIGHT)
     @gauges[[x,y]].type("mb_bhp")
   end
   
@@ -263,7 +264,7 @@ class Window_Base < Window
   def draw_enemy_mp(x, y, width, rate, color1, color2)
     style=BWX::Vars::MULTIPLESTYLE ? BWX::Vars::MOBSTYLE : BWX::Vars::DEFSTYLE
     draw_gauge(x, y, width, rate, color1, color2,
-     :def, style, BWX::Vars::MOBHEIGHT)
+     :def, false, style, BWX::Vars::MOBHEIGHT)
     @gauges[[x,y]].type("mp")
   end
 end
@@ -420,8 +421,8 @@ class Monster_Bar_Viewport < Viewport
     @gw = BWX::Vars::MHPB_WIDTH
     @gw *= BWX::Vars::MHPB_BWMOD if @IsBoss
     @gh = BWX::Vars::MOBHEIGHT
-
-    @DisplayWindow = Monster_Bar_Window.new(0, 0, @gw+@gh*2+15, @gh*5+6)
+    offset = BWX::Vars::MHPB_SWHIT ? 6 + Font.default_size : 6
+    @DisplayWindow = Monster_Bar_Window.new(0, 0, @gw+@gh*2+15, @gh*5+offset)
     @DisplayWindow.opacity = 0
     @visible_counter = 0
     update_position
@@ -453,6 +454,17 @@ class Monster_Bar_Viewport < Viewport
     
     @DisplayWindow.contents.clear
     @DisplayWindow.DrawGauges(@gw,@target.hp_rate,@target.mp_rate,@IsBoss)
+    if SceneManager.scene.enemy_window.active && BWX::Vars::MHPB_SWHIT
+      actor = BattleManager.actor
+      item = actor.input.item
+      if item.physical? || item.magical?
+        hit = @target.item_hit(actor,item)
+        eva = @target.item_eva(actor,item)
+        hit -= eva
+        @DisplayWindow.draw_text_ex(0,@gh*2+7,
+          "\eC[1]Hit Chance: \eC[0]" + hit.percent.to_s + "%")
+      end
+    end
     @DisplayWindow.update
   end
   
