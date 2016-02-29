@@ -908,7 +908,7 @@ class Window_BattleStatus < Window_Selectable
   
   if !$imported["RPGM-X_Dragon"]
   #=============================================================================
-  # Draw Item (If not using RPGM-X Battle Stats)
+  # Draw Item (If not using RPGM-X Dragon Battle System)
   #=============================================================================
     def draw_item(index)
       return if index.nil?
