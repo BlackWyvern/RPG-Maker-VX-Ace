@@ -3,7 +3,7 @@
   Black Wyvern Arts - RPGMaker-X Sleeker Gauges
   Author: Black Wyvern
   Created: 02/01/16
-  Updated: 02/19/16
+  Updated: 02/29/16
   Version: 1.0
 #===============================================================================
   *** Only for RPG Maker VX Ace. ***
@@ -35,33 +35,142 @@
     integrate.
     
     To draw actor HP gauge:
-    draw_actor_hp(actor, x, y, width = 124,[pos = :def,
-        height = BWX::Vars::BARHEIGHT, notext = false])
+    draw_actor_hp(actor, x, y, width = 124, pos = :def, hidden = false,
+        mode = :dyn, height = BWX::Vars::BARHEIGHT, notext = false)
     
-    The parameters (pos, height, notext) are optional.
-    pos can be :def, :up, :down. This is the position of the gauge text.
-    height is if you wish to use a custom bar height.
-    notext disables gauge text.
+    The parameters (width, pos, hidden, mode, height, notext) are optional.
+    width   How big your bar is. Don't make it too big though, or it wont fit.
+    pos     Can be :def, :up, :down. This is the position of the gauge text. ^;P
+    hidden  Disables the gauge from drawing until it has values assigned to it.
+    mode    Is :dyn or :static. This determines the bar update behavior.
+    height  Is if you wish to use a custom bar height.
+    notext  Disables gauge text.
     
     To draw a custom gauge:
-    draw_gauge(x, y, width, rate, color1, color2,[pos = :def,
-        style = BWX::Vars::DEFSTYLE, height = BWX::Vars::BARHEIGHT])
+    draw_gauge(x, y, width, rate, color1, color2, pos = :def, hidden = false,
+        style = BWX::Vars::DEFSTYLE, height = BWX::Vars::BARHEIGHT)
+    - optionally -
+    gauge[[x,y]].type("",mode)
+    - or -
+    gauge[[x,y]].set_extra(title,min,max,"",mode)
+    
+    Using type will allow you to set a static gauge without in-built text
+    display. Using set_extra will allow you to set text and type simultaniously.
+    Don't use both. Either or.
+    
+    For experienced users:
+    eval_gauge(x, y, width, eval_rate, eval_col1, eval_col2, eval_text = "", 
+        pos = :def, hidden = false, mode = :dyn, height = BWX::Vars::BARHEIGHT)
+    This will render a gauge that will evaluate the given formulas for bar
+    rate, color and display text.
+    Use the internal handles for the gauge definitions. EG: @cur_rate, ect...
 
     ►►► BIG NOTICE YOU SHOULD PROBABLY READ ◄◄◄
-    Animating these gauges becomes very laggy, very quickly. It is strongly
-    advised not to use a lot of them at any one time unless you have all the
-    STATIC options set to true, or are only updating a few at a time.
-      [I made a Status Window with 40 bars on it. It did not end well.]
-    This will make them a bit boring, but otherwise, your client WILL grind
-    to a halt.
+    Animating these gauges becomes very laggy, very quickly.
     
-    Additionally, if your gauges have text assigned to them, you will need to
-    be careful on how you position your bars. The gauges use clear_rect to
-    erase the text before redrawing it. This will nuke fill_rect backgrounds,
-    or other bars if placed in overlap with the text areas. I've done what I
-    can to minimize this effect, but if you see text/bars getting cut off, you
-    will need to move them around.
-  
+    It is strongly advised that if you use a lot of them at once, to set the
+    mode to :static, or set the STATIC options for all gauges below. If you do
+    chose to have many gauges at once, as long as you only update 4-5 of them
+    at once, the impact should be negligable. Using the || style will also
+    drastically reduce process time.
+    
+    Additionally, if your gauges have text assigned to them, and are not set to
+    :static mode, you will need to be careful on how you position your bars.
+    The gauges use clear_rect to erase the text before redrawing it. This will
+    nuke fill_rect backgrounds, or other bars if placed in overlap with the text
+    areas. I've done what I can to minimize this effect, but if you see
+    text/bars getting cut off, you will need to move them around.
+    
+    ►►► MODDING INFORMATION ◄◄◄
+    Because everyone loves bars, here's how to make your own. Remember to change
+    variable names so you can keep things neat and orderly.
+
+#===============================================================================
+# BWX Custom Bar Style
+#===============================================================================
+module BWX
+  module Vars
+    CUSTSTYLE = "||"
+  end
+end
+
+#===============================================================================
+# Sleeker Guages Window Base
+#===============================================================================
+class Window_Base < Window
+  #=============================================================================
+  # Draw Custom Bar (Change this to whatever you want)
+  #=============================================================================
+  def draw_custom_gauge(actor, x, y, width = 124, pos = :def, hidden = false,
+        mode = :dyn, height = BWX::Vars::BARHEIGHT, notext = false)
+    style=BWX::Vars::MULTIPLESTYLE ? BWX::Vars::CUSTSTYLE : BWX::Vars::DEFSTYLE
+    draw_gauge(x, y, width, rate, color1, color2,
+      :def, false, style, height)
+    @gauges[[x,y]].type("custom",mode)
+  end
+end
+
+#===============================================================================
+# BWX Custom Bar Definition
+#===============================================================================
+module BWX_CustomBarDefinition
+  #=============================================================================
+  # Custom Colors (Change this to whatever you want)
+  #=============================================================================
+  def Custom_Colors(position, rate)
+    case position
+    
+    #Here's where you need to read a bit. There's three different things you can
+    #do here. But what you need to keep in mind is that Color1 is the left side
+    #and Color2 is the right side, and the two are blended into a gradient.
+    
+    #Method 1: Manual Dynamic Color
+    #This gives you the most control, but you do need to understand how rates
+    #work. In this example.. The bar goes from 80,0,0 to 255,0,0 when full and
+    #0,150,150 to 0,255,255 when empty. This means it will go from dark red to
+    #a bright cyan as it increases.
+    
+    when 1; return Color.new(0+(80*(1-rate)),(150*rate),(150*rate),192)
+    when 2; return Color.new(0+(255*(1-rate)),(255*rate),(255*rate),192)
+    
+    #Method 2: Automatic Dynamic Color
+    #You can set an autormatic dynamic color, which will work similarly as the
+    #above. This one however, is slightly easier to define.
+    
+    when 1; return Auto_Color(<Left color when full>,
+                              <Left color when empty>),rate)
+    when 2; return Auto_Color(<Right color when full>,
+                              <Right color when empty>,rate)
+
+    #Method 3: Static Colors
+    #You could also just set static text colors. If you chose to use this route,
+    #you do not need the next section of code for this particular bar. You can
+    #add it in if you want... But it won't do anything.
+    
+    when 1; return text_color(1)
+    when 2; return text_color(2)
+    end
+  end
+end
+include BWX::BWX_CustomBarDefinition
+
+class Sleek_Gauge
+  #=============================================================================
+  # Alias: Refresh (Change this to whatever you set the definition to.)
+  #=============================================================================
+  alias custom_refresh refresh
+  def refresh
+    case @type
+    when "custom"
+      @color1 = Custom_Colors(1,@cur_rate)
+      @color2 = Custom_Colors(2,@cur_rate)
+    end
+    custom_refresh
+  end
+end
+
+    ►►► END OF MODDING INFORMATION (Have fun!)◄◄◄
+
   Optional:
     - BWA RPGM-X Enemy HP Bars, Place this above EHPB, it makes it look bettter.
 
@@ -79,7 +188,7 @@
 
 active = true # Turns the script on or off.
 if ($Global_Enable.nil? && active) || ($Global_Enable && active)
-  ($imported||={})["RPGM-X_Gauges"]=[1.0,true]
+  ($imported||={})["RPGM-X_Gauges"]=[1.0]
   # ^ Signifies that the script is installed to other scripts.
 
 #===============================================================================
@@ -90,9 +199,9 @@ if ($Global_Enable.nil? && active) || ($Global_Enable && active)
 module BWX
   module Vars
     BARHEIGHT     = 8       # Default height for bars
-    STATICNUMBERS = false   # Numbers are static, or count down
-    STATIC_GAUGES = false   # Bar has no effects while moving
-    STATIC_BACKGD = false   # Back background changes with bar color
+    STATICNUMBERS = false   # Numbers are static, or count up/down
+    STATIC_GAUGES = false   # Bar has no effects between updates
+    STATIC_BACKGD = false   # Background changes with bar color
     GAUGEMOVSTYLE = :fancy  # If STATIC_GAUGES == false
                             #   use :normal, :fancy, or :fall
                             # It is not recommended to use :fall with anything
@@ -112,12 +221,6 @@ module BWX
     TP_STYLE = '||'         # Style of the TP Gauge
     XP_STYLE = '||'         # Style of the XP Gauge
     PARSTYLE = '||'         # Style of the Parameter Gauges
-    #===========================================================================
-    # Simple adjustments to aesthetics
-    # -- Advised to use SLANT_RESIZE if you have bars with / or \ styles.
-    #===========================================================================
-    THICKERCURVE = true     # Slightly thicken curved bars?
-    SLANT_RESIZE = true     # Adjust bar size when slanted?
     #===========================================================================
     # Control the colours of the gauge borders and shading
     #===========================================================================
@@ -154,10 +257,8 @@ module BWX
     #===========================================================================
     def Subparam_Color(position, rate)
       case position
-      when 1; return Auto_Color(Color.new(0,255,255,192),
-                                Color.new(255,0,0,192), rate)
-      when 2; return Auto_Color(Color.new(0,0,255,192), 
-                                Color.new(255,255,0,192), rate)
+      when 1; return Color.new(0+(80*(1-rate)),(150*rate),(150*rate),192)
+      when 2; return Color.new(0+(255*(1-rate)),(255*rate),(255*rate),192)
       end
     end
 
@@ -282,7 +383,7 @@ unless $imported["BWA_RPGM-X"]
   #=============================================================================
     def clamp min, max
       self < min ? min : (self > max ? max : self)
-    end unless method_defined? :clamp
+    end
   end
 end # End Core Function Subs
 
@@ -294,72 +395,82 @@ class Window_Base < Window
   #=============================================================================
   # Draw Gauge
   #=============================================================================
-  def draw_gauge(x, y, width, rate, color1, color2, pos = :def,
+  def draw_gauge(x, y, width, rate, color1, color2, pos = :def, hidden = false,
         style = BWX::Vars::DEFSTYLE, height = BWX::Vars::BARHEIGHT)
     @gauges = {} unless @gauges
-    if @gauges[[x,y]] && @gauges[[x,y]].width == width #Fixes bug with Yanfly
+    if @gauges[[x,y]] && @gauges[[x,y]].width == width
       @gauges[[x,y]].set_rate(rate)
     else
       @gauges[[x,y]] = Sleek_Gauge.new(x,y,width,rate,color1,color2,self,
-        pos,style,height)
+        pos,hidden,style,height)
     end
   end
   
   #=============================================================================
   # Draw Actor HP
   #=============================================================================
-  def draw_actor_hp(actor, x, y, width = 124, pos = :def,
-        height = BWX::Vars::BARHEIGHT, notext = false)
+  def draw_actor_hp(actor, x, y, width = 124, pos = :def, hidden = false,
+        mode = :dyn, height = BWX::Vars::BARHEIGHT, notext = false)
     style=BWX::Vars::MULTIPLESTYLE ? BWX::Vars::HP_STYLE : BWX::Vars::DEFSTYLE
     rate = actor.hp_rate
     draw_gauge(x, y, width, rate, HP_Colors(1,rate), HP_Colors(2,rate),
-      pos, style, height)
-    @gauges[[x,y]].type("hp")
-    @gauges[[x,y]].set_extra(Vocab::hp_a,actor.hp,actor.mhp,pos) unless notext
+      pos, hidden, style, height)
+    @gauges[[x,y]].set_extra(Vocab::hp_a,actor.hp,actor.mhp,
+      "hp",mode) unless notext
   end
   
   #=============================================================================
   # Draw Actor MP
   #=============================================================================
-  def draw_actor_mp(actor, x, y, width = 124, pos = :def,
-        height = BWX::Vars::BARHEIGHT, notext = false)
+  def draw_actor_mp(actor, x, y, width = 124, pos = :def, hidden = false,
+        mode = :dyn, height = BWX::Vars::BARHEIGHT, notext = false)
     style=BWX::Vars::MULTIPLESTYLE ? BWX::Vars::MP_STYLE : BWX::Vars::DEFSTYLE
     rate = actor.mp_rate
     draw_gauge(x, y, width, rate, MP_Colors(1,rate), MP_Colors(2,rate),
-      pos, style, height)
-    @gauges[[x,y]].type("mp")
-    @gauges[[x,y]].set_extra(Vocab::mp_a,actor.mp,actor.mmp,pos) unless notext
+      pos, hidden, style, height)
+    @gauges[[x,y]].set_extra(Vocab::mp_a,actor.mp,actor.mmp,
+      "mp",mode) unless notext
   end
   
   #=============================================================================
   # Draw Actor TP
   #=============================================================================
-  def draw_actor_tp(actor, x, y, width = 124, pos = :def,
-        height = BWX::Vars::BARHEIGHT, notext = false)
+  def draw_actor_tp(actor, x, y, width = 124, pos = :def, hidden = false,
+        mode = :dyn, height = BWX::Vars::BARHEIGHT, notext = false)
     style=BWX::Vars::MULTIPLESTYLE ? BWX::Vars::TP_STYLE : BWX::Vars::DEFSTYLE
     rate = actor.tp_rate
     draw_gauge(x, y, width, rate, TP_Colors(1,rate), TP_Colors(2,rate),
-      pos, style, height)
-    @gauges[[x,y]].type("tp")
-    @gauges[[x,y]].set_extra(Vocab::tp_a,actor.tp.to_i,100,pos) unless notext
+      pos, hidden, style, height)
+    @gauges[[x,y]].set_extra(Vocab::tp_a,actor.tp.to_i,actor.max_tp.to_i,
+      "tp",mode) unless notext
   end
   
   #=============================================================================
   # Draw Actor XP
   #=============================================================================
-  def draw_actor_xp(actor, x, y, width = 124, pos = :def,
-        height = BWX::Vars::BARHEIGHT, notext = false)
+  def draw_actor_xp(actor, x, y, width = 124, pos = :def, hidden = false,
+        mode = :dyn, height = BWX::Vars::BARHEIGHT, notext = false)
     style=BWX::Vars::MULTIPLESTYLE ? BWX::Vars::XP_STYLE : BWX::Vars::DEFSTYLE
     rate = actor.xp_rate
     draw_gauge(x, y, width, rate, XP_Colors(1,rate), XP_Colors(2,rate),
-      pos, style, height)
-    @gauges[[x,y]].type("xp")
+      pos, hidden, style, height)
     if(actor.level != actor.max_level)
       @gauges[[x,y]].set_extra(Vocab::xp_a, actor.xp_in_level, actor.xp_to_next,
-        pos) unless notext
+        "xp",mode) unless notext
     else
-      @gauges[[x,y]].set_extra(Vocab::xp_a,0,0,pos) unless notext
+      @gauges[[x,y]].set_extra(Vocab::xp_a,0,0,"xp",mode) unless notext
     end
+  end
+  
+  #=============================================================================
+  # Draw Eval Gauge
+  #=============================================================================
+  def eval_gauge(x, y, width, eval_rate, eval_col1, eval_col2, eval_text = "", 
+        pos = :def, hidden = false, mode = :dyn, height = BWX::Vars::BARHEIGHT)
+    style=BWX::Vars::MULTIPLESTYLE ? BWX::Vars::XP_STYLE : BWX::Vars::DEFSTYLE
+    draw_gauge(x, y, width, eval_rate, eval_col1, eval_col2, pos, hidden,
+      style, height)
+    @gauges[[x,y]].set_extra(eval_text,0,0,"eval",mode) if eval_text != ""
   end
   
   #=============================================================================
@@ -383,22 +494,30 @@ class Sleek_Gauge
   #=============================================================================
   # Initialize
   #=============================================================================
-  def initialize(x, y, w, r, c1, c2, window, pos = :def,
+  def initialize(x, y, w, r, c1, c2, window, pos = :def, hidden = false,
     style = BWX::Vars::DEFSTYLE, height = BWX::Vars::BARHEIGHT)
-    @x = x; @y = y; @width = w
-    @cur_rate = r; @max_rate = r
+    @x = x; @y = y
+    @y+=10 if pos == :def
+    @y+=12 if pos == :up
+    @y+=2 if pos == :down
+    @width = w
+    @cur_rate = @max_rate = r
     @color1 = c1; @color2 = c2
     @pos = pos; @window = window
-    @speed = 0; @speed_rate = 0
+    @speed = @speed_rate = 0
     @height = height; @fall_sprites = []
-    @style = style
-    refresh
+    @style = style; @mode = :dyn; @hidden = hidden
+    @cur_rate = @max_rate = eval(@eval_rate = r) if r.is_a?(String)
+    @color1 = eval(@eval_col1 = @color1) if @color1.is_a?(String)
+    @color2 = eval(@eval_col2 = @color2) if @color2.is_a?(String)
+    #refresh
   end
   
   #=============================================================================
   # Update
   #=============================================================================
   def update
+    return if @mode != :dyn
     update_fall_sprites
     @cur_rate; @max_rate
     @cur_val; @set_val
@@ -408,7 +527,7 @@ class Sleek_Gauge
     @cur_rate = @max_rate if (@cur_rate - @max_rate).abs < @speed_rate
     @cur_rate = @max_rate if
       (BWX::Vars::STATIC_GAUGES || BWX::Vars::GAUGEMOVSTYLE == :fall)
-    return unless @vocab
+    return if @vocab.empty?
     @cur_val -= @speed if @cur_val > @set_val
     @cur_val += @speed if @cur_val < @set_val
     @cur_val = @set_val if (@cur_val-@set_val).abs < @speed
@@ -440,32 +559,35 @@ class Sleek_Gauge
   # Refresh
   #=============================================================================
   def refresh
-    if @vocab
-      xr = @x + @width/2
-      if @pos == :def
-        @window.contents.clear_rect(
-          Rect.new(@x,@y-(@height),20,@height+3))
-        @window.contents.clear_rect(
-          Rect.new(xr,@y-(@height),@width/2-5,@height+4))
-      elsif  @pos == :up
-        @window.contents.clear_rect(
-          Rect.new(@x,@y-(@height+3),20,@height+5))
-        @window.contents.clear_rect(
-          Rect.new(xr,@y-(@height+3),@width/2-5,@height+5))
-      elsif @pos == :down
-        @window.contents.clear_rect(
-          Rect.new(@x,@y+@height,20,@height+2))
-        @window.contents.clear_rect(
-          Rect.new(xr,@y+@height-1,@width/2-5,@height+4))
-      end
+    return if (@hidden && @cur_rate == 0) &&
+      ((@set_val.nil? && @max_val.nil?) || (@set_val == 0 && @max_val == 0))
+    
+    fds = Font.default_size
+    @vocab.nil? ? @vocab = "" : @vocab
+    xl = @vocab.length * (fds / 1.25)
+    xl = eval(@vocab).length * (fds / 4) if @type == "eval"
+
+    if @mode == :dyn && @width > 100
+      rect1 = Rect.new(@x,@y-(@height+2),xl,@height+6) if @pos == :def
+      rect1 = Rect.new(@x,@y-(@height+4),xl,@height+6) if @pos == :up
+      rect1 = Rect.new(@x,@y+(@height-3),xl,@height+6) if @pos == :down
+      @window.contents.clear_rect(rect1)
     end
+    
+    @display.nil? ? @display = "" : @display
+    xs = @display.length * (fds / 2)+5
+    xr = @x + @width - xs
+    if @mode == :dyn
+      rect2 = Rect.new(xr,@y-(@height+2),xs,@height+6) if @pos == :def
+      rect2 = Rect.new(xr,@y-(@height+4),xs,@height+6) if @pos == :up
+      rect2 = Rect.new(xr,@y+(@height-3),xs,@height+6) if @pos == :down
+      @window.contents.clear_rect(rect2) if @type != "eval"
+    end
+    
     case @type
     when "hp"
       @color1 = HP_Colors(1,@cur_rate)
       @color2 = HP_Colors(2,@cur_rate)
-    when "sp"
-      @color1 = SP_Colors(1,@cur_rate)
-      @color2 = SP_Colors(2,@cur_rate)
     when "mp"
       @color1 = MP_Colors(1,@cur_rate)
       @color2 = MP_Colors(2,@cur_rate)
@@ -478,11 +600,10 @@ class Sleek_Gauge
     when "Sub%"
       @color1 = Subparam_Color(1,@cur_rate)
       @color2 = Subparam_Color(2,@cur_rate)
+    when "eval"
+      @color1 = eval(@eval_col1)
+      @color2 = eval(@eval_col2)
     end
-    #@cur_rate = @cur_rate > 1 ? 1 : @cur_rate < 0 ? 0 : @cur_rate
-    #@max_rate = @max_rate > 1 ? 1 : @max_rate < 0 ? 0 : @max_rate
-    # Saved these just in case something happens and clamp explodes.
-
     @cur_rate = @cur_rate.clamp 0,1
     @max_rate = @max_rate.clamp 0,1
     draw_gauge(@x,@y,@width,@cur_rate,@color1,@color2,@style,@height)
@@ -522,25 +643,26 @@ class Sleek_Gauge
         end
       end
     end
-
     refresh
   end
 
   #=============================================================================
   # Set Type
   #=============================================================================
-  def type(mode)
-    @type = mode
+  def type(type, mode = :dyn)
+    @type = type
+    @mode = mode
   end
   
   #=============================================================================
   # Set Extra Params
   #=============================================================================
-  def set_extra(vocab, set_val, max_val=0, pos=:def)
+  def set_extra(vocab, set_val, max_val=0, type = "", mode = :dyn)
     @vocab = vocab
+    @type = type
+    @mode = mode
     @max_val = max_val
     set_val = set_val.to_f
-    @pos = pos
     reset_speed = set_val != @set_val
     if @cur_val
       @set_val = set_val
@@ -561,42 +683,40 @@ class Sleek_Gauge
     (y -= (@height-3)) if @pos == :def
     (y -= (@height)) if @pos == :up
     (y += (@height+2)) if @pos == :down
+    fds = Font.default_size
+    xl = @vocab.length * (fds / 1.5)
+    xl = eval(@vocab).length * (fds / 4) if @type == "eval"
+    
     if w > 100
       @window.change_color(@window.system_color)
-      @window.draw_text(x, y-10, 33, @height+20, @vocab) if @max_val != 0
-      @window.draw_text(x, y-10, 200, @height+20, @vocab) if @max_val == 0
-      @window.change_color(@window.normal_color)
-      @window.change_color(@window.crisis_color) if (@cur_val < @max_val / 4) &&
-        (@type == "hp" || @type == "sp")
-    end
-    @line_height = @window.line_height
-    xr = x + w-10
-    if w < 100
-      if(@cur_val == 0)
-        display = "None" if @type == "sp"
-        display = "Max "+Vocab::level_a if @type == "xp"
-        display = "None" if @type == "mp"
-      else
-        display = @cur_val.to_i.to_s
-      end
-      @window.draw_text(xr - 40, y-10, 42, @height+20, display, 2)
-    else
+      @window.draw_text(x, y-(fds/3), xl, fds, @vocab) if @type != "eval"
+      @window.draw_text_ex(x, y-(fds/3), eval(@vocab)) if @type == "eval"
+      @window.change_color(
+        ((@cur_val < @max_val / 4) && (@type == "hp" || @type == "sp")) ? 
+          @window.crisis_color : @window.normal_color)
+      return if @type == "eval"
       if(@max_val != 0)
-        @window.draw_text(xr - 92, y-10, 96, @height+20,
-          @cur_val.to_i.to_s + "/" + @max_val.to_i.to_s, 2)
+        @display = @cur_val.to_i.group + "/" + @max_val.to_i.group
       else
-        if(@cur_val == 0 && @type != "Sub%")
-          display = "Unshielded" if @type == "sp"
-          display = "Max "+Vocab::level_a if @type == "xp"
-          display = "Can't Use" if @type == "mp"
-        else
-          display = @cur_val.to_i.to_s
-          display += "%" if @type == "Sub%"
+        @display = @cur_val.to_i.group
+        case @type
+          when "xp"; @display = "Max "+Vocab::level_a
+          when "Sub%"; @display += "%"
+          else; @display = "" if @cur_val == 0
         end
-        @window.draw_text(xr - 92, y-10, 96, @height+20,
-          display, 2)
+      end
+    else
+      if(@max_val == 0)
+        @display = ""
+        @display = "Max "+Vocab::level_a if @type == "xp"
+      else
+        @display = @cur_val.to_i.group
       end
     end
+    
+    xs = @display.length * (fds / 2)+5
+    xr = x + w - xs
+    @window.draw_text(xr, y-(fds/3), xs, fds, @display, 2)
     @window.change_color(@window.normal_color)
   end
   
@@ -607,33 +727,30 @@ class Sleek_Gauge
       style = BWX::Vars::DEFSTYLE, height = BWX::Vars::BARHEIGHT)
     x+=4
     fill_ww = (width * @max_rate).to_i
-    gauge_y = y
     h = height.to_i
-    style.slice!(/\s*/);     style = style.split(/\s*/)
-    if style.empty? or (style[0] == "|" && style[1] == "|")
-      if(BWX::Vars::DOUBLEBORDERS)
-        @window.contents.fill_rect(x-2, gauge_y-2, width-4,
-          height+4, BWX::Vars::BAR_COL1)
-        @window.contents.fill_rect(x-1, gauge_y-1, width-6,
-          height+2, BWX::Vars::BAR_COL2)
-      else
-        @window.contents.fill_rect(x-1, gauge_y-1, width-6,
-          height+2, BWX::Vars::BAR_COL1)
-      end
-      
-      if(BWX::Vars::STATIC_BACKGD)
-        backcol1 = BWX::Vars::BAR_COL3
-        backcol2 = BWX::Vars::BAR_COL4
-      else
-        backcol1 = Color.new(color1.red,color1.green,color1.blue,12)
-        backcol2 = Color.new(color2.red,color2.green,color2.blue,92)
-      end
-      @window.contents.gradient_fill_rect(
-        x, gauge_y, width-8, height, backcol1, backcol2)
-      fill_w = ((width-8) * rate).to_i
-      @window.contents.gradient_fill_rect(
-        x, gauge_y, fill_w ,height, color1, color2)
+
+    style.slice!(/\s*/); style = style.split(/\s*/)
+    
+    if(BWX::Vars::STATIC_BACKGD)
+      backcol1 = BWX::Vars::BAR_COL3
+      backcol2 = BWX::Vars::BAR_COL4
     else
+      backcol1 = Color.new(color1.red,color1.green,color1.blue,12)
+      backcol2 = Color.new(color2.red,color2.green,color2.blue,92)
+    end
+
+    # Square Style
+    if style.empty? or (style[0] == "|" && style[1] == "|")
+      fill_w = ((width-4) * rate).to_i
+      if(BWX::Vars::DOUBLEBORDERS)
+        @window.contents.fill_rect(x-2,y-2,width  ,height+4,BWX::Vars::BAR_COL1)
+        @window.contents.fill_rect(x-1,y-1,width-2,height+2,BWX::Vars::BAR_COL2)
+      else
+        @window.contents.fill_rect(x-1,y-1,width-2,height+2,BWX::Vars::BAR_COL1)
+      end
+      @window.contents.gradient_fill_rect(x,y,width-4,height,backcol1, backcol2)
+      @window.contents.gradient_fill_rect(x,y,fill_w,height,color1,color2)
+    else # Dynamic Generation
       adj1 = style_adj_string(style[0]); adj2 = style_adj_string(style[1], true)
 
       if(BWX::Vars::DOUBLEBORDERS)
@@ -642,7 +759,7 @@ class Sleek_Gauge
           a1 = eval(adj1[0]); a2 = eval(adj2[0])
           a3 = adj1[2]; a4 = adj2[4].nil? ? adj2[2] : adj2[4]
           @window.contents.fill_rect(
-            x-a3 +a1, gauge_y-2 + i, width+(a3+a4) - a1 - a2, 1,
+            x-a3+a1,y-2+i,width+(a3+a4)-a1-a2,1,
             BWX::Vars::BAR_COL1)
         end
       
@@ -651,7 +768,7 @@ class Sleek_Gauge
           a1 = eval(adj1[0]); a2 = eval(adj2[0])
           a3 = adj1[1]; a4 = adj2[3].nil? ? adj2[1] : adj2[3]
           @window.contents.fill_rect(
-            x-a3 +a1, gauge_y-1 + i, width+(a3+a4) - a1 - a2, 1,
+            x-a3+a1,y-1+i,width+(a3+a4)-a1-a2,1,
             BWX::Vars::BAR_COL2)
         end
       else
@@ -660,7 +777,7 @@ class Sleek_Gauge
           a1 = eval(adj1[0]); a2 = eval(adj2[0])
           a3 = adj1[1]; a4 = adj2[3].nil? ? adj2[1] : adj2[3]
           @window.contents.fill_rect(
-            x-a3 +a1, gauge_y-1 + i, width+(a3+a4) - a1 - a2, 1,
+            x-a3+a1,y-1+i,width+(a3+a4)-a1-a2,1,
             BWX::Vars::BAR_COL1)
         end
       end
@@ -668,15 +785,9 @@ class Sleek_Gauge
       h -= 2
       for i in 0...h
         a1 = eval(adj1[0]); a2 = eval(adj2[0])
-        if(BWX::Vars::STATIC_BACKGD)
-          backcol1 = BWX::Vars::BAR_COL3
-          backcol2 = BWX::Vars::BAR_COL4
-        else
-          backcol1 = Color.new(color1.red,color1.green,color1.blue,12)
-          backcol2 = Color.new(color2.red,color2.green,color2.blue,92)
-        end
         @window.contents.gradient_fill_rect(
-          x +a1, gauge_y +i, width - a1 - a2, 1, backcol1, backcol2)
+          x+a1,y+i,width-a1-a2,1,
+          backcol1,backcol2)
       end
       
       for i in 0...h
@@ -686,35 +797,37 @@ class Sleek_Gauge
         fill_w = ((width-a1-a2) * rate).round
         fill_ww = ((width-a1-a2) * @max_rate).round
         
-        @window.contents.gradient_fill_rect(
-          x+a1, gauge_y+i, fill_w, 1, color1, color2)
-        
-        if BWX::Vars::GAUGEMOVSTYLE == :fancy
-          color1.alpha -= 150;color2.alpha -= 150
-          if rate > @max_rate
-            @window.contents.gradient_fill_rect(x+a1, gauge_y+i, fill_w, 1,
-              color1, color2)
-            color1.alpha += 150;color2.alpha += 150
-            @window.contents.gradient_fill_rect(x+a1, gauge_y+i, fill_ww, 1,
-              color1, color2)
-          else rate < @max_rate
-            @window.contents.gradient_fill_rect(x+a1, gauge_y+i, fill_ww, 1,
-              color1, color2)
-            color1.alpha += 150;color2.alpha += 150
-            @window.contents.gradient_fill_rect(x+a1, gauge_y+i, fill_w, 1,
-              color1, color2)
+        if rate != @max_rate
+          case BWX::Vars::GAUGEMOVSTYLE
+            when :fancy
+              color1.alpha -= 150; color2.alpha -= 150
+              if rate > @max_rate
+                @window.contents.gradient_fill_rect(x+a1,y+i,fill_w,1,
+                  color1,color2)
+                color1.alpha += 150; color2.alpha += 150
+                @window.contents.gradient_fill_rect(x+a1,y+i,fill_ww,1,
+                  color1,color2)
+              else rate < @max_rate
+                @window.contents.gradient_fill_rect(x+a1,y+i,fill_ww,1,
+                  color1,color2)
+                color1.alpha += 150; color2.alpha += 150
+                @window.contents.gradient_fill_rect(x+a1,y+i,fill_w,1,
+                  color1,color2)
+              end
+            when :normal
+              @window.contents.gradient_fill_rect(x+a1,y+i,fill_w,1,
+                color1,color2)
+            when :fall
+              if rate > @max_rate
+                @window.contents.gradient_fill_rect(x,y+1,fill_ww,1,
+                  color1,color2)
+              else
+                @window.contents.gradient_fill_rect(x,y+1,fill_w,1,
+                  color1,color2)
+              end
           end
-        elsif BWX::Vars::GAUGEMOVSTYLE == :normal
-          @window.contents.gradient_fill_rect(x+a1, gauge_y+i, fill_w, 1,
-            color1, color2)
-        elsif BWX::Vars::GAUGEMOVSTYLE == :fall
-          if rate > @max_rate
-            @window.contents.gradient_fill_rect(x, gauge_y+1, fill_ww, 1,
-              color1, color2)
-          else
-            @window.contents.gradient_fill_rect(x, gauge_y+1, fill_w, 1,
-              color1, color2)
-          end
+        else
+          @window.contents.gradient_fill_rect(x+a1,y+i,fill_w,1,color1,color2)
         end
       end
     end
@@ -725,24 +838,23 @@ class Sleek_Gauge
   #=============================================================================
   def style_adj_string(sym, edge = false) 
     case sym
+      # Confusing as all hell, so you shouldn't touch this. Thanks Syvkal.
     when '/'
-      BWX::Vars::SLANT_RESIZE ? [(edge ? 'i+12' : '(h+1) - i'), 3, 5] : 
-        [(edge ? 'i' : '(h-1) - i'), 3, 5]
+      [(edge ? 'i+6' : '(h-1) - i'), 3, 5]
     when '\\'
-      BWX::Vars::SLANT_RESIZE ? [(edge ? '(h+9) - i' : 'i+2'), 3, 5] :
-        [(edge ? '(h-1) - i' : 'i'), 3, 5]
+      [(edge ? '(h-1) - i+6' : 'i'), 3, 5]
     when '<'
-      [(edge ? '(h/2)-((h/2) - i).abs+9' : '((h/2) - i).abs'), 2, 3]
+      [(edge ? '(h/2)-((h/2) - i).abs+5' : '((h/2) - i).abs'), 2, 3]
     when '>'
-      [(edge ? '((h/2) - i).abs+9' : '(h/2)-((h/2) - i).abs'), 2, 3]
+      [(edge ? '((h/2) - i).abs+5' : '(h/2)-((h/2) - i).abs-3'), 2, 3]
     when '('
-      [(edge ? '((h/2) * Math.sin(i * 1.0 * Math::PI / (h-1))).round.to_i+9' :
-        '(h-6) - ((h/2) * Math.sin(i * 1.0 * Math::PI / (h-1))).round.to_i+4'), 
-        BWX::Vars::THICKERCURVE ? 3 : 2, BWX::Vars::THICKERCURVE ? 5 : 4, 3, 5]
+      [(edge ? '((h/2) * Math.sin(i * 1.0 * Math::PI / (h-1))).round.to_i+5' :
+        '(h-6) - ((h/2) * Math.sin(i * 1.0 * Math::PI / (h-1))).round.to_i'), 
+        3, 5, 3, 5]
     when ')'
-      [(edge ? '(h-3)-((h/2)*Math.sin(i*1.0*Math::PI/(h-1))).round.to_i+9' :
-        '((h/2) * Math.sin(i * 1.0 * Math::PI / (h-1))).round.to_i+4'), 
-        3, 5, BWX::Vars::THICKERCURVE ? 3 : 2, BWX::Vars::THICKERCURVE ? 5 : 4]
+      [(edge ? '(h-3)-((h/2)*Math.sin(i*1.0*Math::PI/(h-1))).round.to_i+5' :
+        '((h/2) * Math.sin(i * 1.0 * Math::PI / (h-1))).round.to_i+1'), 
+        3, 5, 3, 5]
     else # eg. | or invalid sym
       ['0', 1, 2]
     end
@@ -794,9 +906,9 @@ class Window_BattleStatus < Window_Selectable
     ynfbs_refresh
   end
   
-  if !$imported["RPGM-X_Stats"]
+  if !$imported["RPGM-X_Dragon"]
   #=============================================================================
-  # Draw Item (If not using RPGM-X Battle Stats)
+  # Draw Item (If not using RPGM-X Dragon Battle System)
   #=============================================================================
     def draw_item(index)
       return if index.nil?
@@ -812,24 +924,23 @@ class Window_BattleStatus < Window_Selectable
       gx = YEA::BATTLE::BATTLESTATUS_HPGAUGE_Y_PLUS
       contents.font.size = YEA::BATTLE::BATTLESTATUS_TEXT_FONT_SIZE
       if (draw_tp?(actor) && draw_mp?(actor))
-        dw = rect.width/2 - 2
-        draw_actor_tp(actor, rect.x+8, line_height*3, dw,:down)
-        dw = rect.width/2 - 2
-        draw_actor_mp(actor, rect.x+rect.width/2+6, line_height*3, dw,:down)
+        dw = (rect.width-8)/2
+        draw_actor_tp(actor, rect.x+8, line_height*3+3, dw, :down)
+        draw_actor_mp(actor, rect.x+rect.width/2+4, line_height*3+3, dw, :down)
       elsif (draw_tp?(actor) && !draw_mp?(actor))
-        draw_actor_tp(actor, rect.x+8, line_height*3, rect.width-4,:down)
-      elsif (!draw_tp?(actor) && draw_mp?)
-        draw_actor_mp(actor, rect.x+8, line_height*3, rect.width-4,:down)
+        draw_actor_tp(actor, rect.x+8, line_height*3+3, rect.width, :down)
+      elsif (!draw_tp?(actor) && draw_mp?(actor))
+        draw_actor_mp(actor, rect.x+8, line_height*3+3, rect.width, :down)
       end
       draw_actor_hp(
-        actor,rect.x+2,line_height*3-9,rect.width-4, :up)
+        actor,rect.x+2,line_height*2+7,rect.width-8, :up)
     end
   else
   #=============================================================================
   # Draw Gauge Area (with TP) (Vanilla)
   #=============================================================================
     def draw_gauge_area_with_tp(rect, actor)
-      rect.y += 10
+      #rect.y += 10
       draw_actor_hp(actor, rect.x + 0, rect.y, 72)
       draw_actor_mp(actor, rect.x + 82, rect.y, 64)
       draw_actor_tp(actor, rect.x + 156, rect.y, 64)
@@ -839,7 +950,7 @@ class Window_BattleStatus < Window_Selectable
   # Draw Gauge Area (without TP) (Vanilla)
   #=============================================================================
     def draw_gauge_area_without_tp(rect, actor)
-      rect.y += 10
+      #rect.y += 10
       draw_actor_hp(actor, rect.x + 0, rect.y, 134)
       draw_actor_mp(actor, rect.x + 144,  rect.y, 76)
     end
@@ -866,21 +977,21 @@ class Window_BattleStatus < Window_Selectable
   # Draw Actor HP
   #=============================================================================
   def draw_actor_hp(actor, dx, dy, width = 124, pos = :def)
-    @DisplayWindow.draw_actor_hp(actor, dx, dy, width, pos, 8)
+    @DisplayWindow.draw_actor_hp(actor, dx, dy, width, pos)
   end
     
   #=============================================================================
   # Draw Actor MP
   #=============================================================================
   def draw_actor_mp(actor, dx, dy, width = 124, pos = :def)
-    @DisplayWindow.draw_actor_mp(actor, dx, dy, width, pos, 8)
+    @DisplayWindow.draw_actor_mp(actor, dx, dy, width, pos)
   end
     
   #=============================================================================
   # Draw Actor TP
   #=============================================================================
   def draw_actor_tp(actor, dx, dy, width = 124, pos = :def)
-    @DisplayWindow.draw_actor_tp(actor, dx, dy, width, pos, 8)
+    @DisplayWindow.draw_actor_tp(actor, dx, dy, width, pos)
   end
   
   #=============================================================================
