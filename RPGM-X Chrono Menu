@@ -74,7 +74,7 @@ if ($Global_Enable.nil? && active) || ($Global_Enable && active)
 
 module BWX
 #===============================================================================
-#Chrono Menu Settings
+# Chrono Menu Settings
 # -- These variables change how the menu functions.
 #===============================================================================
   module CHRONO_MENU
@@ -124,19 +124,23 @@ end
 #===============================================================================
 class Game_System
   attr_accessor :menu_list
-  
-  alias xail_icon_menu_sys_initialize initialize unless $@
-  def initialize(*args, &block)
-    xail_icon_menu_sys_initialize(*args, &block)
+  #=============================================================================
+  # Reinitialize
+  #=============================================================================
+  alias menu_gs_init initialize
+  def initialize
+    menu_gs_init
     @menu_list = []
   end
-  
 end
 
 #===============================================================================
 # Game_Interpreter
 #===============================================================================
 class Game_Interpreter
+  #=============================================================================
+  # Menu Scene (Add/Remove Entries)
+  #=============================================================================
   def menu_scene(id, type)  
     case type
       when :add
@@ -150,28 +154,32 @@ class Game_Interpreter
     end
   end
   
+  #=============================================================================
+  # Menu Active? (Can Use Entry)
+  #=============================================================================
   def menu_active?(id)
     return if $game_system.menu_list[id].nil?
     return $game_system.menu_list[id][5]
   end
   
+  #=============================================================================
+  # Menu Active (Enable/Disable Entry)
+  #=============================================================================
   def menu_active(id, enabled)
     $game_system.menu_list[id][5] = enabled
   end
   
+  #=============================================================================
+  # Menu Scene All (Add/Remove All Entries)
+  #=============================================================================
   def menu_scene_all(type = :add)
-    id = 0
-    while id < BWA::CHRONO_MENU::MENU_ITEM.size
+    BWA::CHRONO_MENU::MENU_ITEM.each_index do |i|
       case type
-      when :add
-        menu_scene(id, :add)
-      else
-        menu_scene(id, :del)
+        when :add; menu_scene(id, :add)
+        when :del; menu_scene(id, :del)
       end
-      id += 1
     end
   end
-  
 end
 
 #===============================================================================
