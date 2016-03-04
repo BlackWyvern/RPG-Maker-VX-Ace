@@ -98,9 +98,6 @@ module BWX
     MENU_ITEM[0] = [
       "Journal", "Read your personal journal.",
       :journal,     :command_custom,    2109, true, Scene_Journal]
-    #MENU_ITEM[1] = [
-    #  "Teleport", "Teleport to a memorized location.",
-    #  :teleport,    :command_custom,    1573, true, Scene_Teleport]
     MENU_ITEM[2] = [
       "Status", "See the current status of the hero.",
       :status,      :command_status,    1286, true]
@@ -114,23 +111,11 @@ module BWX
       "Skills", "Manage your available skills.",
       :skill,       :command_skill,      276, true]
     MENU_ITEM[6] = [
-      "Shards", "Manage skill shards.",
-      :shards,      :command_custom,     323, true, Scene_Shards]
-    MENU_ITEM[7] = [
-      "Attributes", "Adjust attribute points.",
-      :attributes,  :command_custom,    1052, true, Scene_Attribute]
-    MENU_ITEM[8] = [
-      "Stats", "View various game stats.",
-      :records,     :command_custom,     746, true, Scene_Records]
-    MENU_ITEM[9] = [
       "Save", "Record your progress.",
       :save,        :command_save,      1053, true]
-    MENU_ITEM[10]= [
+    MENU_ITEM[7] = [
       "Load", "Load your saved progress.",
       :load,        :command_custom,    1039, true, Scene_Load]
-    MENU_ITEM[11]= [
-      "Options", "Change options or exit the program.",
-      :game_end,    :command_custom,    2900, true, Scene_System]
   end
 end
 
