@@ -686,7 +686,7 @@ class Sleek_Gauge
       rect1=Rect.new(@x,@y-(@height+2),txrec.width,txrec.height)if@pos==:def
       rect1=Rect.new(@x,@y-(@height+4),txrec.width,txrec.height)if@pos==:up
       rect1=Rect.new(@x,@y+(@height-3),txrec.width,txrec.height)if@pos==:down
-      @window.contents.fill_rect(rect1,COLS.g('white'))
+      @window.contents.clear_rect(rect1)
     end
     
     @display.nil? ? @display = "" : @display
