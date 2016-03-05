@@ -3,8 +3,8 @@
   Black Wyvern Arts - RPGMaker-X Sleeker Gauges
   Author: Black Wyvern
   Created: 02/01/16
-  Updated: 02/29/16
-  Version: 1.1
+  Updated: 03/04/16
+  Version: 1.2
 #===============================================================================
   *** Only for RPG Maker VX Ace. ***
   ------------------------------------------------------------------------------
@@ -187,7 +187,7 @@ end
 
 active = true # Turns the script on or off.
 if ($Global_Enable.nil? && active) || ($Global_Enable && active)
-  ($imported||={})["RPGM-X_Gauges"]=[1.1]
+  ($imported||={})["RPGM-X_Gauges"]=[1.2]
   # ^ Signifies that the script is installed to other scripts.
 
 #===============================================================================
@@ -219,6 +219,8 @@ module BWX
     MP_STYLE = '||'         # Style of the MP Gauge
     TP_STYLE = '||'         # Style of the TP Gauge
     XP_STYLE = '||'         # Style of the XP Gauge
+    LVLSTYLE = '||'         # Style of the Level Gauge
+    EVLSTYLE = '||'         # Style of the Eval Gauge
     PARSTYLE = '||'         # Style of the Parameter Gauges
     #===========================================================================
     # Control the colours of the gauge borders and shading
@@ -358,6 +360,17 @@ module BWX
                               Color.new(88,147,174,255), rate)
         when 2; return Auto_Color(Color.new(133,181,203,255),
                               Color.new(133,181,203,255), rate)
+      end
+    end
+    
+    #===========================================================================
+    # LVLColor
+    # -- Color for Level gauges
+    #===========================================================================
+    def LVLColors(position, rate)
+      case position
+        when 1; return Color.new(0,64,256)
+        when 2; return Color.new(0,64,256)
       end
     end
 
@@ -539,11 +552,35 @@ class Window_Base < Window
   end
   
   #=============================================================================
+  # Draw Actor Lvl
+  #=============================================================================
+  def draw_actor_lvl(actor, x, y, width = 124, pos = :def, hidden = false,
+        mode = :dyn, height = BWX::Vars::BARHEIGHT, notext = false)
+    style=BWX::Vars::MULTIPLESTYLE ? BWX::Vars::LVLSTYLE : BWX::Vars::DEFSTYLE
+    rate = actor.level.to_f / actor.max_level
+    draw_gauge(x, y, width, rate, LVLColors(1,rate), LVLColors(2,rate),
+      pos, hidden, style, height)
+    @gauges[[x,y]].set_extra(Vocab::level, actor.level, actor.max_level,
+      "lvl",mode) unless notext
+  end
+  
+  #=============================================================================
+  # Draw Sub-Param
+  #=============================================================================
+  def draw_subparam(actor,x, y,rate = 0,width = 124,pos = :def,hidden = false,
+        mode = :dyn, height = BWX::Vars::BARHEIGHT)
+    style=BWX::Vars::MULTIPLESTYLE ? BWX::Vars::PARSTYLE : BWX::Vars::DEFSTYLE
+    draw_gauge(x,y,width, rate, Subparam_Color(1,rate), Subparam_Color(2,rate),
+      pos, hidden, style, height)
+    @gauges[[x,y]].type("SubN",mode)
+  end
+  
+  #=============================================================================
   # Draw Eval Gauge
   #=============================================================================
   def eval_gauge(x, y, width, eval_rate, eval_col1, eval_col2, eval_text = "", 
         pos = :def, hidden = false, mode = :dyn, height = BWX::Vars::BARHEIGHT)
-    style=BWX::Vars::MULTIPLESTYLE ? BWX::Vars::XP_STYLE : BWX::Vars::DEFSTYLE
+    style=BWX::Vars::MULTIPLESTYLE ? BWX::Vars::EVLSTYLE : BWX::Vars::DEFSTYLE
     draw_gauge(x, y, width, eval_rate, eval_col1, eval_col2, pos, hidden,
       style, height)
     @gauges[[x,y]].set_extra(eval_text,0,0,"eval",mode) if eval_text != ""
@@ -639,15 +676,17 @@ class Sleek_Gauge
       ((@set_val.nil? && @max_val.nil?) || (@set_val == 0 && @max_val == 0))
     
     fds = Font.default_size
-    @vocab.nil? ? @vocab = "" : @type == "eval" ? @vocab = eval(@vocab) : @vocab
-    txrec = @window.text_size(@vocab)
+    @vocab.nil? ? @vocab = "" : @vocab
+    txrec = @window.text_size(@vocab) unless @type == "eval"
+    txrec = @window.text_size(
+      eval(@vocab.gsub(/((\e)|(\i))([A-Z]+)(\[\d\])/,""))) if @type == "eval"
     txrec.height -= 4
 
     if @mode == :dyn && @width > 100
       rect1=Rect.new(@x,@y-(@height+2),txrec.width,txrec.height)if@pos==:def
       rect1=Rect.new(@x,@y-(@height+4),txrec.width,txrec.height)if@pos==:up
       rect1=Rect.new(@x,@y+(@height-3),txrec.width,txrec.height)if@pos==:down
-      @window.contents.clear_rect(rect1)
+      @window.contents.fill_rect(rect1,COLS.g('white'))
     end
     
     @display.nil? ? @display = "" : @display
@@ -674,6 +713,9 @@ class Sleek_Gauge
     when "xp"
       @color1 = XP_Colors(1,@cur_rate)
       @color2 = XP_Colors(2,@cur_rate)
+    when "lvl"
+      @color1 = LVLColors(1,@cur_rate)
+      @color2 = LVLColors(2,@cur_rate)
     when "Sub%", "SubN"
       @color1 = Subparam_Color(1,@cur_rate)
       @color2 = Subparam_Color(2,@cur_rate)
@@ -729,7 +771,6 @@ class Sleek_Gauge
   def type(type, mode = :dyn)
     @type = type
     @mode = mode
-    refresh
   end
   
   #=============================================================================
@@ -762,12 +803,14 @@ class Sleek_Gauge
     (y -= (@height)) if @pos == :up
     (y += (@height+2)) if @pos == :down
     fds = Font.default_size
-    txrec = @window.text_size(@vocab)
-    txrec = @window.text_size(eval(@vocab)) if @type == "eval"
+    @vocab.nil? ? @vocab = "" : @vocab
+    txrec = @window.text_size(@vocab) unless @type == "eval"
+    txrec = @window.text_size(
+      eval(@vocab.gsub(/((\e)|(\i))([A-Z]+)(\[\d\])/,""))) if @type == "eval"
     if w > 100
       @window.change_color(@window.system_color)
-      @window.draw_text(x,y-(fds/3),txrec.width,txrec.height,
-        @vocab) if @type != "eval"
+      @window.draw_text(x,y-(fds/3),txrec.width,txrec.height,@vocab) if
+        @type != "eval"
       @window.draw_text_ex(x,y-(fds/3),eval(@vocab)) if @type == "eval"
       @window.change_color(
         ((@cur_val < @max_val / 4) && (@type == "hp" || @type == "sp")) ? 
