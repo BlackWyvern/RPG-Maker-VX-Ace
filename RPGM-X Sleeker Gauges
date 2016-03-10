@@ -697,17 +697,20 @@ class Sleek_Gauge
     return if (@hidden && @cur_rate == 0) &&
       ((@set_val.nil? && @max_val.nil?) || (@set_val == 0 && @max_val == 0))
     
-    fds = Font.default_size
     @vocab.nil? ? @vocab = "" : @vocab
     txrec = @window.text_size(@vocab) unless @type == "eval"
     txrec = @window.text_size(
       eval(@vocab.gsub(/((\e)|(\i))([A-Z]+)(\[\d\])/,""))) if @type == "eval"
     txrec.height -= 4
+    y = @y
+    (y -= txrec.height/2.0) if @pos == :def
+    (y -= txrec.height/1.5) if @pos == :up
+    (y += @height-2) if @pos == :down
 
     if @mode == :dyn && @width > 100
-      rect1=Rect.new(@x,@y-(@height+2),txrec.width,txrec.height)if@pos==:def
-      rect1=Rect.new(@x,@y-(@height+4),txrec.width,txrec.height)if@pos==:up
-      rect1=Rect.new(@x,@y+(@height-3),txrec.width,txrec.height)if@pos==:down
+      rect1=Rect.new(@x,y,txrec.width,txrec.height) if@pos == :def
+      rect1=Rect.new(@x,y,txrec.width,txrec.height) if@pos == :up
+      rect1=Rect.new(@x,y,txrec.width,txrec.height) if@pos == :down
       @window.contents.clear_rect(rect1)
     end
     
@@ -716,9 +719,9 @@ class Sleek_Gauge
     xr = @x + @width - txrec.width
     txrec.height -= 4
     if @mode == :dyn
-      rect2=Rect.new(xr,@y-(@height+2),txrec.width,txrec.height)if@pos==:def
-      rect2=Rect.new(xr,@y-(@height+4),txrec.width,txrec.height)if@pos==:up
-      rect2=Rect.new(xr,@y+(@height-3),txrec.width,txrec.height)if@pos==:down
+      rect2=Rect.new(xr,y,txrec.width,txrec.height) if @pos == :def
+      rect2=Rect.new(xr,y,txrec.width,txrec.height) if @pos == :up
+      rect2=Rect.new(xr,y,txrec.width,txrec.height) if @pos == :down
       @window.contents.clear_rect(rect2) if @type != "eval"
     end
     
@@ -822,23 +825,25 @@ class Sleek_Gauge
   #=============================================================================
   def draw_text(x, y, w)
     return unless @cur_val
-    (y -= (@height-3)) if @pos == :def
-    (y -= (@height)) if @pos == :up
-    (y += (@height+2)) if @pos == :down
-    fds = Font.default_size
-    @vocab.nil? ? @vocab = "" : @vocab
     txrec = @window.text_size(@vocab) unless @type == "eval"
     txrec = @window.text_size(
       eval(@vocab.gsub(/((\e)|(\i))([A-Z]+)(\[\d\])/,""))) if @type == "eval"
+    (y -= txrec.height/2.0) if @pos == :def
+    (y -= txrec.height/1.5) if @pos == :up
+    (y += @height-3) if @pos == :down
+    @vocab.nil? ? @vocab = "" : @vocab
+    
     if w > 100
       @window.change_color(@window.system_color)
-      @window.draw_text(x,y-(fds/3),txrec.width,txrec.height,@vocab) if
-        @type != "eval"
-      @window.draw_text_ex(x,y-(fds/3),eval(@vocab)) if @type == "eval"
+      @window.draw_text(x,y,txrec.width,txrec.height,@vocab) if
+        @type != "eval" #
+      @window.draw_text_ex(x,y,eval(@vocab)) if @type == "eval" #
       @window.change_color(
         ((@cur_val < @max_val / 4) && (@type == "hp" || @type == "sp")) ? 
           @window.crisis_color : @window.normal_color)
       return if @type == "eval"
+    end
+    if w > 80
       if(@max_val != 0)
         @display = @cur_val.to_i.group + "/" + @max_val.to_i.group
       else
@@ -860,7 +865,7 @@ class Sleek_Gauge
     
     txrec = @window.text_size(@display)
     xr = x + w - txrec.width
-    @window.draw_text(xr,y-(fds/3),txrec.width,txrec.height,@display,2)
+    @window.draw_text(xr,y,txrec.width,txrec.height,@display,2) #
     @window.change_color(@window.normal_color)
   end
   
