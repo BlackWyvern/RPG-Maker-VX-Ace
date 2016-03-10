@@ -3,8 +3,8 @@
   Black Wyvern Arts - RPGMaker-X Sleeker Gauges
   Author: Black Wyvern
   Created: 02/01/16
-  Updated: 03/08/16
-  Version: 1.3
+  Updated: 03/09/16
+  Version: 1.4
 #===============================================================================
   *** Only for RPG Maker VX Ace. ***
   ------------------------------------------------------------------------------
@@ -204,7 +204,7 @@ end
 
 active = true # Turns the script on or off.
 if ($Global_Enable.nil? && active) || ($Global_Enable && active)
-  ($imported||={})["RPGM-X_Gauges"]=[1.3]
+  ($imported||={})["RPGM-X_Gauges"]=[1.4]
   # ^ Signifies that the script is installed to other scripts.
 
 #===============================================================================
