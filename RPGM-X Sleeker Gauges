@@ -167,7 +167,7 @@ module BWX_CustomBarDefinition
     end
   end
 end
-include BWX::BWX_CustomBarDefinition
+include BWX_CustomBarDefinition
 
 class Sleek_Gauge
   #=============================================================================
