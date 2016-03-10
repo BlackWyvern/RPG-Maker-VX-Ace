@@ -3,8 +3,8 @@
   Black Wyvern Arts - RPGMaker-X Chrono Menu
   Author: Black Wyvern
   Created: 03/02/16
-  Updated: 03/04/16
-  Version: 1.0
+  Updated: 03/09/16
+  Version: 1.1
 #===============================================================================
   *** Only for RPG Maker VX Ace. ***
   ------------------------------------------------------------------------------
@@ -69,7 +69,7 @@
 
 active = true # Turns the script on or off.
 if ($Global_Enable.nil? && active) || ($Global_Enable && active)
-  ($imported||={})["RPGM-X_Chrono"]=[true,1.0]
+  ($imported||={})["RPGM-X_Chrono"]=[true,1.1]
   # ^ Signifies that the script is installed to other scripts.
 
 module BWX
@@ -552,6 +552,12 @@ end
 # Window Base
 #==============================================================================
 class Window_Base < Window
+  alias chrono_init initialize
+  def initialize(*args)
+    chrono_init(*args)
+    @location = where_am_i?
+  end
+  
   #=============================================================================
   # Where Am I?
   #=============================================================================
@@ -559,7 +565,7 @@ class Window_Base < Window
     caller.each_index do |i|
       info = caller[i].split(":")
       script = $RGSS_SCRIPTS[info[0][1,4].to_i][1]
-      name = /(?:[Scene|scene])+[_]+\w+/.match(script).to_s
+      name = /(?:scene_)\w+/i.match(script).to_s
       next if name.empty? || name == "Scene_Base"
       return SceneManager.scene_is?(Object.const_get(name))
     end
@@ -575,7 +581,7 @@ class Window_Selectable < Window_Base
   #=============================================================================
   alias menu_ws_pcm process_cursor_move
   def process_cursor_move
-    return unless where_am_i?
+    return unless @location
     menu_ws_pcm
   end
 end
