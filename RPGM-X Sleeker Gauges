@@ -3,8 +3,8 @@
   Black Wyvern Arts - RPGMaker-X Sleeker Gauges
   Author: Black Wyvern
   Created: 02/01/16
-  Updated: 03/09/16
-  Version: 1.4
+  Updated: 03/12/16
+  Version: 1.5
 #===============================================================================
   *** Only for RPG Maker VX Ace. ***
   ------------------------------------------------------------------------------
@@ -204,7 +204,7 @@ end
 
 active = true # Turns the script on or off.
 if ($Global_Enable.nil? && active) || ($Global_Enable && active)
-  ($imported||={})["RPGM-X_Gauges"]=[1.4]
+  ($imported||={})["RPGM-X_Gauges"]=[true,1.5]
   # ^ Signifies that the script is installed to other scripts.
 
 #===============================================================================
@@ -225,7 +225,11 @@ module BWX
 
     DOUBLEBORDERS = false   # Draws two pixel borders if true. Else, only one.
 
-    MULTIPLESTYLE = false   # Set true if you wish to have styles for each bar
+    MULTIPLESTYLE = false   # Set true if you wish to have styles for each bar.
+    FRAMESKIPPING = 5       # This dramatically cuts down on lag, but also makes
+                            # Bar animations look choppy. Try to keep it under
+                            # 10. This will only update the gauge movements once
+                            # every x Frames.
     #===========================================================================
     # Available Styles = (   )   <   >   |   /   \
     # -- Will use DEFSTYLE for all the bars, unless MULTIPLESTYLE is true.
@@ -503,6 +507,7 @@ class Window_Base < Window
   # Get Gauge Style
   #=============================================================================
   def gauge_style(type)
+    return BWX::Vars::DEFSTYLE if !BWX::Vars::MULTIPLESTYLE
     case type
       when "hp";  return BWX::Vars::HP_STYLE
       when "mp";  return BWX::Vars::MP_STYLE
@@ -512,7 +517,6 @@ class Window_Base < Window
       when "par"; return BWX::Vars::PARSTYLE
       when "evl"; return BWX::Vars::EVLSTYLE
     end
-    return BWX::Vars::DEFSTYLE
   end
 
   #=============================================================================
@@ -520,9 +524,10 @@ class Window_Base < Window
   #=============================================================================
   def draw_gauge(x,y,w,r,c1,c2,p=:def,h=BWX::Vars::BARHEIGHT,s="",hdn=false)
     s = gauge_style(s) if s.empty?
+    r = r.round_to(2)
     @gauges = {} unless @gauges
-    if @gauges[[x,y]] && @gauges[[x,y]].width == w
-      @gauges[[x,y]].set_rate(r)
+    if (@gauges[[x,y]] && @gauges[[x,y]].width == w)
+      @gauges[[x,y]].set_rate(r) if r != @gauges[[x,y]].cur_rate
     else
       @gauges[[x,y]] = Sleek_Gauge.new(x,y,w,r,c1,c2,p,h,s,hdn,self)
     end
@@ -532,33 +537,33 @@ class Window_Base < Window
   # Draw Actor HP
   #=============================================================================
   def draw_actor_hp(a,x,y,w=124,p=:def,m=:dyn,h=BWX::Vars::BARHEIGHT,s="",
-        nt=false,hdn=false)
+        nt=false,hdn=false,notag=false)
 
     s = gauge_style("hp") if s.empty?; r = a.hp_rate
     draw_gauge(x,y,w,r,HP_Colors(1,r),HP_Colors(2,r),p,h,s,hdn)
-    @gauges[[x,y]].extras(Vocab::hp_a,a.hp,a.mhp,"hp",m,nt)
+    @gauges[[x,y]].extras(Vocab::hp_a,a.hp,a.mhp,"hp",m,nt,notag)
   end
   
   #=============================================================================
   # Draw Actor MP
   #=============================================================================
   def draw_actor_mp(a,x,y,w=124,p=:def,m=:dyn,h=BWX::Vars::BARHEIGHT,s="",
-        nt=false,hdn=false)
+        nt=false,hdn=false,notag=false)
 
     s = gauge_style("mp") if s.empty?; r = a.mp_rate
     draw_gauge(x,y,w,r,MP_Colors(1,r),MP_Colors(2,r),p,h,s,hdn)
-    @gauges[[x,y]].extras(Vocab::mp_a,a.mp,a.mmp,"mp",m,nt)
+    @gauges[[x,y]].extras(Vocab::mp_a,a.mp,a.mmp,"mp",m,nt,notag)
   end
   
   #=============================================================================
   # Draw Actor TP
   #=============================================================================
   def draw_actor_tp(a,x,y,w=124,p=:def,m=:dyn,h=BWX::Vars::BARHEIGHT,s="",
-        nt=false,hdn=false)
+        nt=false,hdn=false,notag=false)
 
     s = gauge_style("tp") if s.empty?; r = a.tp_rate
     draw_gauge(x,y,w,r,TP_Colors(1,r),TP_Colors(2,r),p,h,s,hdn)
-    @gauges[[x,y]].extras(Vocab::tp_a,a.tp,a.mtp,"tp",m,nt)
+    @gauges[[x,y]].extras(Vocab::tp_a,a.tp,a.mtp,"tp",m,nt,notag)
   end
   
   #=============================================================================
@@ -566,7 +571,6 @@ class Window_Base < Window
   #=============================================================================
   def draw_actor_xp(a,x,y,w=124,p=:def,m=:dyn,h=BWX::Vars::BARHEIGHT,s="",
         nt=false,hdn=false)
-
     s = gauge_style("xp") if s.empty?; r = a.tp_rate
     draw_gauge(x,y,w,r,XP_Colors(1,r),XP_Colors(2,r),p,h,s,hdn)
     if(a.level != a.max_level)
@@ -596,7 +600,7 @@ class Window_Base < Window
       
     s = gauge_style("par") if s.empty?;
     draw_gauge(x,y,w,r,SubColors(1,r),SubColors(2,r),p,h,s,hdn)
-    @gauges[[x,y]].type(spm,m)
+    @gauges[[x,y]].extras("",0,0,spm,m,nt)
   end
   
   #=============================================================================
@@ -627,35 +631,39 @@ end
 #===============================================================================
 class Sleek_Gauge
   attr_accessor :cur_val
+  attr_accessor :cur_rate
   attr_accessor :width
+  attr_accessor :type
   #=============================================================================
   # Initialize
   #=============================================================================
   def initialize(x,y,w,r,c1,c2,p,h,s,hdn,win)
     @x = x; @y = y
-    @y+=10 if p == :def
-    @y+=12 if p == :up
-    @y+=2 if p == :down
     @width = w
-    @cur_rate = @max_rate = r
+    @cur_rate = @max_rate = r.is_a?(String) ? eval(@eval_rate) : r.round_to(2)
     @color1 = c1; @color2 = c2
     @pos = p; @window = win
     @speed = @speed_rate = 0
     @height = h; @fall_sprites = []
     @style = s; @mode = :dyn; @hidden = hdn
-    @cur_rate = @max_rate = eval(@eval_rate = r) if r.is_a?(String)
     @color1 = eval(@eval_col1 = @color1) if @color1.is_a?(String)
     @color2 = eval(@eval_col2 = @color2) if @color2.is_a?(String)
+    @frame = 0
+    @frameskip = BWX::Vars::FRAMESKIPPING
   end
   
   #=============================================================================
   # Update
   #=============================================================================
   def update
-    update_fall_sprites if @mode == :dyn
+    @frame += 1
+    return unless @frame % @frameskip == 0
+    @frame = 0 if @frame > 100
+    
+    update_fall_sprites if !@fall_sprites.empty?
     @cur_rate; @max_rate
     @cur_val; @set_val
-    return if (@cur_rate == @max_rate && @cur_val == @set_val && @mode == :dyn)
+    return if (@cur_rate == @max_rate && @cur_val == @set_val)
     @cur_rate -= @speed_rate if @cur_rate > @max_rate
     @cur_rate += @speed_rate if @cur_rate < @max_rate
     @cur_rate = @max_rate if (@cur_rate - @max_rate).abs < @speed_rate
@@ -666,6 +674,7 @@ class Sleek_Gauge
       @cur_val += @speed if @cur_val < @set_val
       @cur_val = @set_val if (@cur_val-@set_val).abs < @speed
       @cur_val = @set_val if BWX::Vars::STATICNUMBERS
+      @cur_val = @cur_val
     end
     refresh
   end
@@ -696,7 +705,6 @@ class Sleek_Gauge
   def refresh
     return if (@hidden && @cur_rate == 0) &&
       ((@set_val.nil? && @max_val.nil?) || (@set_val == 0 && @max_val == 0))
-    
     @vocab.nil? ? @vocab = "" : @vocab
     txrec = @window.text_size(@vocab) unless @type == "eval"
     txrec = @window.text_size(
@@ -707,7 +715,7 @@ class Sleek_Gauge
     (y -= txrec.height/1.5) if @pos == :up
     (y += @height-2) if @pos == :down
 
-    if @mode == :dyn && @width > 100
+    if @mode == :dyn && @width > 100 && !@notag && !@notext
       rect1=Rect.new(@x,y,txrec.width,txrec.height) if@pos == :def
       rect1=Rect.new(@x,y,txrec.width,txrec.height) if@pos == :up
       rect1=Rect.new(@x,y,txrec.width,txrec.height) if@pos == :down
@@ -718,7 +726,7 @@ class Sleek_Gauge
     txrec = @window.text_size(@display)
     xr = @x + @width - txrec.width
     txrec.height -= 4
-    if @mode == :dyn
+    if @mode == :dyn && !@notext
       rect2=Rect.new(xr,y,txrec.width,txrec.height) if @pos == :def
       rect2=Rect.new(xr,y,txrec.width,txrec.height) if @pos == :up
       rect2=Rect.new(xr,y,txrec.width,txrec.height) if @pos == :down
@@ -751,7 +759,7 @@ class Sleek_Gauge
     @cur_rate = @cur_rate.clamp 0,1
     @max_rate = @max_rate.clamp 0,1
     draw_gauge(@x,@y,@width,@cur_rate,@color1,@color2,@style,@height)
-    draw_text(@x,@y,@width)
+    draw_text(@x,@y,@width) unless @notext
   end
 
   #=============================================================================
@@ -760,8 +768,7 @@ class Sleek_Gauge
   def set_rate(rate)
     reset_speed = rate != @max_rate
     @max_rate = rate
-    @speed_rate = (@cur_rate-@max_rate).abs / 60 if reset_speed
-
+    @speed_rate = (@cur_rate-@max_rate).abs / (60/@frameskip) if reset_speed
     if BWX::Vars::GAUGEMOVSTYLE == :fall && reset_speed
       if @cur_rate > @max_rate
         sprite = Sprite.new()
@@ -787,27 +794,21 @@ class Sleek_Gauge
         end
       end
     end
-    refresh
+    refresh if (@set_rate != @max_rate && @cur_rate != @max_rate)
   end
 
   #=============================================================================
-  # Set Type
-  #=============================================================================
-  def type(type, mode = :dyn)
-    @type = type
-    @mode = mode
-  end
-  
-  #=============================================================================
   # Set Extra Params
   #=============================================================================
-  def extras(vocab,set_val,max_val=0,type="",mode=:dyn,notext=false)
+  def extras(vocab,set_val,max_val=0,type="",mode=:dyn,notext=false,notag=false)
     @type = type
     @mode = mode
-    return if notext
+    @notag = notag
+    @notext = notext
+
     @vocab = vocab
     @max_val = max_val
-    set_val = set_val.to_f
+    set_val = set_val
     reset_speed = set_val != @set_val
     if @cur_val
       @set_val = set_val
@@ -815,8 +816,9 @@ class Sleek_Gauge
       @cur_val = set_val
       @set_val = set_val
     end
-    @speed = (@cur_val-@set_val).abs / 60 if reset_speed
+    @speed = (@cur_val-@set_val).abs / (60/@frameskip) if reset_speed
     @speed = 1 if @speed == 0
+
     refresh
   end
   
@@ -833,11 +835,11 @@ class Sleek_Gauge
     (y += @height-3) if @pos == :down
     @vocab.nil? ? @vocab = "" : @vocab
     
-    if w > 100
+    if w > 100 && !@notag && !@notext
       @window.change_color(@window.system_color)
       @window.draw_text(x,y,txrec.width,txrec.height,@vocab) if
-        @type != "eval" #
-      @window.draw_text_ex(x,y,eval(@vocab)) if @type == "eval" #
+        @type != "eval"
+      @window.draw_text_ex(x,y,eval(@vocab)) if @type == "eval"
       @window.change_color(
         ((@cur_val < @max_val / 4) && (@type == "hp" || @type == "sp")) ? 
           @window.crisis_color : @window.normal_color)
@@ -865,7 +867,7 @@ class Sleek_Gauge
     
     txrec = @window.text_size(@display)
     xr = x + w - txrec.width
-    @window.draw_text(xr,y,txrec.width,txrec.height,@display,2) #
+    @window.draw_text(xr,y,txrec.width,txrec.height,@display,2) unless @notext
     @window.change_color(@window.normal_color)
   end
   
@@ -903,14 +905,14 @@ class Sleek_Gauge
       if rate != @max_rate
         case BWX::Vars::GAUGEMOVSTYLE
           when :fancy
-            color1.alpha -= 150; color2.alpha -= 150
+            color1.alpha -= 50; color2.alpha -= 50
             if rate > @max_rate
               @window.contents.gradient_fill_rect(x,y,fill_w,h,color1,color2)
-              color1.alpha += 150; color2.alpha += 150
+              color1.alpha += 50; color2.alpha += 50
               @window.contents.gradient_fill_rect(x,y,fill_ww,h,color1,color2)
             else rate < @max_rate
               @window.contents.gradient_fill_rect(x,y,fill_ww,h,color1,color2)
-              color1.alpha += 150; color2.alpha += 150
+              color1.alpha += 50; color2.alpha += 50
               @window.contents.gradient_fill_rect(x,y,fill_w,h,color1,color2)
             end
           when :normal
@@ -975,17 +977,17 @@ class Sleek_Gauge
         if rate != @max_rate
           case BWX::Vars::GAUGEMOVSTYLE
             when :fancy
-              color1.alpha -= 150; color2.alpha -= 150
+              color1.alpha -= 50; color2.alpha -= 50
               if rate > @max_rate
                 @window.contents.gradient_fill_rect(x+a1,y+i,fill_w,1,
                   color1,color2)
-                color1.alpha += 150; color2.alpha += 150
+                color1.alpha += 50; color2.alpha += 50
                 @window.contents.gradient_fill_rect(x+a1,y+i,fill_ww,1,
                   color1,color2)
               else rate < @max_rate
                 @window.contents.gradient_fill_rect(x+a1,y+i,fill_ww,1,
                   color1,color2)
-                color1.alpha += 150; color2.alpha += 150
+                color1.alpha += 50; color2.alpha += 50
                 @window.contents.gradient_fill_rect(x+a1,y+i,fill_w,1,
                   color1,color2)
               end
@@ -1036,22 +1038,19 @@ class Sleek_Gauge
   end
 end
 
-
 #===============================================================================
 # Yanfly Battle Engine Compatability
 #===============================================================================
-unless !$imported["YEA-BattleEngine"]
+if $imported["YEA-BattleEngine"]
 #===============================================================================
-# Window Battle Status
+# Window Gauge Pane
 #===============================================================================
-class Window_BattleStatus < Window_Selectable
-  #=============================================================================
-  # Initialize
-  #=============================================================================
-  def initialize
-    super(0, 0, window_width, window_height)
+class Window_GaugePane < Window_Selectable
+  def initialize(x,y,w,h)
+    super(x,y,w,h)
     self.openness = 0
-    @party = $game_party.battle_members.clone
+    @frameskip = 0
+    update
   end
   
   #=============================================================================
@@ -1059,122 +1058,203 @@ class Window_BattleStatus < Window_Selectable
   #=============================================================================
   def update
     super
-    @DisplayWindow.update if @DisplayWindow
-    return if @party == $game_party.battle_members
-    @party = $game_party.battle_members.clone
-    refresh
+    @frameskip += 1
+    draw_all_items if @frameskip % 5 == 0
+    @frameskip = 0 if @frameskip > 100
   end
   
+  #=============================================================================
+  # Col Max
+  #=============================================================================
+  def col_max; return $game_party.max_battle_members; end
+  
+  #=============================================================================
+  # Battle Members
+  #=============================================================================
+  def battle_members; return $game_party.battle_members; end
+  
+  #=============================================================================
+  # Actor
+  #=============================================================================
+  def actor; return battle_members[@index]; end
+  
+  #=============================================================================
+  # Draw TP?
+  #=============================================================================
+  def draw_tp?(actor)
+    return actor.draw_tp?
+  end
+  
+  #=============================================================================
+  # Draw MP?
+  #=============================================================================
+  def draw_mp?(actor)
+    return actor.draw_mp?
+  end
+  
+  #=============================================================================
+  # Item Max
+  #=============================================================================
+  def item_max
+    return $game_party.max_battle_members
+  end
+
+  #=============================================================================
+  # Item Rect
+  #=============================================================================
+  def item_rect(index)
+    rect = Rect.new
+    rect.width = contents.width / $game_party.max_battle_members
+    rect.height = contents.height
+    rect.x = index * rect.width
+    if YEA::BATTLE::BATTLESTATUS_CENTER_FACES
+      rect.x += (contents.width - $game_party.members.size * rect.width) / 2
+    end
+    rect.y = 0
+    return rect
+  end
+  
+  #=============================================================================
+  # Battle Members
+  #=============================================================================
+  def battle_members
+    return $game_party.battle_members
+  end
+
+  #=============================================================================
+  # Draw Item
+  #=============================================================================
+  def draw_item(index)
+    actor = battle_members[index]
+    return if actor.nil?
+    rect = item_rect(index)
+    sx = rect.x+2
+    rw = rect.width-4
+    dw = rw/2-4
+    dy = line_height*3+3
+    contents.font.size = YEA::BATTLE::BATTLESTATUS_TEXT_FONT_SIZE
+    if (draw_tp?(actor) && draw_mp?(actor))
+      draw_actor_tp(actor, sx,    dy, dw, :down)
+      draw_actor_mp(actor, sx+dw, dy, dw, :down)
+    elsif (draw_tp?(actor) && !draw_mp?(actor))
+      draw_actor_tp(actor, sx,    dy, rw, :down)
+    elsif (!draw_tp?(actor) && draw_mp?(actor))
+      draw_actor_mp(actor, sx,    dy, rw, :down)
+    end
+    draw_misc_gauges(actor,index,sx,rw)
+  end
+  
+  #=============================================================================
+  # Draw Misc Gauges (For easier modding)
+  #=============================================================================
+  def draw_misc_gauges(actor,index,sx,rw)
+    draw_actor_hp(actor,sx,line_height*2+4,rw,:up)
+  end
+end
+end
+
+#===============================================================================
+# Window Battle Status
+#===============================================================================
+class Window_BattleStatus < Window_Selectable
+  if $imported["YEA-BattleEngine"]
+
+  #=============================================================================
+  # Update
+  #=============================================================================
+	  def update
+		super
+    if @SGDisplay_Window
+      @SGDisplay_Window.x = self.x
+      @SGDisplay_Window.y = self.y
+      @SGDisplay_Window.width = self.width
+      @SGDisplay_Window.height = self.height
+      @SGDisplay_Window.openness = self.openness
+      @SGDisplay_Window.update
+    end
+		return if @party == $game_party.battle_members
+		@party = $game_party.battle_members.clone
+		refresh
+    end
+
   #=============================================================================
   # Alias: Refresh
   #=============================================================================
-  alias ynfbs_refresh refresh
-  def refresh
-    if !@DisplayWindow
-      @DisplayWindow = Window_Base.new(self.x,self.y,self.width,self.height)
-      @DisplayWindow.viewport = self.viewport
-      @DisplayWindow.opacity = 0
-      @DisplayWindow.contents.font.size =
-        YEA::BATTLE::BATTLESTATUS_TEXT_FONT_SIZE
+	  alias ynfbs_refresh refresh
+	  def refresh
+		if !@SGDisplay_Window
+		  @SGDisplay_Window=Window_GaugePane.new(self.x,self.y,self.width,self.height)
+		  @SGDisplay_Window.viewport = self.viewport
+		  @SGDisplay_Window.opacity = 0
+      @SGDisplay_Window.openness = self.openness
+		  @SGDisplay_Window.contents.font.size =
+			YEA::BATTLE::BATTLESTATUS_TEXT_FONT_SIZE
+		end
+		ynfbs_refresh
     end
-    @DisplayWindow.contents.clear
-    ynfbs_refresh
-  end
-  
-  if !$imported["RPGM-X_Dragon"]
+
   #=============================================================================
-  # Draw Item (If not using RPGM-X Dragon Battle System)
+  # Draw Item
   #=============================================================================
     def draw_item(index)
-      return if index.nil?
-      clear_item(index)
-      @DisplayWindow.contents.clear_rect(item_rect(index)) if @DisplayWindow
       actor = battle_members[index]
-      rect = item_rect(index)
       return if actor.nil?
-      draw_actor_face(actor, rect.x+2, rect.y+2, actor.alive?)
-      draw_actor_name(actor, rect.x, rect.y, rect.width-8)
-      draw_actor_action(actor, rect.x, rect.y)
-      draw_actor_icons(actor, rect.x, line_height*1, rect.width)
-      gx = YEA::BATTLE::BATTLESTATUS_HPGAUGE_Y_PLUS
-      contents.font.size = YEA::BATTLE::BATTLESTATUS_TEXT_FONT_SIZE
-      if (draw_tp?(actor) && draw_mp?(actor))
-        dw = (rect.width-8)/2
-        draw_actor_tp(actor, rect.x+8, line_height*3+3, dw, :down)
-        draw_actor_mp(actor, rect.x+rect.width/2+4, line_height*3+3, dw, :down)
-      elsif (draw_tp?(actor) && !draw_mp?(actor))
-        draw_actor_tp(actor, rect.x+8, line_height*3+3, rect.width, :down)
-      elsif (!draw_tp?(actor) && draw_mp?(actor))
-        draw_actor_mp(actor, rect.x+8, line_height*3+3, rect.width, :down)
-      end
-      draw_actor_hp(
-        actor,rect.x+2,line_height*2+7,rect.width-8, :up)
+      rect = item_rect(index)
+      contents.clear_rect(rect)
+      sx = rect.x
+      sy = rect.y
+      rw = rect.width-2
+      dw = rw/2-2
+      dy = line_height*3+3
+      draw_actor_face(actor,    sx+2, sy+2, actor.alive?)
+      draw_actor_name(actor,    sx,   sy, rect.width-8)
+      draw_actor_action(actor,  sx,   sy)
+      draw_actor_icons(actor,   sx,   line_height*1, rw)
+      @SGDisplay_Window.draw_item(index)
     end
   else
+
   #=============================================================================
   # Draw Gauge Area (with TP) (Vanilla)
   #=============================================================================
-    def draw_gauge_area_with_tp(rect, actor)
-      #rect.y += 10
+	  def draw_gauge_area_with_tp(rect, actor)
       draw_actor_hp(actor, rect.x + 0, rect.y, 72)
       draw_actor_mp(actor, rect.x + 82, rect.y, 64)
       draw_actor_tp(actor, rect.x + 156, rect.y, 64)
-    end
+	  end
 
   #=============================================================================
   # Draw Gauge Area (without TP) (Vanilla)
   #=============================================================================
-    def draw_gauge_area_without_tp(rect, actor)
-      #rect.y += 10
+	  def draw_gauge_area_without_tp(rect, actor)
       draw_actor_hp(actor, rect.x + 0, rect.y, 134)
       draw_actor_mp(actor, rect.x + 144,  rect.y, 76)
-    end
+	  end
   end
-  
+
   #=============================================================================
   # Draw Actor Name
   #=============================================================================
   def draw_actor_name(actor, dx, dy, dw = 112)
-    @DisplayWindow.reset_font_settings
-    @DisplayWindow.contents.font.size = YEA::BATTLE::BATTLESTATUS_NAME_FONT_SIZE
-    @DisplayWindow.change_color(hp_color(actor))
-    @DisplayWindow.draw_text(dx+24, dy, dw-24, line_height, actor.name)
+    reset_font_settings
+    contents.font.size = YEA::BATTLE::BATTLESTATUS_NAME_FONT_SIZE
+    change_color(hp_color(actor))
+    draw_text(dx+24, dy, dw-24, line_height, actor.name)
   end
 
   #=============================================================================
   # Draw Actor Action
   #=============================================================================
   def draw_actor_action(actor, dx, dy)
-    @DisplayWindow.draw_icon(action_icon(actor), dx, dy)
+    draw_icon(action_icon(actor), dx, dy)
   end
 
-  #=============================================================================
-  # Draw Actor HP
-  #=============================================================================
-  def draw_actor_hp(*args)
-    @DisplayWindow.draw_actor_hp(*args)
-  end
-    
-  #=============================================================================
-  # Draw Actor MP
-  #=============================================================================
-  def draw_actor_mp(*args)
-    @DisplayWindow.draw_actor_mp(*args)
-  end
-    
-  #=============================================================================
-  # Draw Actor TP
-  #=============================================================================
-  def draw_actor_tp(*args)
-    @DisplayWindow.draw_actor_tp(*args)
-  end
-  
   #=============================================================================
   # Alias: Close
   #=============================================================================
   alias ynfbs_close close
   def close
-    @DisplayWindow.close if @DisplayWindow
+    @SGDisplay_Window.close if @SGDisplay_Window
     ynfbs_close
   end
   
@@ -1183,7 +1263,7 @@ class Window_BattleStatus < Window_Selectable
   #=============================================================================
   alias ynfbs_hide hide
   def hide
-    @DisplayWindow.hide if @DisplayWindow
+    @SGDisplay_Window.hide if @SGDisplay_Window
     ynfbs_hide
   end
   
@@ -1192,7 +1272,7 @@ class Window_BattleStatus < Window_Selectable
   #=============================================================================
   alias ynfbs_show show
   def show
-    @DisplayWindow.show if @DisplayWindow
+    @SGDisplay_Window.show if @SGDisplay_Window
     ynfbs_show
   end
 end
@@ -1201,52 +1281,51 @@ end
 # Window BattleStatusAid
 #===============================================================================
 class Window_BattleStatusAid < Window_BattleStatus
+  if $imported["YEA-BattleEngine"]
   #=============================================================================
   # Alias: Update
   #=============================================================================
-  alias ynfbsa_update update
-  def update
-    @DisplayWindow.update if @DisplayWindow
-    ynfbsa_update
-  end
-  
+    alias ynfbsa_update update
+    def update
+      ynfbsa_update
+    end
+
   #=============================================================================
   #  Alias: Hide
   #=============================================================================
-  alias ynfbsa_hide hide
-  def hide
-    @DisplayWindow.hide if @DisplayWindow
-    ynfbsa_hide
-  end
+    alias ynfbsa_hide hide
+    def hide
+      @SGDisplay_Window.hide if @SGDisplay_Window
+      ynfbsa_hide
+    end
   
   #=============================================================================
   #  Alias: Show
   #=============================================================================
-  alias ynfbsa_show show
-  def show
-    refresh
-    @DisplayWindow.show
-    ynfbsa_show
-  end
-  
+    alias ynfbsa_show show
+    def show
+      refresh
+      @SGDisplay_Window.show
+      ynfbsa_show
+    end
+
   #=============================================================================
   #  Alias: Refresh
   #=============================================================================
-  alias ynfbs_refresh refresh
-  def refresh
-    if !@DisplayWindow
-      @DisplayWindow = Window_Base.new(self.x,self.y,self.width,self.height)
-      @DisplayWindow.viewport = self.viewport
-      @DisplayWindow.opacity = 0
-      @DisplayWindow.contents.font.size =
-        YEA::BATTLE::BATTLESTATUS_TEXT_FONT_SIZE
-      @DisplayWindow.hide
-    end
-    @DisplayWindow.contents.clear
-    ynfbs_refresh
-  end
-  
-end
+	  alias ynfbs_refresh refresh
+	  def refresh
+		if !@SGDisplay_Window
+		  @SGDisplay_Window =Window_GaugePane.new(self.x,self.y,self.width,self.height)
+		  @SGDisplay_Window.viewport = self.viewport
+		  @SGDisplay_Window.opacity = 0
+		  @SGDisplay_Window.contents.font.size =
+			YEA::BATTLE::BATTLESTATUS_TEXT_FONT_SIZE
+		  @SGDisplay_Window.hide
+		end
+		@SGDisplay_Window.contents.clear
+		ynfbs_refresh
+	  end
+	end
 end
 #===============================================================================
 # EOF
