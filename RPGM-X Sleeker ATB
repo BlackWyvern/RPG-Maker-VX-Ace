@@ -4,7 +4,7 @@
   Author: Black Wyvern
   Created: 03/11/16
   Updated: 03/13/16
-  Version: 1.0
+  Version: 1.1
 #===============================================================================
   *** Only for RPG Maker VX Ace. ***
   ------------------------------------------------------------------------------
@@ -75,7 +75,7 @@ end
 
 if active
 #if (!$Global_Enable.nil? && active)
-  ($imported||={})["RPGM-X_Sleek_ATB"]=[true,1.0]
+  ($imported||={})["RPGM-X_Sleek_ATB"]=[true,1.1]
   # ^ Signifies that the script is installed to other scripts.
 
 module Vocab
@@ -189,6 +189,65 @@ class Window_Base < Window
     draw_gauge(x,y,w,r,ATB_Colors(1,1,r),ATB_Colors(1,2,r),p,h,s,hdn)
     @gauges[[x,y]].extras(Vocab::ap_a,dap_rate(a),1,t,m,true,true)
   end
+  
+  #=============================================================================
+  # Fetch ATB System
+  #=============================================================================
+  def fetch_atb_system(a,x,y,w,*args)
+    found_atb_system = false
+    if $imported["YSA-CATB"] || $imported[:mog_atb_system] ||
+       $imported[:ve_active_time_battle] || @ccwinter_atb
+        found_atb_system = true
+        draw_actor_atb(a,x,y,w,*args) unless casting?(a)
+        draw_actor_catb(a,x,y,w,*args) if casting?(a)
+    end
+    return found_atb_system
+  end
+
+  #=============================================================================
+  # Actor Casting?
+  #=============================================================================           
+  def casting?(a)
+    if $imported["YSA-CATB"]
+      return true if a.atb_castrate > 0; end
+    if $imported[:mog_atb_system]
+      return true if !a.atb_cast.empty?; end
+    if $imported[:ve_active_time_battle]
+      return true if a.cast_action?; end
+    if @ccwinter_atb 
+      return true if a.chanting?; end
+    return false
+  end
+
+  #=============================================================================
+  # AP/ATB Rate
+  #=============================================================================
+  def ap_rate(a)
+    value = 0
+    value = (a.atb_chargerate) if $imported["YSA-CATB"]
+    value = (a.atb / a.atp_max.to_f) if $imported[:mog_atb_system]
+    value = (a.atb / a.max_atp.to_f) if $imported[:ve_active_time_battle]
+    value = (a.ap / ATB::MAX_AP.to_f) unless @ccwinter_atb.nil?
+    value = stamina_rate if defined?(CBS::MAX_STAMINA)
+    return value
+  end
+
+  #=============================================================================
+  # Casting Rate
+  #=============================================================================
+  def dap_rate(a)
+    value = 0
+    value = a.atb_castrate if $imported["YSA-CATB"]
+    if $imported[:mog_atb_system]
+      current = a.atb_cast[1]
+      maximum = a.atb_cast[2] if @battler.atb_cast[2] != 0
+      maximum = a.atb_cast[0].speed.abs if @battler.atb_cast[2] == 0
+      value = current/maximum.to_f
+    end   
+    value = (-a.atb / a.max_atb.to_f) if $imported[:ve_active_time_battle]
+    value = (a.chant_count / a.max_chant_count.to_f) unless @ccwinter_atb.nil?
+    return value
+  end
 end
 
 #===============================================================================
@@ -266,65 +325,6 @@ class Window_GaugePane < Window_Selectable
     ry -= BWX::Vars::BARHEIGHT+1 if fetch_atb_system(actor,sx,ry,rw)
     draw_actor_hp(actor,sx,ry,rw,:up)
   end
-  
-  #=============================================================================
-  # Fetch ATB System
-  #=============================================================================
-  def fetch_atb_system(a,x,y,w,*args)
-    found_atb_system = false
-    if $imported["YSA-CATB"] || $imported[:mog_atb_system] ||
-       $imported[:ve_active_time_battle] || @ccwinter_atb
-        found_atb_system = true
-        draw_actor_atb(a,x,y,w,*args) unless casting?(a)
-        draw_actor_catb(a,x,y,w,*args) if casting?(a)
-    end
-    return found_atb_system
-  end
-
-  #=============================================================================
-  # Actor Casting?
-  #=============================================================================           
-  def casting?(a)
-    if $imported["YSA-CATB"]
-      return true if a.atb_castrate > 0; end
-    if $imported[:mog_atb_system]
-      return true if !a.atb_cast.empty?; end
-    if $imported[:ve_active_time_battle]
-      return true if a.cast_action?; end
-    if @ccwinter_atb 
-      return true if a.chanting?; end
-    return false
-  end
-
-  #=============================================================================
-  # AP/ATB Rate
-  #=============================================================================
-  def ap_rate(a)
-    value = 0
-    value = (a.atb_chargerate) if $imported["YSA-CATB"]
-    value = (a.atb / a.atp_max.to_f) if $imported[:mog_atb_system]
-    value = (a.atb / a.max_atp.to_f) if $imported[:ve_active_time_battle]
-    value = (a.ap / ATB::MAX_AP.to_f) unless @ccwinter_atb.nil?
-    value = stamina_rate if defined?(CBS::MAX_STAMINA)
-    return value
-  end
-
-  #=============================================================================
-  # Casting Rate
-  #=============================================================================
-  def dap_rate(a)
-    value = 0
-    value = a.atb_castrate if $imported["YSA-CATB"]
-    if $imported[:mog_atb_system]
-      current = a.atb_cast[1]
-      maximum = a.atb_cast[2] if @battler.atb_cast[2] != 0
-      maximum = a.atb_cast[0].speed.abs if @battler.atb_cast[2] == 0
-      value = current/maximum.to_f
-    end   
-    value = (-a.atb / a.max_atb.to_f) if $imported[:ve_active_time_battle]
-    value = (a.chant_count / a.max_chant_count.to_f) unless @ccwinter_atb.nil?
-    return value
-  end  
 end
 #===============================================================================
 # EOF
