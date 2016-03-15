@@ -4,7 +4,7 @@
   Author: Black Wyvern
   Created: 02/01/16
   Updated: 03/13/16
-  Version: 1.5
+  Version: 1.51
 #===============================================================================
   *** Only for RPG Maker VX Ace. ***
   ------------------------------------------------------------------------------
@@ -209,7 +209,7 @@ end
 
 active = true # Turns the script on or off.
 if ($Global_Enable.nil? && active) || ($Global_Enable && active)
-  ($imported||={})["RPGM-X_Gauges"]=[true,1.5]
+  ($imported||={})["RPGM-X_Gauges"]=[true,1.51]
   # ^ Signifies that the script is installed to other scripts.
 
 #===============================================================================
@@ -237,11 +237,11 @@ module BWX
                             # @type of the gauge you wish to maintain.
                             # If you are using Sleeker ATB, this will be handled
                             # for you.
-    FRAMESKIPPING = 5       # This dramatically cuts down on realtimee lag, but 
-                            # also makes Bar Animations look choppy. Try to keep
-                            # it under 10. This will only update the gauge 
-                            # movements once every x Frames. Also appliies to
-                            # popups in YEA Battle Engine.
+    FRAMESKIPPING = 5       # This dramatically cuts down on rendering lag, but 
+                            # also makes bar animations look slightly choppy.
+                            # Try to keep it under 10. This will only update the
+                            # gauge movements once every x update calls.
+                            # Also appliies to popups in YEA Battle Engine.
     #===========================================================================
     # Available Styles = (   )   <   >   |   /   \
     # -- Will use DEFSTYLE for all the bars, unless MULTIPLESTYLE is true.
@@ -699,13 +699,18 @@ class Sleek_Gauge
     @style = s; @mode = :dyn; @hidden = hdn
     @color1 = eval(@eval_col1 = @color1) if @color1.is_a?(String)
     @color2 = eval(@eval_col2 = @color2) if @color2.is_a?(String)
-    @latch = false
+    @latch = false; @frame = -1
   end
   
   #=============================================================================
   # Update
   #=============================================================================
   def update
+    if BWX::Vars::FRAMESKIPPING != 0
+      @frame += 1
+      return unless @frame % BWX::Vars::FRAMESKIPPING == 0
+      @frame = 0 if @frame > 100
+    end
     update_fall_sprites if !@fall_sprites.empty?
     @cur_rate; @max_rate
     @cur_val; @set_val
@@ -805,6 +810,7 @@ class Sleek_Gauge
       end
       @cur_rate = @cur_rate.clamp 0,1
       @max_rate = @max_rate.clamp 0,1
+      
       draw_gauge(@x,@y,@width,@cur_rate,@color1,@color2,@style,@height)
       draw_text(@x,@y,@width) unless @notext
     end
@@ -818,7 +824,11 @@ class Sleek_Gauge
   def set_rate(rate)
     reset_speed = rate != @max_rate
     @max_rate = rate
-    @speed_rate = (@cur_rate-@max_rate).abs / (60.0) if reset_speed
+    
+    movetime = 60.0
+    movetime /= BWX::Vars::FRAMESKIPPING if BWX::Vars::FRAMESKIPPING != 0
+    
+    @speed_rate = (@cur_rate-@max_rate).abs / (movetime) if reset_speed
     if BWX::Vars::GAUGEMOVSTYLE == :fall && reset_speed
       if @cur_rate > @max_rate
         sprite = Sprite.new()
@@ -874,7 +884,9 @@ class Sleek_Gauge
       @cur_val = set_val
       @set_val = set_val
     end
-    @speed = (@cur_val-@set_val).abs / (60.0) if reset_speed
+    movetime = 60.0
+    movetime /= BWX::Vars::FRAMESKIPPING if BWX::Vars::FRAMESKIPPING != 0
+    @speed = (@cur_val-@set_val).abs / (movetime) if reset_speed
     @speed = 1 if @speed == 0
 
     update
@@ -885,6 +897,7 @@ class Sleek_Gauge
   #=============================================================================
   def draw_text(x, y, w)
     return unless @cur_val
+    
     txrec = @window.text_size(@vocab) unless @type == "eval"
     txrec = @window.text_size(
       eval(@vocab.gsub(/((\e)|(\i))([A-Z]+)(\[\d\])/,""))) if @type == "eval"
@@ -1120,12 +1133,12 @@ class Sprite_Popup < Sprite_Base
   # Update
   #=============================================================================
   def update
-    super
     if BWX::Vars::FRAMESKIPPING != 0
       @frame += 1
-      return unless @frame % BWX::Vars::FRAMESKIPPING == 0
+      return unless @frame % BWX::Vars::FRAMESKIPPING*2 == 0
       @frame = 0 if @frame > 100
     end
+    super
     #---
     if @flags.include?("critical") && YEA::BATTLE::FLASH_CRITICAL
       @hue_duration = 2 if @hue_duration == nil || @hue_duration == 0
@@ -1174,12 +1187,6 @@ class Window_GaugePane < Window_Selectable
   def update
     super
     return if self.openness != 255
-    
-    if BWX::Vars::FRAMESKIPPING != 0
-      @frame += 1
-      return unless @frame % BWX::Vars::FRAMESKIPPING == 0
-      @frame = 0 if @frame > 100
-    end
       
     for gauges in @gauges
       for item in gauges
