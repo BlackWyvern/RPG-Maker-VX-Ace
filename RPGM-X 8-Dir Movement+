@@ -254,7 +254,6 @@ if BWX::Vars::EXTENDED_SPRITES
     def turn_toward_character(character)
       sx = (distance_x_from(character.x).to_tri).to_i
       sy = (distance_y_from(character.y).to_tri).to_i
-      Display(distance_x_from(character.x),distance_y_from(character.y),sx,sy)
       face_direction(sx,sy,true)
     end
     
