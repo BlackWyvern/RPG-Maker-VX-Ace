@@ -1,0 +1,279 @@
+=begin
+#===============================================================================
+  Black Wyvern Arts - RPGM-X 8 Directional Movement+
+  Author: Black Wyvern
+  Created: 09/14/13
+  Updated: 03/15/16
+  Version: 1.0
+#===============================================================================
+  *** Only for RPG Maker VX Ace. ***
+  ------------------------------------------------------------------------------
+  To install this script, open up your script editor and copy/paste this script
+  to an open slot below ▼ Materials but above ▼ Main. Remember to save.
+  
+  Terms of use:
+    1. Give credit where credit is due.
+    2. You may use my code in anything you like. Commercial, non-commercial.
+    3. If you edit my code in any way, please link back to the original source.
+    4. Support is always appreciated in form of gold, sacrificial virgins,
+        large quantaties of bacon (or other cooked meats), or free games.
+          I can be contacted at LuneTheWyvern@Gmail.com
+
+  Description:
+    Builds an array of possible moves around the character, then determines if
+    character should move diagonally when walking against a diagonal surface.
+    This function is meant to reproduce that from games like Chrono Trigger.
+    Allows diagonal movement in all other cases.
+    
+    Supports 8-Directional Spritesheets. (Optionally of course.)
+    Basically, what needs be done is instead of having 8 characters in a file,
+    you will need 4 characters with their diagonal facings next to it.
+    
+    Visit Hime's link for information on how to set those up.
+    It's down in the credits. She does a much better job explaining it than I.
+    
+    ►►► BIG NOTICE YOU SHOULD PROBABLY READ ◄◄◄
+    I'm more than fairly certain this would be incompatable with pixel movement
+    scripts. Not that those probably don't already do what mine do anyways,
+    but, you know; disclaimers and all.
+
+  Configuration:
+    - Enable/Disable extended sprite sheets.
+  
+  Instructions: Plug 'n' Play
+    - Nothing else really.
+
+  Optional:
+    - None
+
+  Dependencies:
+    - None
+  
+  Credits:
+    - Hime :: For her awesome 8-directional movement tutorial.
+      http://himeworks.com/2014/11/eight-directional-movement/
+#===============================================================================
+=end
+
+active = true # Turns the script on or off.
+if ($Global_Enable.nil? && active) || ($Global_Enable && active)
+  ($imported||={})["RPGM-X_8DirMove"]=[1.0,true]
+  # ^ Signifies that the script is installed to other scripts.
+
+#===============================================================================
+# BWX Sprite Setting
+#===============================================================================
+module BWX
+  module Vars
+    EXTENDED_SPRITES = true    # Enables/Disables non-orthogonal spritesheets.
+  end
+end
+
+#===============================================================================
+#   ►►► WARNING: YOU PROBABLY SHOULDN'T EDIT ANYTHING BELOW THIS POINT ◄◄◄
+#   ►►►  CUZ YEAH, THERE'S NOTHING REALLY CONFIGURABLE, AND IT DOESN'T ◄◄◄
+#   ►►►              LIKE IT WHEN YOU TOUCH IT THAT WAY.               ◄◄◄
+#===============================================================================
+
+#===============================================================================
+# Game Player
+#===============================================================================
+class Game_Player < Game_Character
+  #=============================================================================
+  # Move By Input
+  #=============================================================================
+  def move_by_input
+    return if !movable? || $game_map.interpreter.running?
+    return if Input.dir8 == 0
+    
+    movearray = []
+    movearray[7] = diagonal_passable?(x, y, 4, 8)
+    movearray[8] = passable?(x, y, 8)
+    movearray[9] = diagonal_passable?(x, y, 6, 8)
+    
+    movearray[4] = passable?(x, y, 4)
+    movearray[5] = nil #Character Position
+    movearray[6] = passable?(x, y, 6)
+
+    movearray[1] = diagonal_passable?(x, y, 4, 2)
+    movearray[2] = passable?(x, y, 2)
+    movearray[3] = diagonal_passable?(x, y, 6, 2)
+
+    case Input.dir8
+    #Linear
+    when 2
+      if movearray[2]; move_straight(2)
+      else
+        if    movearray[1] && movearray[3];   move_straight(2)
+        elsif movearray[1] && !movearray[3];  move_diagonal(4,2)
+        elsif !movearray[1] && movearray[3];  move_diagonal(6,2)
+        end
+      end
+    when 4
+      if movearray[4]; move_straight(4)
+      else
+        if    movearray[1] && movearray[7];   move_straight(4)
+        elsif movearray[1] && !movearray[7];  move_diagonal(4,2)
+        elsif !movearray[1] && movearray[7];  move_diagonal(4,8)
+        end
+      end
+    when 6
+      if movearray[6]; move_straight(6)
+      else
+        if    movearray[3] && movearray[9];   move_straight(6)
+        elsif movearray[3] && !movearray[9];  move_diagonal(6,2)
+        elsif !movearray[3] && movearray[9];  move_diagonal(6,8)
+        end
+      end
+    when 8
+      if movearray[8]; move_straight(8)
+      else
+        if    movearray[7] && movearray[9];   move_straight(8)
+        elsif movearray[7] && !movearray[9];  move_diagonal(4,8)
+        elsif !movearray[7] && movearray[9];  move_diagonal(6,8)
+        end
+      end
+    #Diags
+    when 1; move_diagonal(4, 2)
+    when 3; move_diagonal(6, 2)
+    when 7; move_diagonal(4, 8)
+    when 9; move_diagonal(6, 8)
+    end
+  end
+end
+
+#===============================================================================
+# Game Character Base
+#===============================================================================
+class Game_CharacterBase
+  #=============================================================================
+  # Distance Per Frame
+  #=============================================================================
+  def distance_per_frame
+    s = (2**real_move_speed/256.0)
+    return @direction % 2 == 0 ? s : s / 1.41421356237
+  end
+end
+
+if BWX::Vars::EXTENDED_SPRITES
+#===============================================================================
+# Game Character Base (Again, this time for the non-ortho views.)
+#===============================================================================
+  class Game_CharacterBase
+  #=============================================================================
+  # Move Diagional
+  #=============================================================================
+    def move_diagonal(cx, cy)
+      @move_succeed = diagonal_passable?(x, y, cx, cy)
+      if @move_succeed
+        @x = $game_map.round_x_with_direction(@x, cx)
+        @y = $game_map.round_y_with_direction(@y, cy)
+        @real_x = $game_map.x_with_direction(@x, reverse_dir(cx))
+        @real_y = $game_map.y_with_direction(@y, reverse_dir(cy))
+        increase_steps
+
+        case cx
+        when 4; set_direction(1) if cy == 2; set_direction(7) if cy == 8
+        when 6; set_direction(3) if cy == 2; set_direction(9) if cy == 8
+        end
+      end
+    end
+  end
+
+#===============================================================================
+# BWX Sprite Character
+#===============================================================================
+  class Sprite_Character < Sprite_Base
+  #=============================================================================
+  # Update Source Rectangle
+  #=============================================================================
+    def update_src_rect
+      if @tile_id == 0      
+        if @character.direction % 2 == 0
+          index = @character.character_index
+          pattern = @character.pattern < 3 ? @character.pattern : 1
+          sx = (index%4*3+pattern)*@cw
+          sy = (index/4*4+(@character.direction-2)/2)*@ch
+          self.src_rect.set(sx,sy,@cw,@ch)
+        else
+          index = @character.character_index + 1
+          pattern = @character.pattern < 3 ? @character.pattern : 1
+          sx = (index%4*3+pattern)*@cw
+          sy = (index/4*4+(((@character.direction*2)%10)-2)/2)*@ch
+          self.src_rect.set(sx,sy,@cw,@ch)
+        end
+      end
+    end
+  end
+
+#===============================================================================
+# Game Map (Yay logic)
+#===============================================================================
+  class Game_Map
+    def x_with_direction(x,d); x+(d%3==0?1: (d+2)%3==0?-1: 0); end
+    def y_with_direction(y,d); y+(d<4?1: d>6?-1: 0); end
+    def round_x_with_direction(x,d); round_x(x+(d%3==0?1:(d+2)%3==0?-1: 0)); end
+    def round_y_with_direction(y,d); round_y(y+(d<4?1: d>6?-1: 0)); end
+  end
+
+#===============================================================================
+# Game Character
+#===============================================================================
+  class Game_Character < Game_CharacterBase
+  #=============================================================================
+  # Turn Toward Character
+  #=============================================================================
+    def turn_toward_character(character)
+      sx = distance_x_from(character.x)
+      sy = distance_y_from(character.y)
+      
+      if sx > sy      
+        if sx == -sy;           set_direction(1)
+        elsif sx.abs > sy.abs;  set_direction(4)
+        else;                   set_direction(2)
+        end
+      else
+        if -sx == sy;           set_direction(9)
+        elsif -sx < sy
+          if sx == sy;          set_direction(7)
+          else;                 set_direction(8)
+          end
+        else
+          if sx == sy;          set_direction(3)
+          else;                 set_direction(6)
+          end
+        end      
+      end
+    end
+    
+  #=============================================================================
+  # Turn Away From Character
+  #=============================================================================
+    def turn_away_from_character(character)
+      sx = distance_x_from(character.x)
+      sy = distance_y_from(character.y)
+      
+      if sx > sy      
+        if sx == -sy;           set_direction(9)
+        elsif sx.abs > sy.abs;  set_direction(6)
+        else;                   set_direction(8)
+        end
+      else
+        if -sx == sy;           set_direction(1)
+        elsif -sx < sy
+          if sx == sy;          set_direction(3)
+          else;                 set_direction(2)
+          end
+        else
+          if sx == sy;          set_direction(7)
+          else;                 set_direction(4)
+          end
+        end      
+      end
+    end
+  end
+end
+#===============================================================================
+# EOF
+#===============================================================================
+end # End Activation Handler
