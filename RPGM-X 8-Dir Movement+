@@ -65,7 +65,7 @@ if ($Global_Enable.nil? && active) || ($Global_Enable && active)
 #===============================================================================
 module BWX
   module Vars
-    EXTENDED_SPRITES = true    # Enables/Disables non-orthogonal spritesheets.
+    EXTENDED_SPRITES = false    # Enables/Disables non-orthogonal spritesheets.
   end
 end
 
@@ -74,6 +74,18 @@ end
 #   ►►►  CUZ YEAH, THERE'S NOTHING REALLY CONFIGURABLE, AND IT DOESN'T ◄◄◄
 #   ►►►              LIKE IT WHEN YOU TOUCH IT THAT WAY.               ◄◄◄
 #===============================================================================
+
+#===============================================================================
+# Numeric Module
+# -- X to Trinary
+#===============================================================================
+class Numeric
+  def to_tri
+    return -1 if self < 0
+    return 0 if self == 0
+    return 1 if self > 0
+  end
+end
 
 #===============================================================================
 # Game Player
@@ -104,33 +116,33 @@ class Game_Player < Game_Character
     when 2
       if movearray[2]; move_straight(2)
       else
-        if    movearray[1] && movearray[3];   move_straight(2)
-        elsif movearray[1] && !movearray[3];  move_diagonal(4,2)
-        elsif !movearray[1] && movearray[3];  move_diagonal(6,2)
+        if     movearray[1] &&  movearray[3]; move_straight(2)
+        elsif  movearray[1] && !movearray[3]; move_diagonal(4,2)
+        elsif !movearray[1] &&  movearray[3]; move_diagonal(6,2)
         end
       end
     when 4
       if movearray[4]; move_straight(4)
       else
-        if    movearray[1] && movearray[7];   move_straight(4)
-        elsif movearray[1] && !movearray[7];  move_diagonal(4,2)
-        elsif !movearray[1] && movearray[7];  move_diagonal(4,8)
+        if     movearray[1] &&  movearray[7]; move_straight(4)
+        elsif  movearray[1] && !movearray[7]; move_diagonal(4,2)
+        elsif !movearray[1] &&  movearray[7]; move_diagonal(4,8)
         end
       end
     when 6
       if movearray[6]; move_straight(6)
       else
-        if    movearray[3] && movearray[9];   move_straight(6)
-        elsif movearray[3] && !movearray[9];  move_diagonal(6,2)
-        elsif !movearray[3] && movearray[9];  move_diagonal(6,8)
+        if     movearray[3] &&  movearray[9]; move_straight(6)
+        elsif  movearray[3] && !movearray[9]; move_diagonal(6,2)
+        elsif !movearray[3] &&  movearray[9]; move_diagonal(6,8)
         end
       end
     when 8
       if movearray[8]; move_straight(8)
       else
-        if    movearray[7] && movearray[9];   move_straight(8)
-        elsif movearray[7] && !movearray[9];  move_diagonal(4,8)
-        elsif !movearray[7] && movearray[9];  move_diagonal(6,8)
+        if     movearray[7] &&  movearray[9]; move_straight(8)
+        elsif  movearray[7] && !movearray[9]; move_diagonal(4,8)
+        elsif !movearray[7] &&  movearray[9]; move_diagonal(6,8)
         end
       end
     #Diags
@@ -173,8 +185,8 @@ if BWX::Vars::EXTENDED_SPRITES
         increase_steps
 
         case cx
-        when 4; set_direction(1) if cy == 2; set_direction(7) if cy == 8
-        when 6; set_direction(3) if cy == 2; set_direction(9) if cy == 8
+          when 4; cy == 2 ? set_direction(1) : set_direction(7)
+          when 6; cy == 2 ? set_direction(3) : set_direction(9)
         end
       end
     end
@@ -221,55 +233,38 @@ if BWX::Vars::EXTENDED_SPRITES
 #===============================================================================
   class Game_Character < Game_CharacterBase
   #=============================================================================
+  # Face Direction
+  #=============================================================================
+  def face_direction(x,y,m)
+    case [x,y]
+      when [-1,-1]; m ? set_direction(3) : set_direction(7)
+      when [-1,0];  m ? set_direction(6) : set_direction(4)
+      when [-1,1];  m ? set_direction(9) : set_direction(1)
+      when [0,-1];  m ? set_direction(2) : set_direction(8)
+      when [0,1];   m ? set_direction(8) : set_direction(2)
+      when [1,-1];  m ? set_direction(1) : set_direction(9)
+      when [1,0];   m ? set_direction(4) : set_direction(6)
+      when [1,1];   m ? set_direction(7) : set_direction(3)
+    end
+  end
+
+  #=============================================================================
   # Turn Toward Character
   #=============================================================================
     def turn_toward_character(character)
-      sx = distance_x_from(character.x)
-      sy = distance_y_from(character.y)
-      
-      if sx > sy      
-        if sx == -sy;           set_direction(1)
-        elsif sx.abs > sy.abs;  set_direction(4)
-        else;                   set_direction(2)
-        end
-      else
-        if -sx == sy;           set_direction(9)
-        elsif -sx < sy
-          if sx == sy;          set_direction(7)
-          else;                 set_direction(8)
-          end
-        else
-          if sx == sy;          set_direction(3)
-          else;                 set_direction(6)
-          end
-        end      
-      end
+      sx = (distance_x_from(character.x).to_tri).to_i
+      sy = (distance_y_from(character.y).to_tri).to_i
+      Display(distance_x_from(character.x),distance_y_from(character.y),sx,sy)
+      face_direction(sx,sy,true)
     end
     
   #=============================================================================
   # Turn Away From Character
   #=============================================================================
     def turn_away_from_character(character)
-      sx = distance_x_from(character.x)
-      sy = distance_y_from(character.y)
-      
-      if sx > sy      
-        if sx == -sy;           set_direction(9)
-        elsif sx.abs > sy.abs;  set_direction(6)
-        else;                   set_direction(8)
-        end
-      else
-        if -sx == sy;           set_direction(1)
-        elsif -sx < sy
-          if sx == sy;          set_direction(3)
-          else;                 set_direction(2)
-          end
-        else
-          if sx == sy;          set_direction(7)
-          else;                 set_direction(4)
-          end
-        end      
-      end
+      sx = (distance_x_from(character.x).to_tri).to_i
+      sy = (distance_y_from(character.y).to_tri).to_i
+      face_direction(sx,sy,false)
     end
   end
 end
