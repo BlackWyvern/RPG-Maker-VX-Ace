@@ -4,7 +4,7 @@
   Author: Black Wyvern
   Created: 03/11/16
   Updated: 03/13/16
-  Version: 1.1
+  Version: 1.11
 #===============================================================================
   *** Only for RPG Maker VX Ace. ***
   ------------------------------------------------------------------------------
@@ -55,39 +55,58 @@ active = true # Turns the script on or off.
 # -- Just making sure you have the core module installed.
 # -- You probably shouldn't poke at this bit.
 #==============================================================================
-Core = $imported["RPGM-X_Gauges"]
-Req = 1.5
-if Core
-  Ver = Core[1]
-  if Ver < Req
-    Debug("version","Insufficient Required Version","1.0 or Higher",false,false,
-      "This script will not be activated:\nRPGM-X Sleeker ATB")
+#==============================================================================
+# Version Checking
+# -- Just making sure you have the core module installed.
+# -- You probably shouldn't poke at this bit.
+#==============================================================================
+ErrNam = "RPGM-X Sleeker ATB"
+ReqNam = ["RPGM-X Sleeker Gauges"]
+ReqScr = [$imported["RPGM-X_Gauges"]]
+ReqVer = 1.52
+
+i = 0
+title = ""
+error = ""
+ReqScr.each do |core|
+  if core
+    Ver = core[1]
+    if Ver < ReqVer
+      title = "Insufficent Required Version\n"
+      error = "The version of your " + ReqNam[i] + " is out of date.\n" +
+              "You will need to update before this module can be activated.\n"+
+              "Version " + ReqVer.to_s + " or higher is required.\n\n"+
+              "This script will not be activated: " + ErrNam
+      active = false
+    end
+  else
+    title = "Missing Dependancy\n"
+    error = "This script requires/must be placed below\n" +
+      ReqNam[i] + " [Ver. " + ReqVer.to_s + " or higher.]\n" +
+      "This script will not be activated."
     active = false
   end
-else
-  title = "RPGM-X Sleeker ATB"
-  error = "This script requires/must be placed below" +
-    "\nBWA RPGM-X Sleeker Gauges [Ver. " + Req.to_s + " or higher.]\n" +
-    "This script will not be activated."
-  msgbox(sprintf(title+"\n"+error))
-  active = false
+  i+=1
 end
+msgbox(sprintf(title+error)) unless title.empty?
 
 if active
 #if (!$Global_Enable.nil? && active)
-  ($imported||={})["RPGM-X_Sleek_ATB"]=[true,1.1]
+  ($imported||={})["RPGM-X_Sleek_ATB"]=[true,1.11]
   # ^ Signifies that the script is installed to other scripts.
 
 module Vocab
-  def self.ap;          "Active Time";  end   # AT
-  def self.ap_a;        "AT";           end   # AT (short)
+  def self.atb;          "Active Time";   end   # AT
+  def self.atb_a;        "AT";            end   # AT (short)
+  def self.catb;         "Cast Progress"; end   # AT
+  def self.catb_a;       "CAT";           end   # AT (short)
 end
 
 #===============================================================================
 # BWX Custom Bar Style
 #===============================================================================
 module BWX
-  module Vars
+  module Bars
     ATBTSTYLE = "||"
     REALTIMEFLAGS += ["atb","datb"]
   end
@@ -157,9 +176,9 @@ class Window_Base < Window
   #=============================================================================
   alias atb_gss gauge_style
   def gauge_style(type)
-    return BWX::Vars::DEFSTYLE if !BWX::Vars::MULTIPLESTYLE
+    return BWX::Bars::DEFSTYLE if !BWX::Bars::MULTIPLESTYLE
     case type
-      when "atb";  return BWX::Vars::ATBSTYLE
+      when "atb";  return BWX::Bars::ATBSTYLE
     end
     atb_gss(type)
   end
@@ -167,27 +186,27 @@ class Window_Base < Window
   #=============================================================================
   # Draw Actor ATB
   #=============================================================================
-  def draw_actor_atb(a,x,y,w=124,p=:def,m=:dyn,h=BWX::Vars::BARHEIGHT,s="",
+  def draw_actor_atb(a,x,y,w=124,p=:def,m=:dyn,h=BWX::Bars::BARHEIGHT,s="",
         nt=false,hdn=false,notag=false)
 
     t = "atb"; s = gauge_style(t) if s.empty?; r = ap_rate(a)
-    if BWX::Vars::REALTIMEFLAGS.include?(t)
+    if BWX::Bars::REALTIMEFLAGS.include?(t)
       @realtime+=[[x,y,a]] unless @realtime.include?([x,y,a]); end
     draw_gauge(x,y,w,r,ATB_Colors(0,1,r),ATB_Colors(0,2,r),p,h,s,hdn)
-    @gauges[[x,y]].extras(Vocab::ap_a,ap_rate(a),1,t,m,true,true)
+    @gauges[[x,y]].extras(Vocab::atb_a,ap_rate(a),1,t,m,true,true)
   end
   
   #=============================================================================
   # Draw Actor Casting ATB
   #=============================================================================
-  def draw_actor_catb(a,x,y,w=124,p=:def,m=:dyn,h=BWX::Vars::BARHEIGHT,s="",
+  def draw_actor_catb(a,x,y,w=124,p=:def,m=:dyn,h=BWX::Bars::BARHEIGHT,s="",
         nt=false,hdn=false,notag=false)
 
     t = "datb"; s = gauge_style(t) if s.empty?; r = dap_rate(a)
-    if BWX::Vars::REALTIMEFLAGS.include?(t)
+    if BWX::Bars::REALTIMEFLAGS.include?(t)
       @realtime+=[[x,y,a]] unless @realtime.include?([x,y,a]); end
     draw_gauge(x,y,w,r,ATB_Colors(1,1,r),ATB_Colors(1,2,r),p,h,s,hdn)
-    @gauges[[x,y]].extras(Vocab::ap_a,dap_rate(a),1,t,m,true,true)
+    @gauges[[x,y]].extras(Vocab::catb_a,dap_rate(a),1,t,m,true,true)
   end
   
   #=============================================================================
@@ -225,7 +244,7 @@ class Window_Base < Window
   def ap_rate(a)
     value = 0
     value = (a.atb_chargerate) if $imported["YSA-CATB"]
-    value = (a.atb / a.atp_max.to_f) if $imported[:mog_atb_system]
+    value = (a.at / a.at_max.to_f) if $imported[:mog_atb_system]
     value = (a.atb / a.max_atp.to_f) if $imported[:ve_active_time_battle]
     value = (a.ap / ATB::MAX_AP.to_f) unless @ccwinter_atb.nil?
     value = stamina_rate if defined?(CBS::MAX_STAMINA)
@@ -314,7 +333,7 @@ class Game_Actor < Game_Battler
 end
 
 #===============================================================================
-# Window BattleStatus
+# Window BattleStatus (Yanfly Compatibility Module from Sleeker Gauges)
 #===============================================================================
 class Window_GaugePane < Window_Selectable
   #=============================================================================
@@ -322,7 +341,7 @@ class Window_GaugePane < Window_Selectable
   #=============================================================================
   def draw_misc_gauges(actor,index,sx,rw)
     ry = line_height*3-6
-    ry -= BWX::Vars::BARHEIGHT+1 if fetch_atb_system(actor,sx,ry,rw)
+    ry -= BWX::Bars::BARHEIGHT+1 if fetch_atb_system(actor,sx,ry,rw)
     draw_actor_hp(actor,sx,ry,rw,:up)
   end
 end
