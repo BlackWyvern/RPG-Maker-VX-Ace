@@ -4,7 +4,7 @@
   Author: Black Wyvern
   Created: 02/01/16
   Updated: 03/13/16
-  Version: 1.51
+  Version: 1.52
 #===============================================================================
   *** Only for RPG Maker VX Ace. ***
   ------------------------------------------------------------------------------
@@ -34,7 +34,7 @@
     
     To draw actor HP gauge:
     draw_actor_hp(actor, x, y, [width = 124, pos = :def, mode = :dyn,
-      height = BWX::Vars::BARHEIGHT, style = "", notext = false,
+      height = BWX::Bars::BARHEIGHT, style = "", notext = false,
       hidden = false,notag = false])
     
     The parameters width, style, height, pos, mode, notext, hidden and notag
@@ -50,7 +50,7 @@
     
     To draw a custom gauge:
     draw_gauge(x, y, width, rate, col1, col2, [pos = :def,
-      height = BWX::Vars::BARHEIGHT, style = "", hidden = false])
+      height = BWX::Bars::BARHEIGHT, style = "", hidden = false])
     - optionally -
     @gauges[[x,y]].extras(title,current,max,type,mode,notext,notag)
     - or -
@@ -62,7 +62,7 @@
     
     For experienced users:
     eval_gauge(x, y, width, eval_rate, eval_col1, eval_col2, eval_text = "",
-      pos = :def, mode = :dyn, height = BWX::Vars::BARHEIGHT, style = "",
+      pos = :def, mode = :dyn, height = BWX::Bars::BARHEIGHT, style = "",
       notext = false, hidden = false)
 
     This will render a gauge that will evaluate the given formulas for bar
@@ -93,7 +93,7 @@
 # BWX Custom Bar Style
 #===============================================================================
 module BWX
-  module Vars
+  module Bars
     CUSTSTYLE = "||"
   end
 end
@@ -108,7 +108,7 @@ class Window_Base < Window
   alias custom_ggs gauge_style
   def gauge_style(type)
     case type
-      when "custom";  return BWX::Vars::CUSTSTYLE
+      when "custom";  return BWX::Bars::CUSTSTYLE
     end
     custom_ggs(type)
   end
@@ -117,11 +117,11 @@ class Window_Base < Window
   # Draw Custom Bar (Change this to whatever you want)
   #=============================================================================
   def draw_custom_gauge(actor,x,y,width=124,pos=:def,mode=:dyn,
-    height=BWX::Vars::BARHEIGHT,style="",notext=false,hidden=false,notag=false)
+    height=BWX::Bars::BARHEIGHT,style="",notext=false,hidden=false,notag=false)
 
     type = "custom"; style = gauge_style(type) if style.empty?
     rate = actor.custom_rate
-    if BWX::Vars::REALTIMEFLAGS.include?(type)
+    if BWX::Bars::REALTIMEFLAGS.include?(type)
         @realtime+=[[x,y,a]] unless @realtime.include?([x,y,a]); end
     draw_gauge(x,y,width,rate,Custom_Colors(1,rate),Custom_Colors(2,rate),
       pos,height,style,hidden)
@@ -203,13 +203,12 @@ end
   Credits:
     - Vlue :: Sleek Gauges
     - Syvkal :: Menu Gauges
-    - Moghunter :: For having an ATB gauge that shows all the formulas.
 #===============================================================================
 =end
 
 active = true # Turns the script on or off.
 if ($Global_Enable.nil? && active) || ($Global_Enable && active)
-  ($imported||={})["RPGM-X_Gauges"]=[true,1.51]
+  ($imported||={})["RPGM-X_Gauges"]=[true,1.52]
   # ^ Signifies that the script is installed to other scripts.
 
 #===============================================================================
@@ -218,7 +217,7 @@ if ($Global_Enable.nil? && active) || ($Global_Enable && active)
 # -- Edit them as needed.
 #===============================================================================
 module BWX
-  module Vars
+  module Bars
     BARHEIGHT     = 8       # Default height for bars
     STATICNUMBERS = false   # Numbers are static, or count up/down
     STATIC_GAUGES = false   # Bar has no effects between updates
@@ -275,16 +274,14 @@ module BWX
     # -- Color for base param gauges
     #===========================================================================
     def Param_Color(param_id, position)
-      if $imported["BWA_RPGM-X"]
-        if BWX::Vars::BWX_COLOR
-          case param_id
-            when 2; return position == 1 ? text_color(16) : text_color(17)
-            when 3; return position == 1 ? text_color(18) : text_color(19)
-            when 4; return position == 1 ? text_color(20) : text_color(21)
-            when 5; return position == 1 ? text_color(22) : text_color(23)
-            when 6; return position == 1 ? text_color(24) : text_color(25)
-            when 7; return position == 1 ? text_color(26) : text_color(27)
-          end
+      if $imported["RPGM-X_Colorspace"]
+        case param_id
+          when 2; return position == 1 ? text_color(16) : text_color(17)
+          when 3; return position == 1 ? text_color(18) : text_color(19)
+          when 4; return position == 1 ? text_color(20) : text_color(21)
+          when 5; return position == 1 ? text_color(22) : text_color(23)
+          when 6; return position == 1 ? text_color(24) : text_color(25)
+          when 7; return position == 1 ? text_color(26) : text_color(27)
         end
       end
       case param_id
@@ -302,12 +299,10 @@ module BWX
     # -- Color for HP gauges
     #===========================================================================
     def HP_Colors(position, rate)
-      if $imported["BWA_RPGM-X"]
-        if BWX::Vars::BWX_COLOR
-          case position
-            when 1; return Auto_Color(text_color(32),text_color(34),rate)
-            when 2; return Auto_Color(text_color(33),text_color(35),rate)
-          end
+      if $imported["RPGM-X_Colorspace"]
+        case position
+          when 1; return Auto_Color(text_color(32),text_color(34),rate)
+          when 2; return Auto_Color(text_color(33),text_color(35),rate)
         end
       end
       case position
@@ -321,12 +316,10 @@ module BWX
     # -- Color for MP gauges
     #===========================================================================
     def MP_Colors(position, rate)
-      if $imported["BWA_RPGM-X"]
-        if BWX::Vars::BWX_COLOR
-          case position
-            when 1; return Auto_Color(text_color(36),text_color(38),rate)
-            when 2; return Auto_Color(text_color(37),text_color(39),rate)
-          end
+      if $imported["RPGM-X_Colorspace"]
+        case position
+          when 1; return Auto_Color(text_color(36),text_color(38),rate)
+          when 2; return Auto_Color(text_color(37),text_color(39),rate)
         end
       end
       case position
@@ -340,12 +333,10 @@ module BWX
     # -- Color for TP gauges
     #===========================================================================
     def TP_Colors(position, rate)
-      if $imported["BWA_RPGM-X"]
-        if BWX::Vars::BWX_COLOR
-          case position
-            when 1; return Auto_Color(text_color(40),text_color(42),rate)
-            when 2; return Auto_Color(text_color(41),text_color(43),rate)
-          end
+      if $imported["RPGM-X_Colorspace"]
+        case position
+          when 1; return Auto_Color(text_color(40),text_color(42),rate)
+          when 2; return Auto_Color(text_color(41),text_color(43),rate)
         end
       end
       case position
@@ -361,12 +352,10 @@ module BWX
     # -- Color for XP gauges
     #===========================================================================
     def XP_Colors(position, rate)
-      if $imported["BWA_RPGM-X"]
-        if BWX::Vars::BWX_COLOR
-          case position
-            when 1; return Auto_Color(text_color(68),text_color(70),rate)
-            when 2; return Auto_Color(text_color(69),text_color(71),rate)
-          end
+      if $imported["RPGM-X_Colorspace"]
+        case position
+          when 1; return Auto_Color(text_color(68),text_color(70),rate)
+          when 2; return Auto_Color(text_color(69),text_color(71),rate)
         end
       end
       case position
@@ -393,12 +382,10 @@ module BWX
     # -- Color for subparam gauges
     #===========================================================================
     def SubColors(position, rate)
-      if $imported["BWA_RPGM-X"]
-        if BWX::Vars::BWX_COLOR
-          case position
-            when 1; return Auto_Color(text_color(64),text_color(66),rate)
-            when 2; return Auto_Color(text_color(65),text_color(67),rate)
-          end
+      if $imported["RPGM-X_Colorspace"]
+        case position
+          when 1; return Auto_Color(text_color(64),text_color(66),rate)
+          when 2; return Auto_Color(text_color(65),text_color(67),rate)
         end
       end
       case position
@@ -426,19 +413,17 @@ module BWX
     # -- Because this isn't a window, yo.
     #===========================================================================
     def text_color(n)
-      if $imported["BWA_RPGM-X"]
-        if BWX::Vars::BWX_COLOR
-          row = (n / 16).to_i; col = (n % 16); off = [0,0]
-          case row
-            when 0 || 4 ||  8 || 12;  col.even? ? off = [0,0] : off = [3,0]
-            when 1 || 5 ||  9 || 13;  col.even? ? off = [3,3] : off = [0,3]
-            when 2 || 6 || 10 || 14;  col.even? ? off = [3,0] : off = [0,0]
-            when 3 || 7 || 11 || 15;  col.even? ? off = [0,3] : off = [3,3]
-          end
-          return Cache.system(BWX::Vars::COLRSPACE).get_pixel(
-            (col*4)+off[0],
-            (((row/2).floor)*4)+off[1])
+      if $imported["RPGM-X_Colorspace"]
+        row = (n / 16).to_i; col = (n % 16); off = [0,0]
+        case row
+          when 0 || 4 ||  8 || 12;  col.even? ? off = [0,0] : off = [3,0]
+          when 1 || 5 ||  9 || 13;  col.even? ? off = [3,3] : off = [0,3]
+          when 2 || 6 || 10 || 14;  col.even? ? off = [3,0] : off = [0,0]
+          when 3 || 7 || 11 || 15;  col.even? ? off = [0,3] : off = [3,3]
         end
+        return Cache.system(BWX::Colors::COLORSPACE).get_pixel(
+          (col*4)+off[0],
+          (((row/2).floor)*4)+off[1])
       end
       @ColorWindow = Window_Base.new(0,0,0,0)
       color = @ColorWindow.windowskin.get_pixel(64+(n%8)*8,96+(n/8)*8)
@@ -449,7 +434,7 @@ module BWX
 end
 include BWX::SleekGauges
 
-unless $imported["BWA_RPGM-X"]
+unless $imported["RPGM-X_Colorspace"]
 #===============================================================================
 # Vocab Module (Only if not using the RPGM-X Core)
 # -- Shorthand XP
@@ -536,22 +521,22 @@ class Window_Base < Window
   # Get Gauge Style
   #=============================================================================
   def gauge_style(type)
-    return BWX::Vars::DEFSTYLE if !BWX::Vars::MULTIPLESTYLE
+    return BWX::Bars::DEFSTYLE if !BWX::Bars::MULTIPLESTYLE
     case type
-      when "hp";  return BWX::Vars::HP_STYLE
-      when "mp";  return BWX::Vars::MP_STYLE
-      when "tp";  return BWX::Vars::TP_STYLE
-      when "xp";  return BWX::Vars::XP_STYLE
-      when "lvl"; return BWX::Vars::LVLSTYLE
-      when "par"; return BWX::Vars::PARSTYLE
-      when "evl"; return BWX::Vars::EVLSTYLE
+      when "hp";  return BWX::Bars::HP_STYLE
+      when "mp";  return BWX::Bars::MP_STYLE
+      when "tp";  return BWX::Bars::TP_STYLE
+      when "xp";  return BWX::Bars::XP_STYLE
+      when "lvl"; return BWX::Bars::LVLSTYLE
+      when "par"; return BWX::Bars::PARSTYLE
+      when "evl"; return BWX::Bars::EVLSTYLE
     end
   end
 
   #=============================================================================
   # Draw Gauge
   #=============================================================================
-  def draw_gauge(x,y,w,r,c1,c2,p=:def,h=BWX::Vars::BARHEIGHT,s="",hdn=false)
+  def draw_gauge(x,y,w,r,c1,c2,p=:def,h=BWX::Bars::BARHEIGHT,s="",hdn=false)
     s = gauge_style(s) if s.empty?
     r = r.round_to(2)
     @gauges = {} unless @gauges
@@ -565,11 +550,11 @@ class Window_Base < Window
   #=============================================================================
   # Draw Actor HP
   #=============================================================================
-  def draw_actor_hp(a,x,y,w=124,p=:def,m=:dyn,h=BWX::Vars::BARHEIGHT,s="",
+  def draw_actor_hp(a,x,y,w=124,p=:def,m=:dyn,h=BWX::Bars::BARHEIGHT,s="",
         nt=false,hdn=false,notag=false)
 
     t = "hp"; s = gauge_style(t) if s.empty?; r = a.hp_rate;
-    if BWX::Vars::REALTIMEFLAGS.include?(t)
+    if BWX::Bars::REALTIMEFLAGS.include?(t)
         @realtime+=[[x,y,a]] unless @realtime.include?([x,y,a]); end
     draw_gauge(x,y,w,r,HP_Colors(1,r),HP_Colors(2,r),p,h,s,hdn)
     @gauges[[x,y]].extras(Vocab::hp_a,a.hp,a.mhp,t,m,nt,notag)
@@ -578,11 +563,11 @@ class Window_Base < Window
   #=============================================================================
   # Draw Actor MP
   #=============================================================================
-  def draw_actor_mp(a,x,y,w=124,p=:def,m=:dyn,h=BWX::Vars::BARHEIGHT,s="",
+  def draw_actor_mp(a,x,y,w=124,p=:def,m=:dyn,h=BWX::Bars::BARHEIGHT,s="",
         nt=false,hdn=false,notag=false)
 
     t = "mp"; s = gauge_style(t) if s.empty?; r = a.mp_rate
-    if BWX::Vars::REALTIMEFLAGS.include?(t);
+    if BWX::Bars::REALTIMEFLAGS.include?(t);
         @realtime+=[[x,y,a]] unless @realtime.include?([x,y,a]); end
     draw_gauge(x,y,w,r,MP_Colors(1,r),MP_Colors(2,r),p,h,s,hdn)
     @gauges[[x,y]].extras(Vocab::mp_a,a.mp,a.mmp,t,m,nt,notag)
@@ -591,11 +576,11 @@ class Window_Base < Window
   #=============================================================================
   # Draw Actor TP
   #=============================================================================
-  def draw_actor_tp(a,x,y,w=124,p=:def,m=:dyn,h=BWX::Vars::BARHEIGHT,s="",
+  def draw_actor_tp(a,x,y,w=124,p=:def,m=:dyn,h=BWX::Bars::BARHEIGHT,s="",
         nt=false,hdn=false,notag=false)
 
     t = "tp"; s = gauge_style(t) if s.empty?; r = a.tp_rate
-    if BWX::Vars::REALTIMEFLAGS.include?(t);
+    if BWX::Bars::REALTIMEFLAGS.include?(t);
         @realtime+=[[x,y,a]] unless @realtime.include?([x,y,a]); end
     draw_gauge(x,y,w,r,TP_Colors(1,r),TP_Colors(2,r),p,h,s,hdn)
     @gauges[[x,y]].extras(Vocab::tp_a,a.tp,a.mtp,t,m,nt,notag)
@@ -604,11 +589,11 @@ class Window_Base < Window
   #=============================================================================
   # Draw Actor XP
   #=============================================================================
-  def draw_actor_xp(a,x,y,w=124,p=:def,m=:dyn,h=BWX::Vars::BARHEIGHT,s="",
+  def draw_actor_xp(a,x,y,w=124,p=:def,m=:dyn,h=BWX::Bars::BARHEIGHT,s="",
         nt=false,hdn=false)
         
     t = "xp"; s = gauge_style(t) if s.empty?; r = a.tp_rate
-    if BWX::Vars::REALTIMEFLAGS.include?(t);
+    if BWX::Bars::REALTIMEFLAGS.include?(t);
         @realtime+=[[x,y,a]] unless @realtime.include?([x,y,a]); end
     draw_gauge(x,y,w,r,XP_Colors(1,r),XP_Colors(2,r),p,h,s,hdn)
     if(a.level != a.max_level)
@@ -621,11 +606,11 @@ class Window_Base < Window
   #=============================================================================
   # Draw Actor Lvl
   #=============================================================================
-  def draw_actor_lvl(a,x,y,w=124,p=:def,m=:dyn,h=BWX::Vars::BARHEIGHT,s="",
+  def draw_actor_lvl(a,x,y,w=124,p=:def,m=:dyn,h=BWX::Bars::BARHEIGHT,s="",
         nt=false,hdn=false)
 
     t = "lvl"; s = gauge_style(t) if s.empty?; r = a.level.to_f / a.max_level
-    if BWX::Vars::REALTIMEFLAGS.include?(t)
+    if BWX::Bars::REALTIMEFLAGS.include?(t)
         @realtime+=[[x,y,a]] unless @realtime.include?([x,y,a]); end
     draw_gauge(x,y,w,r,LVLColors(1,r),LVLColors(2,r),p,h,s,hdn)
     @gauges[[x,y]].extras(Vocab::level,a.level,a.max_level,t,m,nt)
@@ -634,11 +619,11 @@ class Window_Base < Window
   #=============================================================================
   # Draw Sub-Param
   #=============================================================================
-  def draw_subparam(a,x,y,r=0,w=124,p=:def,m=:dyn,h=BWX::Vars::BARHEIGHT,
+  def draw_subparam(a,x,y,r=0,w=124,p=:def,m=:dyn,h=BWX::Bars::BARHEIGHT,
         s="",nt=false,hdn=false,spm="SubN")
       
     s = gauge_style("par") if s.empty?;
-    if BWX::Vars::REALTIMEFLAGS.include?(spm) 
+    if BWX::Bars::REALTIMEFLAGS.include?(spm) 
         @realtime+=[[x,y,a]] unless @realtime.include?([x,y,a]); end
     draw_gauge(x,y,w,r,SubColors(1,r),SubColors(2,r),p,h,s,hdn)
     @gauges[[x,y]].gtype(spm,m)
@@ -647,7 +632,7 @@ class Window_Base < Window
   #=============================================================================
   # Draw Eval Gauge
   #=============================================================================
-  def eval_gauge(x,y,w,r,ec1,ec2,et="",p=:def,m=:dyn,h=BWX::Vars::BARHEIGHT,
+  def eval_gauge(x,y,w,r,ec1,ec2,et="",p=:def,m=:dyn,h=BWX::Bars::BARHEIGHT,
         s="",nt=false,hdn=false)
       
     s = gauge_style("evl") if s.empty?;
@@ -706,9 +691,9 @@ class Sleek_Gauge
   # Update
   #=============================================================================
   def update
-    if BWX::Vars::FRAMESKIPPING != 0
+    if BWX::Bars::FRAMESKIPPING != 0
       @frame += 1
-      return unless @frame % BWX::Vars::FRAMESKIPPING == 0
+      return unless @frame % BWX::Bars::FRAMESKIPPING == 0
       @frame = 0 if @frame > 100
     end
     update_fall_sprites if !@fall_sprites.empty?
@@ -719,12 +704,12 @@ class Sleek_Gauge
     @cur_rate += @speed_rate if @cur_rate < @max_rate
     @cur_rate = @max_rate if (@cur_rate - @max_rate).abs < @speed_rate
     @cur_rate = @max_rate if
-      (BWX::Vars::STATIC_GAUGES || BWX::Vars::GAUGEMOVSTYLE == :fall)
+      (BWX::Bars::STATIC_GAUGES || BWX::Bars::GAUGEMOVSTYLE == :fall)
     unless @vocab.empty? || @notext
       @cur_val -= @speed if @cur_val > @set_val
       @cur_val += @speed if @cur_val < @set_val
       @cur_val = @set_val if (@cur_val-@set_val).abs < @speed
-      @cur_val = @set_val if BWX::Vars::STATICNUMBERS
+      @cur_val = @set_val if BWX::Bars::STATICNUMBERS
       @cur_val = @set_val if @max_val == 0
     end
     refresh
@@ -815,7 +800,7 @@ class Sleek_Gauge
       draw_text(@x,@y,@width) unless @notext
     end
     @latch = false
-    @latch = true if BWX::Vars::REALTIMEFLAGS.include?(@type) && @cur_rate == 1
+    @latch = true if BWX::Bars::REALTIMEFLAGS.include?(@type) && @cur_rate == 1
   end
 
   #=============================================================================
@@ -826,10 +811,10 @@ class Sleek_Gauge
     @max_rate = rate
     
     movetime = 60.0
-    movetime /= BWX::Vars::FRAMESKIPPING if BWX::Vars::FRAMESKIPPING != 0
+    movetime /= BWX::Bars::FRAMESKIPPING if BWX::Bars::FRAMESKIPPING != 0
     
     @speed_rate = (@cur_rate-@max_rate).abs / (movetime) if reset_speed
-    if BWX::Vars::GAUGEMOVSTYLE == :fall && reset_speed
+    if BWX::Bars::GAUGEMOVSTYLE == :fall && reset_speed
       if @cur_rate > @max_rate
         sprite = Sprite.new()
         if !@window.viewport.nil?
@@ -885,7 +870,7 @@ class Sleek_Gauge
       @set_val = set_val
     end
     movetime = 60.0
-    movetime /= BWX::Vars::FRAMESKIPPING if BWX::Vars::FRAMESKIPPING != 0
+    movetime /= BWX::Bars::FRAMESKIPPING if BWX::Bars::FRAMESKIPPING != 0
     @speed = (@cur_val-@set_val).abs / (movetime) if reset_speed
     @speed = 1 if @speed == 0
 
@@ -947,16 +932,16 @@ class Sleek_Gauge
   # Draw Gauge
   #=============================================================================
   def draw_gauge(x, y, width, rate, color1, color2,
-      style = BWX::Vars::DEFSTYLE, height = BWX::Vars::BARHEIGHT)
+      style = BWX::Bars::DEFSTYLE, height = BWX::Bars::BARHEIGHT)
     x+=4
     fill_ww = (width * @max_rate).to_i
     h = height.to_i
 
     style.slice!(/\s*/); style = style.split(/\s*/)
     
-    if(BWX::Vars::STATIC_BACKGD)
-      backcol1 = BWX::Vars::BAR_COL3
-      backcol2 = BWX::Vars::BAR_COL4
+    if(BWX::Bars::STATIC_BACKGD)
+      backcol1 = BWX::Bars::BAR_COL3
+      backcol2 = BWX::Bars::BAR_COL4
     else
       backcol1 = Color.new(color1.red,color1.green,color1.blue,12)
       backcol2 = Color.new(color2.red,color2.green,color2.blue,92)
@@ -966,16 +951,16 @@ class Sleek_Gauge
     if style.empty? or (style[0] == "|" && style[1] == "|")
       fill_w = ((width-4) * rate).round
       fill_ww = ((width-4) * @max_rate).round
-      if(BWX::Vars::DOUBLEBORDERS)
-        @window.contents.fill_rect(x-2,y-2,width  ,h+4,BWX::Vars::BAR_COL1)
-        @window.contents.fill_rect(x-1,y-1,width-2,h+2,BWX::Vars::BAR_COL2)
+      if(BWX::Bars::DOUBLEBORDERS)
+        @window.contents.fill_rect(x-2,y-2,width  ,h+4,BWX::Bars::BAR_COL1)
+        @window.contents.fill_rect(x-1,y-1,width-2,h+2,BWX::Bars::BAR_COL2)
       else
-        @window.contents.fill_rect(x-1,y-1,width-2,h+2,BWX::Vars::BAR_COL1)
+        @window.contents.fill_rect(x-1,y-1,width-2,h+2,BWX::Bars::BAR_COL1)
       end
       @window.contents.gradient_fill_rect(x,y,width-4,h,backcol1, backcol2)
       
       if rate != @max_rate
-        case BWX::Vars::GAUGEMOVSTYLE
+        case BWX::Bars::GAUGEMOVSTYLE
           when :fancy
             color1.alpha -= 50; color2.alpha -= 50
             if rate > @max_rate
@@ -1002,14 +987,14 @@ class Sleek_Gauge
     else # Dynamic Generation
       adj1 = style_adj_string(style[0]); adj2 = style_adj_string(style[1], true)
 
-      if(BWX::Vars::DOUBLEBORDERS)
+      if(BWX::Bars::DOUBLEBORDERS)
         h += 4
         for i in 0...h
           a1 = eval(adj1[0]); a2 = eval(adj2[0])
           a3 = adj1[2]; a4 = adj2[4].nil? ? adj2[2] : adj2[4]
           @window.contents.fill_rect(
             x-a3+a1,y-2+i,width+(a3+a4)-a1-a2,1,
-            BWX::Vars::BAR_COL1)
+            BWX::Bars::BAR_COL1)
         end
       
         h -= 2
@@ -1018,7 +1003,7 @@ class Sleek_Gauge
           a3 = adj1[1]; a4 = adj2[3].nil? ? adj2[1] : adj2[3]
           @window.contents.fill_rect(
             x-a3+a1,y-1+i,width+(a3+a4)-a1-a2,1,
-            BWX::Vars::BAR_COL2)
+            BWX::Bars::BAR_COL2)
         end
       else
         h += 2
@@ -1027,7 +1012,7 @@ class Sleek_Gauge
           a3 = adj1[1]; a4 = adj2[3].nil? ? adj2[1] : adj2[3]
           @window.contents.fill_rect(
             x-a3+a1,y-1+i,width+(a3+a4)-a1-a2,1,
-            BWX::Vars::BAR_COL1)
+            BWX::Bars::BAR_COL1)
         end
       end
       
@@ -1047,7 +1032,7 @@ class Sleek_Gauge
         fill_ww = ((width-a1-a2) * @max_rate).round
         
         if rate != @max_rate
-          case BWX::Vars::GAUGEMOVSTYLE
+          case BWX::Bars::GAUGEMOVSTYLE
             when :fancy
               color1.alpha -= 50; color2.alpha -= 50
               if rate > @max_rate
@@ -1125,17 +1110,17 @@ class Sprite_Popup < Sprite_Base
   def initialize(*args)
     satb_sp_init(*args)
     @frame = -1
-    @fade = YEA::BATTLE::POPUP_SETTINGS[:fade] * (BWX::Vars::FRAMESKIPPING*2)
-    @full = YEA::BATTLE::POPUP_SETTINGS[:full] / (BWX::Vars::FRAMESKIPPING*2)
+    @fade = YEA::BATTLE::POPUP_SETTINGS[:fade] * (BWX::Bars::FRAMESKIPPING*2)
+    @full = YEA::BATTLE::POPUP_SETTINGS[:full] / (BWX::Bars::FRAMESKIPPING*2)
   end
   
   #=============================================================================
   # Update
   #=============================================================================
   def update
-    if BWX::Vars::FRAMESKIPPING != 0
+    if BWX::Bars::FRAMESKIPPING != 0
       @frame += 1
-      return unless @frame % BWX::Vars::FRAMESKIPPING*2 == 0
+      return unless @frame % BWX::Bars::FRAMESKIPPING*2 == 0
       @frame = 0 if @frame > 100
     end
     super
@@ -1175,13 +1160,6 @@ class Window_GaugePane < Window_Selectable
   end
   
   #=============================================================================
-  # String to Boolean
-  #=============================================================================
-  def to_b(string)
-    string == "true"
-  end
-  
-  #=============================================================================
   # Realtime Update Area
   #=============================================================================
   def update
@@ -1191,7 +1169,7 @@ class Window_GaugePane < Window_Selectable
     for gauges in @gauges
       for item in gauges
         next if item.class != Sleek_Gauge
-        next if !BWX::Vars::REALTIMEFLAGS.include?(item.type)
+        next if !BWX::Bars::REALTIMEFLAGS.include?(item.type)
         for entry in @realtime
           next unless [item.x,item.y] == entry[0,2]
           a = entry[2]
@@ -1200,21 +1178,21 @@ class Window_GaugePane < Window_Selectable
               initializer = "draw_subparam("
               @values = [a,item.x,item.y,item.cur_rate,item.width,
               item.pos.to_sym,item.mode.to_sym,item.height,
-              item.style,to_b(item.notext.to_s),to_b(item.hidden.to_s),
+              item.style,item.notext,item.hidden,
               item.type]
               @formatted=initializer+"(*@values)"
             when "atb", "datb"
               if $imported["RPGM-X_Sleek_ATB"]
               fetch_atb_system(
                 a,item.x,item.y,item.width,item.pos.to_sym,item.mode.to_sym,
-                item.height,item.style,to_b(item.notext.to_s),
-                to_b(item.hidden.to_s))
+                item.height,item.style,item.notext,
+                item.hidden)
               end
             else
               initializer = "draw_actor_"+item.type
               @values = [a,item.x,item.y,item.width,item.pos.to_sym,
                 item.mode.to_sym,item.height,item.style,
-                to_b(item.notext.to_s),to_b(item.hidden.to_s)]
+                item.notext,item.hidden]
               @formatted=initializer+"(*@values)"
           end
           eval(@formatted) if @formatted
@@ -1235,7 +1213,7 @@ class Window_GaugePane < Window_Selectable
     dw = rw/2-4
     dy = line_height*3+3
     contents.font.size = YEA::BATTLE::BATTLESTATUS_TEXT_FONT_SIZE
-    
+
     if (draw_tp?(actor) && draw_mp?(actor))
       draw_actor_tp(actor, sx,    dy, dw, :down)
       draw_actor_mp(actor, sx+dw, dy, dw, :down)
@@ -1255,6 +1233,7 @@ class Window_GaugePane < Window_Selectable
     rect.width = contents.width / $game_party.max_battle_members
     rect.height = contents.height
     rect.x = index * rect.width
+
     if YEA::BATTLE::BATTLESTATUS_CENTER_FACES
       rect.x += (contents.width - $game_party.members.size * rect.width) / 2
     end
@@ -1278,7 +1257,6 @@ class Window_GaugePane < Window_Selectable
   def draw_tp?(actor); return actor.draw_tp?; end
   def draw_mp?(actor); return actor.draw_mp?; end
   def item_max; return $game_party.max_battle_members; end
-  #def battle_members; return $game_party.battle_members; end
 end
 end
 
