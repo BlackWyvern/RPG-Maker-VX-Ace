@@ -1,0 +1,166 @@
+=begin
+#===============================================================================
+  Black Wyvern Arts - Multi-Scene Image Resoultion Correction (MSIRC)
+  Author: Black Wyvern
+  Created: 08/10/11
+  Updated: 03/22/16
+  Version: 1.0
+#===============================================================================
+  *** Only for RPG Maker VX Ace. ***
+  ------------------------------------------------------------------------------
+  To install this script, open up your script editor and copy/paste this script
+  to an open slot below ▼ Materials but above ▼ Main. Remember to save.
+  
+  Terms of use:
+    1. Give credit where credit is due.
+    2. You may use my code in anything you like. Commercial, non-commercial.
+    3. If you edit my code in any way, please link back to the original source.
+    4. Support is always appreciated in form of gold, sacrificial virgins,
+        large quantaties of bacon (or other cooked meats), or free games.
+          I can be contacted at LuneTheWyvern@Gmail.com
+
+  Description:
+    - Corrects background image resolution when using an upscaled client.
+  
+  Configuration:
+    - LIST_SCENES :: list of the scenes you wish to correct
+    - LIST_SPRITE :: names of the variables that control the BG image
+  
+  Instructions:
+    This needs to be placed below most scripts, and above main.
+
+  Optional:
+    - None
+  
+  Dependencies:
+    - None
+  
+  Compatability:
+    - None
+
+  Credits:
+    - None
+#===============================================================================
+=end
+
+active = true # Turns the script on or off.
+if ($Global_Enable.nil? && active) || ($Global_Enable && active)
+  ($imported||={})["RPGM-X_MSIRC"]=[true,1.0]
+  # ^ Signifies that the script is installed to other scripts.
+
+#===============================================================================
+# MSIRC Configuration
+#===============================================================================
+module BWX
+  module MSIRC
+    LIST_SCENES =
+      ["Title","Gameover","MenuBase","Shards"]
+    LIST_SPRITE =
+      ["@background_sprite","@sprite","@sprite1","@sprite2"]
+    FIX_BATTLEBACKS = true
+  end
+end
+
+#===============================================================================
+#   ►►► WARNING: YOU PROBABLY SHOULDN'T EDIT ANYTHING BELOW THIS POINT ◄◄◄
+#   ►►►  CUZ YEAH, THERE'S NOTHING REALLY CONFIGURABLE, AND IT DOESN'T ◄◄◄
+#   ►►►              LIKE IT WHEN YOU TOUCH IT THAT WAY.               ◄◄◄
+#===============================================================================
+
+#===============================================================================
+# MSIRC Injection Handling
+#===============================================================================
+
+#===============================================================================
+# Scene Base
+#===============================================================================
+class Scene_Base
+  #=============================================================================
+  # Reinitialize
+  #=============================================================================
+  alias msirc_main main
+  def main
+    InjectMSIRC?
+    msirc_main
+  end
+
+  #=============================================================================
+  # Inject MSIRC
+  # - Redefines 'create_background' if scene selected for upscaling.
+  #=============================================================================
+  def InjectMSIRC?
+    @Inject = false
+    BWX::MSIRC::LIST_SCENES.each do |scene|
+      if self.class == Module.const_get("Scene_"+scene)
+        @Inject = true
+        break
+      end rescue next
+    end
+
+    if @Inject
+      return if defined?(self.create_background).nil? # Error Failsafe
+      self.instance_eval do
+        alias msirc_create_bg create_background
+        def create_background
+          msirc_create_bg
+          definedsprites = []
+          BWX::MSIRC::LIST_SPRITE.each do |sprite|
+            next unless instance_variable_defined?(sprite)
+            definedsprites += [sprite]
+          end
+          definedsprites.each do |sprite|
+            instance_variable_get(sprite).visible = false
+            storage = instance_variable_get(sprite).bitmap
+            instance_variable_set(sprite,Sprite.new)
+            instance_variable_get(sprite).bitmap =
+              Bitmap.new(Graphics.width, Graphics.height)
+            bitmap = storage
+            instance_variable_get(sprite).bitmap.stretch_blt(
+              $ScreenRez,bitmap,bitmap.rect)
+            instance_variable_get(sprite).visible = true
+          end
+        end
+      end
+    end
+  end
+end
+
+#===============================================================================
+# Spriteset Battle
+#===============================================================================
+if BWX::MSIRC::FIX_BATTLEBACKS
+  class Spriteset_Battle
+  #=============================================================================
+  # Upscale Battlebacks
+  #=============================================================================
+    alias msirc_create_bb1 create_battleback1
+    def create_battleback1
+      msirc_create_bb1
+      @back1_sprite.visible = false
+      storage = @back1_sprite.bitmap
+      @back1_sprite = Sprite.new(@viewport1)
+      @back1_sprite.bitmap = Bitmap.new(Graphics.width, Graphics.height)
+      bitmap = storage
+      @back1_sprite.bitmap.stretch_blt($ScreenRez, bitmap, bitmap.rect)
+      @back1_sprite.z = 0
+      center_sprite(@back1_sprite)
+    end
+
+    alias msirc_create_bb2 create_battleback2
+    def create_battleback2
+      msirc_create_bb2
+      @back2_sprite.visible = false
+      storage = @back2_sprite.bitmap
+      @back2_sprite = Sprite.new(@viewport1)
+      @back2_sprite.bitmap = Bitmap.new(Graphics.width, Graphics.height)
+      bitmap = storage
+      @back2_sprite.bitmap.stretch_blt($ScreenRez, bitmap, bitmap.rect)
+      @back2_sprite.z = 0
+      center_sprite(@back2_sprite)
+    end
+  end
+end
+#===============================================================================
+# EOF
+#===============================================================================
+end # End Activation Handler
