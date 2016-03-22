@@ -1,0 +1,131 @@
+=begin
+#===============================================================================
+  Black Wyvern Arts - Multiple Battle-Transition Enabler (MBTE)
+  Author: Black Wyvern
+  Created: 08/10/11
+  Updated: 03/22/16
+  Version: 1.0
+#===============================================================================
+  *** Only for RPG Maker VX Ace. ***
+  ------------------------------------------------------------------------------
+  To install this script, open up your script editor and copy/paste this script
+  to an open slot below ▼ Materials but above ▼ Main. Remember to save.
+  
+  Terms of use:
+    1. Give credit where credit is due.
+    2. You may use my code in anything you like. Commercial, non-commercial.
+    3. If you edit my code in any way, please link back to the original source.
+    4. Support is always appreciated in form of gold, sacrificial virgins,
+        large quantaties of bacon (or other cooked meats), or free games.
+          I can be contacted at LuneTheWyvern@Gmail.com
+
+  Description:
+    - Allows use of multiple battle transitions.
+  
+  Configuration:
+    - LIST_MTRANS :: battle transition file names if using multiple btrans mode
+  
+  Instructions:
+    This needs to be placed below most scripts, and above main.
+
+  Optional:
+    - None
+  
+  Dependencies:
+    - None
+  
+  Compatability:
+    - None
+
+  Credits:
+    - None
+#===============================================================================
+=end
+
+active = true # Turns the script on or off.
+if ($Global_Enable.nil? && active) || ($Global_Enable && active)
+  ($imported||={})["RPGM-X_MBTE"]=[true,1.0]
+  # ^ Signifies that the script is installed to other scripts.
+
+#===============================================================================
+# MBTEU Configuration
+#===============================================================================
+module BWX
+  module MBTE
+    # Add in the name of any battle transitions you would like to use.
+    LIST_MTRANS = [
+      "BattleStart",
+      "FusionTransition1A",
+      "FusionTransition2A",
+      "FusionTransition3",
+      "FusionTransition4"]
+  end
+end
+
+#===============================================================================
+#   ►►► WARNING: YOU PROBABLY SHOULDN'T EDIT ANYTHING BELOW THIS POINT ◄◄◄
+#   ►►►  CUZ YEAH, THERE'S NOTHING REALLY CONFIGURABLE, AND IT DOESN'T ◄◄◄
+#   ►►►              LIKE IT WHEN YOU TOUCH IT THAT WAY.               ◄◄◄
+#===============================================================================
+
+#===============================================================================
+# MBTE Injection Handling
+#===============================================================================
+
+#===============================================================================
+# Retrieve Battletrans from Cache
+#===============================================================================
+module Cache
+  def self.btrans(filename)
+    return "Graphics/System/BattleStart" if filename == "BattleStart"
+    pass = 0; ext = 0
+    while pass < 3
+      case pass
+        when 0; @Location = "Graphics/System/"
+        when 1; @Location = "Graphics/BTrans/"
+        when 2; @Location = "Graphics/Parallax/"
+      end
+      
+      while ext < 3
+        case ext
+          when 0; @Ext = ".png"
+          when 1; @Ext = ".tga"
+          when 2; @Ext = ".jpg"
+        end
+        
+        @Exist = File.file?(@Location+filename+@Ext)
+        return @Location+filename+@Ext if @Exist
+        ext += 1
+      end
+      pass += 1
+    end
+    
+    if $imported["RPGM-X_Debugging"]
+      Debug("File", "Multiple Battle-Transition Enabler/Upscaler (MBTEU)",
+      "Given file name '" + filename +
+      "' did not have a valid match in any subdirectory.",53,true,false)
+    else
+      return msg_box("Battleback " + filename + "not found.")
+    end
+  end
+end
+
+#===============================================================================
+# Scene Map
+#===============================================================================
+class Scene_Map < Scene_Base
+  #=============================================================================
+  # Perform Battle Transition
+  #=============================================================================
+  def perform_battle_transition
+    @BTrans_Name = BWX::MBTE::LIST_MTRANS[
+      Random.rand(BWX::MBTE::LIST_MTRANS.length).to_i]
+    @Trans = Cache.btrans(@BTrans_Name)
+    Graphics.transition(60, @Trans, 100)
+    Graphics.freeze
+  end
+end
+#===============================================================================
+# EOF
+#===============================================================================
+end # End Activation Handler
