@@ -144,6 +144,7 @@ if BWX::MSIRC::FIX_BATTLEBACKS
       @back1_sprite.bitmap.stretch_blt($ScreenRez, bitmap, bitmap.rect)
       @back1_sprite.z = 0
       center_sprite(@back1_sprite)
+      @back1_sprite.visible = true
     end
 
     alias msirc_create_bb2 create_battleback2
@@ -155,8 +156,9 @@ if BWX::MSIRC::FIX_BATTLEBACKS
       @back2_sprite.bitmap = Bitmap.new(Graphics.width, Graphics.height)
       bitmap = storage
       @back2_sprite.bitmap.stretch_blt($ScreenRez, bitmap, bitmap.rect)
-      @back2_sprite.z = 0
+      @back2_sprite.z = 1
       center_sprite(@back2_sprite)
+      @back2_sprite.visible = true
     end
   end
 end
