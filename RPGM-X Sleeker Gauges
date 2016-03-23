@@ -1263,24 +1263,24 @@ end
 #===============================================================================
 # Window Battle Status
 #===============================================================================
-unless $imported["YEA-BattleEngine"].nil?
-  class Window_BattleStatus < Window_Selectable
+class Window_BattleStatus < Window_Selectable
+  unless $imported["YEA-BattleEngine"].nil?
   #=============================================================================
   # Update
   #=============================================================================
 	  def update
-		super
-    if @SGDisplay_Window
-      @SGDisplay_Window.x = self.x
-      @SGDisplay_Window.y = self.y
-      @SGDisplay_Window.width = self.width
-      @SGDisplay_Window.height = self.height
-      @SGDisplay_Window.openness = self.openness
-      @SGDisplay_Window.update
-    end
-		return if @party == $game_party.battle_members
-		@party = $game_party.battle_members.clone
-		refresh
+      super
+      if @SGDisplay_Window
+        @SGDisplay_Window.x = self.x
+        @SGDisplay_Window.y = self.y
+        @SGDisplay_Window.width = self.width
+        @SGDisplay_Window.height = self.height
+        @SGDisplay_Window.openness = self.openness
+        @SGDisplay_Window.update
+      end
+      return if @party == $game_party.battle_members
+      @party = $game_party.battle_members.clone
+      refresh
     end
 
   #=============================================================================
@@ -1288,16 +1288,16 @@ unless $imported["YEA-BattleEngine"].nil?
   #=============================================================================
 	  alias ynfbs_refresh refresh
 	  def refresh
-		if !@SGDisplay_Window
-		  @SGDisplay_Window=Window_GaugePane.new(
-        self.x,self.y,self.width,self.height)
-		  @SGDisplay_Window.viewport = self.viewport
-		  @SGDisplay_Window.opacity = 0
-      @SGDisplay_Window.openness = self.openness
-		  @SGDisplay_Window.contents.font.size =
-			YEA::BATTLE::BATTLESTATUS_TEXT_FONT_SIZE
-		end
-		ynfbs_refresh
+      if !@SGDisplay_Window
+        @SGDisplay_Window=Window_GaugePane.new(
+          self.x,self.y,self.width,self.height)
+        @SGDisplay_Window.viewport = self.viewport
+        @SGDisplay_Window.opacity = 0
+        @SGDisplay_Window.openness = self.openness
+        @SGDisplay_Window.contents.font.size =
+        YEA::BATTLE::BATTLESTATUS_TEXT_FONT_SIZE
+      end
+      ynfbs_refresh
     end
 
   #=============================================================================
