@@ -3,8 +3,8 @@
   Black Wyvern Arts - RPGMaker-X Sleeker Gauges
   Author: Black Wyvern
   Created: 02/01/16
-  Updated: 03/13/16
-  Version: 1.52
+  Updated: 03/22/16
+  Version: 1.53
 #===============================================================================
   *** Only for RPG Maker VX Ace. ***
   ------------------------------------------------------------------------------
@@ -208,7 +208,7 @@ end
 
 active = true # Turns the script on or off.
 if ($Global_Enable.nil? && active) || ($Global_Enable && active)
-  ($imported||={})["RPGM-X_Gauges"]=[true,1.52]
+  ($imported||={})["RPGM-X_Gauges"]=[true,1.53]
   # ^ Signifies that the script is installed to other scripts.
 
 #===============================================================================
@@ -1098,7 +1098,7 @@ end
 #===============================================================================
 # Yanfly Battle Engine Compatability
 #===============================================================================
-if $imported["YEA-BattleEngine"]
+unless $imported["YEA-BattleEngine"].nil?
 #===============================================================================
 # Sprite Popup
 #===============================================================================
@@ -1263,9 +1263,8 @@ end
 #===============================================================================
 # Window Battle Status
 #===============================================================================
-class Window_BattleStatus < Window_Selectable
-  if $imported["YEA-BattleEngine"]
-
+unless $imported["YEA-BattleEngine"].nil?
+  class Window_BattleStatus < Window_Selectable
   #=============================================================================
   # Update
   #=============================================================================
@@ -1388,8 +1387,8 @@ end
 #===============================================================================
 # Window BattleStatusAid
 #===============================================================================
-class Window_BattleStatusAid < Window_BattleStatus
-  if $imported["YEA-BattleEngine"]
+unless $imported["YEA-BattleEngine"].nil?
+  class Window_BattleStatusAid < Window_BattleStatus
   #=============================================================================
   # Alias: Update
   #=============================================================================
