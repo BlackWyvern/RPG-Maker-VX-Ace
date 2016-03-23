@@ -274,7 +274,7 @@ module BWX
     # -- Color for base param gauges
     #===========================================================================
     def Param_Color(param_id, position)
-      if $imported["RPGM-X_Colorspace"]
+      unless $imported["RPGM-X_Colorspace"].nil?
         case param_id
           when 2; return position == 1 ? text_color(16) : text_color(17)
           when 3; return position == 1 ? text_color(18) : text_color(19)
@@ -299,7 +299,7 @@ module BWX
     # -- Color for HP gauges
     #===========================================================================
     def HP_Colors(position, rate)
-      if $imported["RPGM-X_Colorspace"]
+      unless $imported["RPGM-X_Colorspace"].nil?
         case position
           when 1; return Auto_Color(text_color(32),text_color(34),rate)
           when 2; return Auto_Color(text_color(33),text_color(35),rate)
@@ -316,7 +316,7 @@ module BWX
     # -- Color for MP gauges
     #===========================================================================
     def MP_Colors(position, rate)
-      if $imported["RPGM-X_Colorspace"]
+      unless $imported["RPGM-X_Colorspace"].nil?
         case position
           when 1; return Auto_Color(text_color(36),text_color(38),rate)
           when 2; return Auto_Color(text_color(37),text_color(39),rate)
@@ -333,7 +333,7 @@ module BWX
     # -- Color for TP gauges
     #===========================================================================
     def TP_Colors(position, rate)
-      if $imported["RPGM-X_Colorspace"]
+      unless $imported["RPGM-X_Colorspace"].nil?
         case position
           when 1; return Auto_Color(text_color(40),text_color(42),rate)
           when 2; return Auto_Color(text_color(41),text_color(43),rate)
@@ -352,7 +352,7 @@ module BWX
     # -- Color for XP gauges
     #===========================================================================
     def XP_Colors(position, rate)
-      if $imported["RPGM-X_Colorspace"]
+      unless $imported["RPGM-X_Colorspace"].nil?
         case position
           when 1; return Auto_Color(text_color(68),text_color(70),rate)
           when 2; return Auto_Color(text_color(69),text_color(71),rate)
@@ -382,7 +382,7 @@ module BWX
     # -- Color for subparam gauges
     #===========================================================================
     def SubColors(position, rate)
-      if $imported["RPGM-X_Colorspace"]
+      unless $imported["RPGM-X_Colorspace"].nil?
         case position
           when 1; return Auto_Color(text_color(64),text_color(66),rate)
           when 2; return Auto_Color(text_color(65),text_color(67),rate)
@@ -413,7 +413,7 @@ module BWX
     # -- Because this isn't a window, yo.
     #===========================================================================
     def text_color(n)
-      if $imported["RPGM-X_Colorspace"]
+      unless $imported["RPGM-X_Colorspace"].nil?
         row = (n / 16).to_i; col = (n % 16); off = [0,0]
         case row
           when 0 || 4 ||  8 || 12;  col.even? ? off = [0,0] : off = [3,0]
@@ -434,7 +434,7 @@ module BWX
 end
 include BWX::SleekGauges
 
-unless $imported["RPGM-X_Colorspace"]
+unless $imported["RPGM-X_Colorspace"].nil?
 #===============================================================================
 # Vocab Module (Only if not using the RPGM-X Core)
 # -- Shorthand XP
@@ -1182,7 +1182,7 @@ class Window_GaugePane < Window_Selectable
               item.type]
               @formatted=initializer+"(*@values)"
             when "atb", "datb"
-              if $imported["RPGM-X_Sleek_ATB"]
+              unless $imported["RPGM-X_Sleek_ATB"].nil?
               fetch_atb_system(
                 a,item.x,item.y,item.width,item.pos.to_sym,item.mode.to_sym,
                 item.height,item.style,item.notext,
