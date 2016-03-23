@@ -4,7 +4,7 @@
   Author: Black Wyvern
   Created: 03/11/16
   Updated: 03/13/16
-  Version: 1.11
+  Version: 1.12
 #===============================================================================
   *** Only for RPG Maker VX Ace. ***
   ------------------------------------------------------------------------------
@@ -63,7 +63,7 @@ active = true # Turns the script on or off.
 ErrNam = "RPGM-X Sleeker ATB"
 ReqNam = ["RPGM-X Sleeker Gauges"]
 ReqScr = [$imported["RPGM-X_Gauges"]]
-ReqVer = 1.52
+ReqVer = 1.53
 
 i = 0
 title = ""
@@ -214,8 +214,8 @@ class Window_Base < Window
   #=============================================================================
   def fetch_atb_system(a,x,y,w,*args)
     found_atb_system = false
-    if $imported["YSA-CATB"] || $imported[:mog_atb_system] ||
-       $imported[:ve_active_time_battle] || @ccwinter_atb
+    unless $imported["YSA-CATB"].nil? || $imported[:mog_atb_system].nil? ||
+       $imported[:ve_active_time_battle].nil? || @ccwinter_atb.nil?
         found_atb_system = true
         draw_actor_atb(a,x,y,w,*args) unless casting?(a)
         draw_actor_catb(a,x,y,w,*args) if casting?(a)
@@ -227,13 +227,13 @@ class Window_Base < Window
   # Actor Casting?
   #=============================================================================           
   def casting?(a)
-    if $imported["YSA-CATB"]
+    unless $imported["YSA-CATB"].nil
       return true if a.atb_castrate > 0; end
-    if $imported[:mog_atb_system]
+    unless $imported[:mog_atb_system].nil
       return true if !a.atb_cast.empty?; end
-    if $imported[:ve_active_time_battle]
+    unless $imported[:ve_active_time_battle].nil
       return true if a.cast_action?; end
-    if @ccwinter_atb 
+    if @ccwinter_atb.nil?
       return true if a.chanting?; end
     return false
   end
@@ -243,10 +243,10 @@ class Window_Base < Window
   #=============================================================================
   def ap_rate(a)
     value = 0
-    value = (a.atb_chargerate) if $imported["YSA-CATB"]
-    value = (a.at / a.at_max.to_f) if $imported[:mog_atb_system]
-    value = (a.atb / a.max_atp.to_f) if $imported[:ve_active_time_battle]
-    value = (a.ap / ATB::MAX_AP.to_f) unless @ccwinter_atb.nil?
+    value = (a.atb_chargerate) unless $imported["YSA-CATB"].nil?
+    value = (a.at/a.at_max.to_f) unless $imported[:mog_atb_system].nil?
+    value = (a.atb/a.max_atp.to_f) unless $imported[:ve_active_time_battle].nil?
+    value = (a.ap/ATB::MAX_AP.to_f) unless @ccwinter_atb.nil?
     value = stamina_rate if defined?(CBS::MAX_STAMINA)
     return value
   end
@@ -256,15 +256,15 @@ class Window_Base < Window
   #=============================================================================
   def dap_rate(a)
     value = 0
-    value = a.atb_castrate if $imported["YSA-CATB"]
-    if $imported[:mog_atb_system]
+    value = a.atb_castrate unless $imported["YSA-CATB"].nil?
+    unless $imported[:mog_atb_system].nil?
       current = a.atb_cast[1]
       maximum = a.atb_cast[2] if @battler.atb_cast[2] != 0
       maximum = a.atb_cast[0].speed.abs if @battler.atb_cast[2] == 0
       value = current/maximum.to_f
     end   
-    value = (-a.atb / a.max_atb.to_f) if $imported[:ve_active_time_battle]
-    value = (a.chant_count / a.max_chant_count.to_f) unless @ccwinter_atb.nil?
+    value =(-a.atb/a.max_atb.to_f) unless $imported[:ve_active_time_battle].nil?
+    value =(a.chant_count / a.max_chant_count.to_f) unless @ccwinter_atb.nil?
     return value
   end
 end
@@ -275,9 +275,9 @@ end
 class Window_BattleStatus < Window_Selectable
   alias satb_wbs_init initialize
   def initialize(*args)
-    if $imported["YSA-CATB"]
+    unless $imported["YSA-CATB"].nil?
       def draw_actor_catb(*args); end; end
-    if $imported[:ve_active_time_battle]
+    unless $imported[:ve_active_time_battle].nil?
       def update_atb; end
       def update_atb_bars; end
       def draw_actor_atb(*args); end
@@ -286,7 +286,7 @@ class Window_BattleStatus < Window_Selectable
   end
 end
 
-if $imported[:mog_atb_system]
+unless $imported[:mog_atb_system].nil?
   class ATB_Meter
     def initialize(*args); end
   end
@@ -299,7 +299,7 @@ end
 # Game Actor Compatibility Code
 #===============================================================================
 class Game_Actor < Game_Battler
-  if $imported["YSA-CATB"]
+  unless $imported["YSA-CATB"].nil?
     attr_accessor :max_atb
     attr_accessor :atb_charge
     attr_accessor :atb_cast
