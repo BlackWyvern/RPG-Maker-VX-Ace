@@ -583,7 +583,7 @@ class Window_Base < Window
     if BWX::Bars::REALTIMEFLAGS.include?(t);
         @realtime+=[[x,y,a]] unless @realtime.include?([x,y,a]); end
     draw_gauge(x,y,w,r,TP_Colors(1,r),TP_Colors(2,r),p,h,s,hdn)
-    @gauges[[x,y]].extras(Vocab::tp_a,a.tp,a.mtp,t,m,nt,notag)
+    @gauges[[x,y]].extras(Vocab::tp_a,a.tp,a.max_tp,t,m,nt,notag)
   end
   
   #=============================================================================
@@ -1325,17 +1325,17 @@ class Window_BattleStatus < Window_Selectable
   # Draw Gauge Area (with TP) (Vanilla)
   #=============================================================================
 	  def draw_gauge_area_with_tp(rect, actor)
-      draw_actor_hp(actor, rect.x + 0, rect.y, 72)
-      draw_actor_mp(actor, rect.x + 82, rect.y, 64)
-      draw_actor_tp(actor, rect.x + 156, rect.y, 64)
+      draw_actor_hp(actor, rect.x + 0, rect.y+10, 72)
+      draw_actor_mp(actor, rect.x + 82, rect.y+10, 64)
+      draw_actor_tp(actor, rect.x + 156, rect.y+10, 64)
 	  end
 
   #=============================================================================
   # Draw Gauge Area (without TP) (Vanilla)
   #=============================================================================
 	  def draw_gauge_area_without_tp(rect, actor)
-      draw_actor_hp(actor, rect.x + 0, rect.y, 134)
-      draw_actor_mp(actor, rect.x + 144,  rect.y, 76)
+      draw_actor_hp(actor, rect.x + 0, rect.y+10, 134)
+      draw_actor_mp(actor, rect.x + 144,  rect.y+10, 76)
 	  end
   end
 
@@ -1344,7 +1344,6 @@ class Window_BattleStatus < Window_Selectable
   #=============================================================================
   def draw_actor_name(actor, dx, dy, dw = 112)
     reset_font_settings
-    contents.font.size = YEA::BATTLE::BATTLESTATUS_NAME_FONT_SIZE
     change_color(hp_color(actor))
     draw_text(dx+24, dy, dw-24, line_height, actor.name)
   end
