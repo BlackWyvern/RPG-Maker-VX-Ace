@@ -1,0 +1,267 @@
+=begin
+#===============================================================================
+  Black Wyvern Arts - PRGM-X Sleeker ATB
+  Author: Black Wyvern
+  Created: 03/11/16
+  Updated: 03/26/16
+  Version: 2.0 Even Sleeker ATB!
+#===============================================================================
+=end        #►►►                                           ◄◄◄#
+                active = true # Turns the script on or off.
+=begin      #►►►                                           ◄◄◄#
+#===============================================================================
+  *** Only for RPG Maker VX Ace. ***
+  ------------------------------------------------------------------------------
+  To install this script, open up your script editor and copy/paste this script
+  to an open slot below ▼ Materials but above ▼ Main. Remember to save.
+
+  Terms of use:
+    1. Give credit where credit is due.
+    2. You may use my code in anything you like. Commercial, non-commercial.
+    3. If you edit my code in any way, please link back to the original source.
+    4. Support is always appreciated in form of gold, sacrificial virgins,
+        large quantaties of bacon (or other cooked meats), or free games.
+          I can be contacted at LuneTheWyvern@Gmail.com
+
+  Description:
+    
+
+  Configuration:
+    - None
+  
+  Instructions: Plug 'n' Play
+    
+
+  Optional:
+    - None
+
+  Dependencies:
+
+#===============================================================================
+=end
+
+#===============================================================================
+# Requirements / Version Checking
+# -- Just making sure you have the required bits installed.
+# -- You probably shouldn't poke at this bit either.
+#===============================================================================
+# BWX::Core::Requirements
+#===============================================================================
+module BWX; module Core; module Requirements
+  #=============================================================================
+  # Determine if RPGM-X Sleeker Gauges is installed and active.
+  #=============================================================================
+  def self.Gauges?
+    checkOK = true
+    checkOK = false if $imported["RPGM-X_SleekerGauges"].nil?
+    checkOK = false unless $imported["RPGM-X_SleekerGauges"][0] if checkOK
+    checkOK = $imported["RPGM-X_SleekerGauges"][1] >= 2.0 if checkOK
+    
+    unless checkOK
+      msgbox("RPGM-X Battle Morale\n"+
+        "This script requires and must be placed below"+
+        "\n►RPGM-X Sleeker Gauges◄\n"+
+        "Version 2.0 or higher.\n" +
+        "It will not be activated.")
+    end
+    return checkOK  
+  end
+end; end; end
+
+active = $Global_Enable unless $Global_Enable.nil?
+active = BWX::Core::Requirements.Gauges?
+($imported||={})["RPGM-X_Morale"]=[active,1.0]
+# ^ Signifies that the script is installed to other scripts.
+if active
+
+#==============================================================================
+# Morale Module
+#==============================================================================
+if false
+module DataManager
+  class <<self; alias rpm_def_ldb load_database; end
+  def self.load_database
+    rpm_def_ldb
+    rpm_lnt_morale
+  end
+  
+  def self.rpm_lnt_morale
+    groups = [$data_skills]
+    for group in groups
+      for obj in group
+        next if obj.nil?
+        obj.rpm_lnt_morale
+      end
+    end
+  end
+end
+end
+
+# Search tags for modifiers in enemies and actors. States too if you can
+# figure that out.
+
+class RPG::BaseItem
+  
+  attr_accessor :base_mbonus
+  attr_accessor :mode_modify
+  attr_accessor :modify_num
+  
+  def rpm_lnt_morale
+    base_mbonus = 0
+    mode_modify = 0
+    modify_num  = 0
+    
+    if @note =~ /<morale mod method: (.*)>/i
+      Display("001::NLR","Modify Method Found",$1)
+      mode_modify = $1.to_i
+    end
+    
+    if @note =~ /<morale mod: (.*)>/i
+      Display("002::NLR","Modify Int Found",$1)
+      modify_num = ($1.to_i/100.0)
+
+      if mode_modify == 1
+        return modify_num
+      elsif mode_modify == 2
+        return modify_num
+      elsif mode_modify == 3
+        return modify_num
+      end
+    end
+  end
+  
+  #def base_mbonus
+  #  return base_mbonus
+  #end
+  
+  #def mode_modify
+  #  return mode_modify
+  #end
+  
+  #def modify_num
+  #  return modify_num
+  #end
+end
+
+class Game_Party < Game_Unit
+  attr_accessor :morale
+  
+  alias gp_init initialize
+  def initialize
+    gp_init
+    @morale = 0
+  end
+end
+
+class Window_Morale < Window_Base
+  def draw_bar
+    gaugeframe = Sprite.new
+    gaugeframe.bitmap = Cache.system("MoraleBar")
+    gaugeframe.y = Graphics.height-190
+    gaugeframe.x = 5
+  end
+  
+  def DrawGauge(r)
+    rate = $game_party.morale
+    ypos = Graphics.height-160
+
+    eval_gauge(
+      100, ypos, Graphics.width-200, r,
+      "BWX::Gauge::Colors.SG_Color(\"HP\",1,defined?(r).nil? ? @cur_rate : r)",
+      "BWX::Gauge::Colors.SG_Color(\"HP\",2,defined?(r).nil? ? @cur_rate : r)",
+      "\"\eC[1]Morale:\eC[0] \"+@cur_rate.percent.to_s+\"%\"",:up)
+  end
+end
+
+class Scene_Battle < Scene_Base
+  alias sb_caw create_all_windows
+  def create_all_windows
+    sb_caw
+    update_morale
+  end
+
+  alias sb_rs refresh_status
+  def refresh_status
+    sb_rs
+    update_morale
+  end
+  
+  alias aie apply_item_effects
+  def apply_item_effects(target, item)
+    aie(target, item)
+    update_morale
+  end
+  
+  def update_morale
+    @Enemy_Mor = [0.0,0.0,0.0,0.0]  #MaxHP, CurHP, Count, Alive
+    @Party_Mor = [0.0,0.0,0.0,0.0]  #MaxHP, CurHP, Count, Alive
+    @Mor_Rates = [0.0,0.0,0.0,0.0]  #Survival, Overmatch, Health%, Total
+    @Mor_Bonus = [0.0,0.0,0.0,0.0]  #Add, Multi, Set, Passive
+    
+    # Make Enemy Array
+    $game_troop.members.each do |enemy|
+      @Enemy_Mor[0]  += enemy.mhp
+      @Enemy_Mor[1]  += enemy.hp
+      @Enemy_Mor[2]  += 1
+    end
+
+    $game_troop.alive_members.each do |enemy|
+      @Enemy_Mor[3]  += 1
+    end
+
+    # Make Party array
+    $game_party.members.each do |mem|
+      @Party_Mor[0]  += mem.mhp
+      @Party_Mor[1]  += mem.hp
+      @Party_Mor[2]  += 1
+    end
+    
+    $game_party.alive_members.each do |mem|
+      @Party_Mor[3]  += 1
+    end
+    
+    # Set Survival Percentages into Total
+    @Enemy_Survival_Rate = @Enemy_Mor[3] / @Enemy_Mor[2] # 1->0
+    @Party_Survival_Rate = @Party_Mor[3] / @Party_Mor[2] # Generally 1
+    @Mor_Rates[0] = ((@Party_Survival_Rate - @Enemy_Survival_Rate)/2)
+
+    # Overmatch Formula
+    @Overmatch = @Party_Mor[3] - @Enemy_Mor[3]
+    @Mor_Rates[1]  = (@Overmatch / (@Enemy_Mor[2] + @Party_Mor[2])) / 2
+    
+    # Set HP Percentages into Total
+    @Enemy_HP_Rate = @Enemy_Mor[1] / @Enemy_Mor[0]
+    @Party_HP_Rate = @Party_Mor[1] / @Party_Mor[0]
+    @Mor_Rates[2]  = (@Party_HP_Rate - @Enemy_HP_Rate) / 2
+    
+    @Mor_Rates[3]  =
+      0.5 +
+      @Mor_Rates[0] +
+      @Mor_Rates[1] +
+      @Mor_Rates[2]
+    
+    # If Morale Modifier Used
+    @Mor_Rates[3] += @Mor_Bonus[0] if @Mor_Bonus[0] != 0  # :add
+    @Mor_Rates[3] *= @Mor_Bonus[1] if @Mor_Bonus[1] != 0  # :mult
+    @Mor_Rates[3] =  @Mor_Bonus[2] if @Mor_Bonus[2] != 0  # :set
+    @Mor_Rates[3] += @Mor_Bonus[3] if @Mor_Bonus[3] != 0  # :pas
+
+    @MoraleRate = @Mor_Rates[3].clamp 0,1
+    $game_party.morale = @MoraleRate
+    
+    if !@Morale_Window
+      @Morale_Window = Window_Morale.new(0,0,Graphics.width,Graphics.height)
+      @Morale_Window.opacity = 0
+    end
+    @Morale_Window.contents.clear
+    @Morale_Window.DrawGauge(@MoraleRate)
+    @Morale_Window.update
+  end
+end
+=begin
+#==============================================================================
+  EOF
+#==============================================================================
+=end
+
+end # End Activation Handler
