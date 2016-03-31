@@ -1,0 +1,56 @@
+module BWX; module Gauge module Colors
+  #===========================================================================
+  # Param Colors
+  #===========================================================================
+  def self.SGC_Param(position,rate)
+    case position
+    when 2; return Colorspace? ?
+      [SGauge_GC(16),SGauge_GC(17)] : [text_color( 2),text_color( 2)]  # ATK
+    when 3; return Colorspace? ?
+      [SGauge_GC(18),SGauge_GC(19)] : [text_color(10),text_color(10)]  # DEF
+    when 4; return Colorspace? ?
+      [SGauge_GC(20),SGauge_GC(21)] : [text_color( 5),text_color( 5)]  # MAT
+    when 5; return Colorspace? ?
+      [SGauge_GC(22),SGauge_GC(23)] : [text_color(13),text_color(13)]  # MDF
+    when 6; return Colorspace? ?
+      [SGauge_GC(24),SGauge_GC(25)] : [text_color( 3),text_color( 3)]  # AGI
+    when 7; return Colorspace? ?
+      [SGauge_GC(26),SGauge_GC(27)] : [text_color( 6),text_color( 6)]  # LUK
+    end
+  end
+
+  #===========================================================================
+  # Subparam Colors
+  #===========================================================================
+  def self.SGC_Sub(position,rate)
+    case position
+    when 1; return Colorspace? ? Auto_Color([64,66],rate) :
+              Color.new(0+(80*(1-rate)),(144*rate),(144*rate),192)
+    when 2; return Colorspace? ? Auto_Color([65,67],rate) :
+              Color.new(0+(255*(1-rate)),(255*rate),(255*rate),192)
+    end
+  end
+end; end; end
+
+#===============================================================================
+# Window Base
+#===============================================================================
+class Window_Base < Window
+  #=============================================================================
+  # Draw Actor Param
+  #=============================================================================
+  def draw_actor_param(actor, x, y, w=124, textpos=:def, mode=:dyn, style="",
+        h=@SG_Height, notext=false, notag=falseparam_id=0)
+    draw_gauge(x,y,w,nil,nil,nil,textpos,mode,"Param",style,h,actor,notext,notag)
+    @gauges[[x,y]].gauge_subparams("Param",param_id)
+  end
+
+  #=============================================================================
+  # Draw Sub-Param
+  #=============================================================================
+  def draw_subparam(actor, x, y, w=124, textpos=:def, mode=:dyn, style="",
+        h=@SG_Height,nt1=false,nt2=false,subtype="SubN",paramtype=0,param_id=0)
+    draw_gauge(x,y,w,nil,nil,nil,textpos,mode,"Sub",style,h,actor,nt1,nt2)
+    @gauges[[x,y]].gauge_subparams(subtype,paramtype,param_id)
+  end
+end
