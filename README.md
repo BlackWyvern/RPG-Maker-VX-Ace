@@ -1,7 +1,9 @@
 # Black Wyvern Arts RPGM-eXperimental
 Various scripts I've coded up for RPG Maker VX Ace
 
-Terms of use:
+My scripts are blanket-published under http://creativecommons.org/licenses/by-sa/3.0/
+
+Summing up the terms of use:
 
 1. Give credit where credit is due.
 
