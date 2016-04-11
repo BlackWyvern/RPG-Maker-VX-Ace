@@ -9,7 +9,7 @@
 │ Forum:   RPGMC /topic/37524-rpgm-x-sleeker-gauges-153/                       │
 │ Created: 02/01/16                                                            │
 │ Updated: 04/10/16                                                            │
-│ Version: 3.0.0 | 3.0.0 | 3.0.0 | NYI | NYI                                   │
+│ Version: 3.0.1 | 3.0.0 | 3.0.0 | NYI | NYI                                   │
 │ License: http://creativecommons.org/licenses/by-sa/3.0/                      │
 ├──────────────────────────────────────────────────────────────────────────────┤
 ╚──────╗               *** Only for RPG Maker VX Ace. ***               ╔──────╝
@@ -48,7 +48,7 @@
     Provides methods for drawing Dragon System resource and Parameter bars.
   
   Configuration:
-    Options below allow for customization. Options start on line 350.
+    Options below allow for customization. Options start on line 330.
   
   Instructions:
     ► SG:   Plug 'n' Play
@@ -298,8 +298,8 @@ end; end; end # ═════════════════════�
 
 #     ╔════════════════════════╗ Liek omg, actual script-like stuff starts here!
 # ════╝ New Activation Handler ╚════════════════════════════════════════════════
-sg_global = $Global_Enable unless $Global_Enable.nil?
-($imported||={})["RPGM-X_SleekerCore"]=[sg_global,3.0]; if sg_global
+sg_global = ($Global_Enable.nil? && active) || ($Global_Enable && active)
+($imported||={})["RPGM-X_SleekerCore"]=[sg_global,3.01]; if sg_global
 
 sg_atb  = BWX::SGV3::Vars::MODULES_SG_ATBS && BWX::Core::Optionals.ATBLoaded?
 ($imported||={})["RPGM-X_SleekerATBs"]=[sg_atb,3.0]
@@ -323,13 +323,9 @@ sg_drgn = BWX::SGV3::Vars::MODULES_SG_DRGN && BWX::Core::Optionals.Dragon?
 =end # ═════════════════════════════════════════════════════════════════════════
 
 #═══════════════════════════════════════════════════════════════════════════════
-# ＭＯＤＵＬＥ: BWX::SGV3::
-#═══════════════════════════════════════════════════════════════════════════════
-module BWX; module SGV3
-#═══════════════════════════════════════════════════════════════════════════════
 # ＭＯＤＵＬＥ: BWX::SGV3::Vars::
 #═══════════════════════════════════════════════════════════════════════════════
-module Vars
+module BWX; module SGV3; module Vars
 
   # BASE GAUGE BEHAVIOR FLAGS ══════════════════════════════════════════════════
   BASE_Bar_Height = 8     # Default bar height
@@ -373,6 +369,13 @@ module Vars
                           #   also makes bar animations look choppy. Try to keep
                           #   this set to something under 10 if needed.
 
+  MHPB_BASE_COLF1 = 20    # Colors to use for the gauges. If you have the
+  MHPB_BASE_COLF2 = 21    # RPGM-X Core Colorspace installed and active these
+  MHPB_BIGG_COLF1 = 20    # settings will be ignored.
+  MHPB_BIGG_COLF2 = 21
+  MHPB_BOSS_COLF1 = 20
+  MHPB_BOSS_COLF2 = 21
+
   # YANFLY ENGINE FLAGS ════════════════════════════════════════════════════════
   # - If you are not using YEA - Ace Battle Engine these do not apply to you.
   # ════════════════════════════════════════════════════════════════════════════
@@ -415,41 +418,44 @@ module Vars
   }
 end; end; end # Close BWX::SGV3::Vars::
 
-#═══════════════════════════════════════════════════════════════════════════════
+
+#═════════════════════════════════════════════════════════════════════════════
 # ＭＯＤＵＬＥ: Vocab.
-#═══════════════════════════════════════════════════════════════════════════════
+#═════════════════════════════════════════════════════════════════════════════
 module Vocab
-  def self.xp;    "Expertise";  end         # XP
-  def self.xp_a;  "Ex";         end         # XP (short)
+  unless BWX::Core::Optionals.Core?
+    def self.xp;    "Expertise";  end         # XP
+    def self.xp_a;  "Ex";         end         # XP (short)
 
-  if BWX::SGV3::Vars::MODULES_SG_PRAM
-    def self.xparam(id)
-      case id
-      when 0 ; "Accuracy Bonus"             # HIT
-      when 1 ; "Evasion Chance"             # EVA
-      when 2 ; "Critical Chance"            # CRI
-      when 3 ; "Critical Evasion"           # CEV
-      when 4 ; "Magic Evasion"              # MEV
-      when 5 ; "Magic Reflection"           # MRF
-      when 6 ; "Counter Attack"             # CNT
-      when 7 ; hp_a + " Regen / Turn"       # HRG
-      when 8 ; mp_a + " Regen / Turn"       # MRG
-      when 9 ; tp_a + " Regen / Turn"       # TRG
+    if BWX::SGV3::Vars::MODULES_SG_PRAM
+      def self.xparam(id)
+        case id
+        when 0 ; "Accuracy Bonus"             # HIT
+        when 1 ; "Evasion Chance"             # EVA
+        when 2 ; "Critical Chance"            # CRI
+        when 3 ; "Critical Evasion"           # CEV
+        when 4 ; "Magic Evasion"              # MEV
+        when 5 ; "Magic Reflection"           # MRF
+        when 6 ; "Counter Attack"             # CNT
+        when 7 ; hp_a + " Regen / Turn"       # HRG
+        when 8 ; mp_a + " Regen / Turn"       # MRG
+        when 9 ; tp_a + " Regen / Turn"       # TRG
+        end
       end
-    end
 
-    def self.sparam(id)
-      case id
-      when 0 ; "Threat Modifier"            # TGR
-      when 1 ; "Guard Power"                # GRD
-      when 2 ; "Healing Power"              # REC
-      when 3 ; "Consumable Power"           # PHA
-      when 4 ; "Magic Fatigue"              # MCR
-      when 5 ; tp_a + " Restore Power"      # TCR
-      when 6 ; "Phys Damage Rate"           # PDR
-      when 7 ; "Mag Damage Rate"            # MDR
-      when 8 ; "Terrain Damage Rate"        # FDR
-      when 9 ; "Expertise Boost"            # EXR
+      def self.sparam(id)
+        case id
+        when 0 ; "Threat Modifier"            # TGR
+        when 1 ; "Guard Power"                # GRD
+        when 2 ; "Healing Power"              # REC
+        when 3 ; "Consumable Power"           # PHA
+        when 4 ; "Magic Fatigue"              # MCR
+        when 5 ; tp_a + " Restore Power"      # TCR
+        when 6 ; "Phys Damage Rate"           # PDR
+        when 7 ; "Mag Damage Rate"            # MDR
+        when 8 ; "Terrain Damage Rate"        # FDR
+        when 9 ; "Expertise Boost"            # EXR
+        end
       end
     end
   end
@@ -956,17 +962,17 @@ class Gauges
       if type == 2
         color_left = @Colorspace ?
           Auto_Color([76,78],rate) :
-          text_color(BWX::Gauge::Variables::MHPB_BIGG_COLF1)
+          text_color(BWX::SGV3::Vars::MHPB_BIGG_COLF1)
                           
       elsif type == 1
         color_left = @Colorspace ?
           Auto_Color([76,78],rate) :
-          text_color(BWX::Gauge::Variables::MHPB_BOSS_COLF1)
+          text_color(BWX::SGV3::Vars::MHPB_BOSS_COLF1)
 
       elsif type == 0
         color_left = @Colorspace ?
           Auto_Color([72,74],rate) :
-          text_color(BWX::Gauge::Variables::MHPB_BASE_COLF1)
+          text_color(BWX::SGV3::Vars::MHPB_BASE_COLF1)
       end
 
       # ＣＯＬＯＲ　ＲＩＧＨＴ ==
@@ -974,17 +980,17 @@ class Gauges
       if type == 2
         color_right = @Colorspace ?
           Auto_Color([77,79],rate) :
-          text_color(BWX::Gauge::Variables::MHPB_BIGG_COLF2)
+          text_color(BWX::SGV3::Vars::MHPB_BIGG_COLF2)
 
       elsif type == 1
         color_right = @Colorspace ?
           Auto_Color([77,79],rate) :
-          text_color(BWX::Gauge::Variables::MHPB_BOSS_COLF2)
+          text_color(BWX::SGV3::Vars::MHPB_BOSS_COLF2)
 
       elsif type == 0
         color_right = @Colorspace ?
           Auto_Color([73,75],rate) :
-          text_color(BWX::Gauge::Variables::MHPB_BASE_COLF2)
+          text_color(BWX::SGV3::Vars::MHPB_BASE_COLF2)
       end
       return [color_left,color_right] if single == "C" # ＲＥＴＵＲＮ ->
     end
@@ -1269,53 +1275,92 @@ class Bitmap
   end
 end # Close Bitmap
 
-#═══════════════════════════════════════════════════════════════════════════════
-# ＣＬＡＳＳ: Numeric.
-#═══════════════════════════════════════════════════════════════════════════════
-class Numeric
-  def clamp min, max
-    self < min ? min : (self > max ? max : self)
-  end
-  def max!(max)
-    self > max ? max : self
-  end
-  def min!(min)
-    self < min ? min : self
-  end
-  def round_to(places)
-    power = 10.0**places
-    (self * power).round / power
-  end
-  def to_b; self >= 1; end
-  def !; !self.to_b; end
-  def comp_tri(value)
-    return -1 if self <  value
-    return  0 if self == value
-    return  1 if self >  value
-  end
-  def percent; (self * 100).round; end
-end
+unless BWX::Core::Optionals.Core?
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＣＬＡＳＳ: Numeric.
+  #═════════════════════════════════════════════════════════════════════════════
+  class Numeric
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Numeric.group
+    #═══════════════════════════════════════════════════════════════════════════
+    def group
+      return self.to_s
+      self.to_s.gsub(/(\d)(?=\d{3}(?:\.|$))(\d{3}\.)?/,'$1,$2')
+    end
 
-class Rext
-  def fit?(rect)
-  end
-end
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Numeric.clamp min,max
+    #═══════════════════════════════════════════════════════════════════════════
+    def clamp min, max
+      self < min ? min : (self > max ? max : self)
+    end
 
-class Float
-  def clone
-  return self + 0
-  end
-end
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Numeric.round_to(places)
+    #═══════════════════════════════════════════════════════════════════════════
+    def round_to(places)
+      power = 10.0**places
+      (self * power).round / power
+    end
 
-class String
-  def ^; self.upcase; end
-end
+    #═════════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Numeric.percent / Numeric.unpercent
+    #═════════════════════════════════════════════════════════════════════════════
+    def percent; (self * 100).round; end
+    def unpercent; self.to_f / 100; end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Numeric.to_b (Numeric to Bool) / !Numeric (Numeric to NOT Bool)
+    #═══════════════════════════════════════════════════════════════════════════
+    def to_b; self >= 1; end
+    def !; !self.to_b; end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Numeric.to_tri(value=0) (Numeric to Trinary)
+    #═══════════════════════════════════════════════════════════════════════════
+    def to_tri(value=0)
+      return -1 if self <  value
+      return  0 if self == value
+      return  1 if self >  value
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Numeric.min!(min) / Numeric.max!(max)
+    #═══════════════════════════════════════════════════════════════════════════
+    def min!(min);  self < min ? min : self;  end
+    def max!(max);  self > max ? max : self;  end
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＣＬＡＳＳ: String.
+  # - String    ->  Uppercase
+  #═════════════════════════════════════════════════════════════════════════════
+  class String
+    def ^; self.upcase; end
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＣＬＡＳＳ: Float.
+  # - Float.clone
+  #═════════════════════════════════════════════════════════════════════════════
+  class Float
+    def clone; self + 0; end
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＣＬＡＳＳ: Rect.
+  # - Fit? (TO DO)
+  #═════════════════════════════════════════════════════════════════════════════
+  class Rect
+    def fit?(rect)
+    end
+  end
+end # Close Core Import
 
 #═══════════════════════════════════════════════════════════════════════════════
 # ＣＬＡＳＳ: Window_Inactive.
 #═══════════════════════════════════════════════════════════════════════════════
 class Window_Inactive < Window_Base
-  attr_reader :colorspace
   #═════════════════════════════════════════════════════════════════════════════
   # ＩＮＩＴＩＡＬＩＺＥ
   #═════════════════════════════════════════════════════════════════════════════
@@ -1323,15 +1368,13 @@ class Window_Inactive < Window_Base
     super(0,0,0,0)
     opacity = openness = 0
     active = visisble = false
-    @colorspace = Cache.system(BWX::Core::Colorspace::COLORSPACE) if
-      BWX::Core::Optionals.Colorspace?
   end
-
   #═════════════════════════════════════════════════════════════════════════════
   # ＧＲＡＶＥＹＡＲＤ
   #═════════════════════════════════════════════════════════════════════════════
   def update; end
   def refresh; end
+  def update_tone; end
 end # Close Window_Inactive
 
 #═══════════════════════════════════════════════════════════════════════════════
@@ -1716,7 +1759,7 @@ class Sleeker_Gauge
         
         @cur_rate = @max_rate
       else
-        ratecomp = @cur_rate.comp_tri(@max_rate)
+        ratecomp = @cur_rate.to_tri(@max_rate)
         @cur_rate -= @SpeedRate * ratecomp
         @cur_rate = @cur_rate.round_to(4).clamp -1,1
       end
@@ -1731,7 +1774,7 @@ class Sleeker_Gauge
 
         @cur_val = @set_val
       else
-        ratecomp = @cur_val.comp_tri(@max_val)
+        ratecomp = @cur_val.to_tri(@max_val)
         @cur_val -= @SpeedVal * ratecomp
         @cur_val = @cur_val.round_to(2).max!(@max_val)
       end
