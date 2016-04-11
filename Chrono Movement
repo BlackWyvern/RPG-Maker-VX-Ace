@@ -1,0 +1,307 @@
+=begin ╔════════════════════════════════════════════════════════════════╗
+╔──────╝      Black Wyvern Arts - RPGM-X 8 Directional Movement+        ╚──────╗
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Author:  Black Wyvern                                                        │
+│ Forum:   RPGMC /topic/37752-rpgm-x-8-directional-move/                       │
+│ Created: 09/14/13                                                            │
+│ Updated: 03/15/16                                                            │
+│ Version: 1.1.0                                                               │
+│ License: http://creativecommons.org/licenses/by-sa/3.0/                      │
+├──────────────────────────────────────────────────────────────────────────────┤
+╚──────╗               *** Only for RPG Maker VX Ace. ***               ╔──────╝
+=end # ╚═──────══╦════════════════════════════════════════════╦══──────═╝
+                   active = true # Turns the script on or off
+=begin ══════════╩════════════════════════════════════════════╩═════════════════
+
+  To install this script, open up your script editor and copy/paste this script
+  to an open slot below ▼ Materials but above ▼ Main. Remember to save.
+  
+  Terms of use:
+    1. Give credit where credit is due.
+    2. You may use my code in anything you like. Commercial, non-commercial.
+    3. If you edit my code in any way, please link back to the original source.
+    4. Support is always appreciated in form of gold, sacrificial virgins,
+        large quantaties of bacon (or other cooked meats), or free games.
+          I can be contacted at LuneTheWyvern@Gmail.com
+
+  Description:
+    Builds an array of possible moves around the character, then determines if
+    character should move diagonally when walking against a diagonal surface.
+    This function is meant to reproduce that from games like Chrono Trigger.
+    Allows diagonal movement in all other cases.
+    
+    Supports 8-Directional Spritesheets. (Optionally of course.)
+    Basically, what needs be done is instead of having 8 characters in a file,
+    you will need 4 characters with their diagonal facings next to the
+    traditional animations. 6x4 instead of the 3x4 default sheet.
+    
+    Visit Hime's link for information on how to set those up.
+    It's down in the credits. She does a much better job explaining it than I.
+    
+    ►►► BIG NOTICE YOU SHOULD PROBABLY READ ◄◄◄
+    I'm more than fairly certain this would be incompatable with pixel movement
+    scripts. Not that those probably don't already do what mine do anyways,
+    but, you know; disclaimers and all.
+
+  Configuration:
+    - Enable/Disable extended sprite sheets.
+  
+  Instructions: Plug 'n' Play
+    - Nothing else really.
+
+  Optional:
+    - None
+
+  Dependencies:
+    - None
+  
+  Credits:
+    - Hime :: For her awesome 8-directional movement tutorial.
+      http://himeworks.com/2014/11/eight-directional-movement/
+=end # ═════════════════════════════════════════════════════════════════════════
+
+=begin ═════════════════════════════════════════════════════════════════════════
+│ Optional Scripts / Version Checking
+│ - Checking to see if you have optional scripts installed and active.
+│ - You probably shouldn't poke at this bit.
+╞═══════════════════════════════════════════════════════════════════════════════
+│ BWX::Core::Optionals.
+=end # ═════════════════════════════════════════════════════════════════════════
+module BWX; module Core; module Optionals
+  #═════════════════════════════════════════════════════════════════════════════
+  # Determine if the RPGM-X Core is installed and active.
+  #═════════════════════════════════════════════════════════════════════════════
+  def self.Core?
+    return false if $imported["BWA_RPGM-X"].nil?
+    return false unless $imported["BWA_RPGM-X"][0]
+    return true if $imported["BWA_RPGM-X"][1] >= 1.1
+  end
+end; end; end # Close BWX::Core::Optionals
+
+#     ╔════════════════════════╗ Liek omg, actual script-like stuff starts here!
+# ════╝ New Activation Handler ╚════════════════════════════════════════════════
+active = ($Global_Enable.nil? && active) || ($Global_Enable && active)
+($imported||={})["RPGM-X_8DirMove"]=[1.1,true]; if active
+# ══════════════════════════════════════════════════════════════════════════════
+
+=begin ═════════════════════════════════════════════════════════════════════════
+│ STREWN BEFORE YOU IS A VIRTUAL CORNICOPIA OF OPTIONS AND SETTINGS FOR WHICH
+│ NO ONE IN YOUR PARTY KNOWS WHAT DOES. YOU ARE TEMPTED TO PICK ONE UP AND
+│ EXAMINE IT. COULD IT BE VALUABLE? COULD YOU BREW IT INTO A POTENT POLTICE?
+│ PROBABLY NOT. THESE ARE SIMPLE VARIABLES AFTERALL. OH, AND IF THERE ISN'T A
+│ "VIRTUAL CORNICOPIA OF OPTIONS AND SETTINGS" DISREGARD THAT MESSAGE. *WHISTLE*
+=end # ═════════════════════════════════════════════════════════════════════════
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ＭＯＤＵＬＥ: BWX::Core::Vars::
+#═══════════════════════════════════════════════════════════════════════════════
+module BWX; module Core; module Vars
+    EXTENDED_SPRITES = false    # Enables/Disables non-orthogonal spritesheets.
+end; end; end
+
+=begin ═════════════════════════════════════════════════════════════════════════
+│ YOU ARE FILLED WITH A SENSE OF DREAD WHEN YOU REALIZE YOU HAVE RUN OUT OF FUN
+│ AND INTERESTING OPTIONS YOU CAN MESS WITH. LOOKING AROUND, ALL YOU SEE IS
+│ JAGGED, UNKEPT CODE.. AND IS THAT.. BLOOD? NO, IT CAN'T BE.. BEFORE MOVING ON
+│ YOU MUST MAKE AND SUCCEED A FORTITUDE CHECK. HOW'S THOSE NATURAL 20 ROLLS
+│ HOLDING OUT FOR YOU NOWADAYS? OH AND SPIDERS. DID I FORGET THE SPIDERS? BIG.
+=end # ═════════════════════════════════════════════════════════════════════════
+
+unless BWX::Core::Optionals.Core?
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＣＬＡＳＳ: Numeric.
+  # - Add Trinary logic operator
+  #═════════════════════════════════════════════════════════════════════════════
+  class Numeric
+    def to_tri(value=0)
+      return -1 if self <  value
+      return  0 if self == value
+      return  1 if self >  value
+    end
+  end
+end
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ＣＬＡＳＳ: Game_Player.
+#═══════════════════════════════════════════════════════════════════════════════
+class Game_Player < Game_Character
+  #═══════════════════════════════════════════════════════════════════════════════
+  # ＲＥＤＥＦＩＮＥ: Game_Player.move_by_input
+  #═══════════════════════════════════════════════════════════════════════════════
+  def move_by_input
+    return if !movable? || $game_map.interpreter.running?
+    return if Input.dir8 == 0
+    
+    movearray = []
+    movearray[7] = diagonal_passable?(x, y, 4, 8)
+    movearray[8] = passable?(x, y, 8)
+    movearray[9] = diagonal_passable?(x, y, 6, 8)
+    
+    movearray[4] = passable?(x, y, 4)
+    movearray[5] = nil #Character Position
+    movearray[6] = passable?(x, y, 6)
+
+    movearray[1] = diagonal_passable?(x, y, 4, 2)
+    movearray[2] = passable?(x, y, 2)
+    movearray[3] = diagonal_passable?(x, y, 6, 2)
+
+    case Input.dir8
+    #Linear
+    when 2
+      if movearray[2]; move_straight(2)
+      else
+        if     movearray[1] &&  movearray[3]; move_straight(2)
+        elsif  movearray[1] && !movearray[3]; move_diagonal(4,2)
+        elsif !movearray[1] &&  movearray[3]; move_diagonal(6,2)
+        end
+      end
+    when 4
+      if movearray[4]; move_straight(4)
+      else
+        if     movearray[1] &&  movearray[7]; move_straight(4)
+        elsif  movearray[1] && !movearray[7]; move_diagonal(4,2)
+        elsif !movearray[1] &&  movearray[7]; move_diagonal(4,8)
+        end
+      end
+    when 6
+      if movearray[6]; move_straight(6)
+      else
+        if     movearray[3] &&  movearray[9]; move_straight(6)
+        elsif  movearray[3] && !movearray[9]; move_diagonal(6,2)
+        elsif !movearray[3] &&  movearray[9]; move_diagonal(6,8)
+        end
+      end
+    when 8
+      if movearray[8]; move_straight(8)
+      else
+        if     movearray[7] &&  movearray[9]; move_straight(8)
+        elsif  movearray[7] && !movearray[9]; move_diagonal(4,8)
+        elsif !movearray[7] &&  movearray[9]; move_diagonal(6,8)
+        end
+      end
+    #Diags
+    when 1; move_diagonal(4, 2)
+    when 3; move_diagonal(6, 2)
+    when 7; move_diagonal(4, 8)
+    when 9; move_diagonal(6, 8)
+    end
+  end
+end
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ＣＬＡＳＳ: Game_CharacterBase.
+#═══════════════════════════════════════════════════════════════════════════════
+class Game_CharacterBase
+  #╒══════════════════════════════════════════════════════════════════════════╤╗
+  #│Hime::Define: Game_CharacterBase.distance_per_frame                       │║
+  #╘══════════════════════════════════════════════════════════════════════════╧╝
+  def distance_per_frame
+    s = (2**real_move_speed/256.0)
+    return @direction % 2 == 0 ? s : s / 1.41421356237
+  end
+end
+
+if BWX::Core::Vars::EXTENDED_SPRITES
+#═══════════════════════════════════════════════════════════════════════════════
+# ＣＬＡＳＳ: Game_CharacterBase.
+# - (Again, this time for the non-ortho views.)
+#═══════════════════════════════════════════════════════════════════════════════
+  class Game_CharacterBase
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＲＥＤＥＦＩＮＥ: Game_CharacterBase.move_diagonal(cx, cy)
+  #═════════════════════════════════════════════════════════════════════════════
+    def move_diagonal(cx, cy)
+      @move_succeed = diagonal_passable?(x, y, cx, cy)
+      if @move_succeed
+        @x = $game_map.round_x_with_direction(@x, cx)
+        @y = $game_map.round_y_with_direction(@y, cy)
+        @real_x = $game_map.x_with_direction(@x, reverse_dir(cx))
+        @real_y = $game_map.y_with_direction(@y, reverse_dir(cy))
+        increase_steps
+
+        case cx
+          when 4; cy == 2 ? set_direction(1) : set_direction(7)
+          when 6; cy == 2 ? set_direction(3) : set_direction(9)
+        end
+      end
+    end
+  end
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ＣＬＡＳＳ: Sprite_Character.
+#═══════════════════════════════════════════════════════════════════════════════
+  class Sprite_Character < Sprite_Base
+    #╒════════════════════════════════════════════════════════════════════════╤╗
+    #│Hime::Class: Game_Map.                                                  │║
+    #╘════════════════════════════════════════════════════════════════════════╧╝
+    def update_src_rect
+      if @tile_id == 0      
+        if @character.direction % 2 == 0
+          index = @character.character_index
+          pattern = @character.pattern < 3 ? @character.pattern : 1
+          sx = (index%4*3+pattern)*@cw
+          sy = (index/4*4+(@character.direction-2)/2)*@ch
+          self.src_rect.set(sx,sy,@cw,@ch)
+        else
+          index = @character.character_index + 1
+          pattern = @character.pattern < 3 ? @character.pattern : 1
+          sx = (index%4*3+pattern)*@cw
+          sy = (index/4*4+(((@character.direction*2)%10)-2)/2)*@ch
+          self.src_rect.set(sx,sy,@cw,@ch)
+        end
+      end
+    end
+  end
+
+#╒════════════════════════════════════════════════════════════════════════════╤╗
+#│Hime::Class: Game_Map.(various definitions)                                 │║
+#╘════════════════════════════════════════════════════════════════════════════╧╝
+class Game_Map
+    def x_with_direction(x,d); x+(d%3==0?1:(d+2)%3==0?-1: 0); end
+    def y_with_direction(y,d); y+(d<4?1: d>6?-1: 0);end
+    def round_x_with_direction(x,d); round_x(x+(d%3==0?1:(d+2)%3==0?-1: 0)); end
+    def round_y_with_direction(y,d); round_y(y+(d<4?1: d>6?-1: 0)); end
+  end
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ＣＬＡＳＳ: Game_Character.
+#═══════════════════════════════════════════════════════════════════════════════
+  class Game_Character < Game_CharacterBase
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＲＥＤＥＦＩＮＥ: Game_Character.face_direction(x,y,m)
+  #═════════════════════════════════════════════════════════════════════════════
+    def face_direction(x,y,m)
+      case [x,y]
+        when [-1,-1]; m ? set_direction(3) : set_direction(7)
+        when [-1,0];  m ? set_direction(6) : set_direction(4)
+        when [-1,1];  m ? set_direction(9) : set_direction(1)
+        when [0,-1];  m ? set_direction(2) : set_direction(8)
+        when [0,1];   m ? set_direction(8) : set_direction(2)
+        when [1,-1];  m ? set_direction(1) : set_direction(9)
+        when [1,0];   m ? set_direction(4) : set_direction(6)
+        when [1,1];   m ? set_direction(7) : set_direction(3)
+      end
+    end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＲＥＤＥＦＩＮＥ: Game_Character.turn_toward_character(character)
+  #═════════════════════════════════════════════════════════════════════════════
+    def turn_toward_character(character)
+      sx = distance_x_from(character.x).to_tri
+      sy = distance_y_from(character.y).to_tri
+      face_direction(sx,sy,true)
+    end
+    
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＲＥＤＥＦＩＮＥ: Game_Character.turn_away_from_character(character)
+  #═════════════════════════════════════════════════════════════════════════════
+    def turn_away_from_character(character)
+      sx = distance_x_from(character.x).to_tri
+      sy = distance_y_from(character.y).to_tri
+      face_direction(sx,sy,false)
+    end
+  end
+end
+# ══════════════════════════════════════════════════════════════════════════════
+# ════╗ End Activation Handler ╔════════════════════════════════════════════════
+end # ╚════════════════════════╝ End of File - Srsly, there's nothing more here!
