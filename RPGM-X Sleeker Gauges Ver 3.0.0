@@ -1,0 +1,3284 @@
+=begin ╔════════════════════════════════════════════════════════════════╗
+╔──────╣         Black Wyvern Arts - RPGMaker-X Sleeker Gauges          ╠──────╗
+╠──────╣           Black Wyvern Arts - PRGM-X ATB System Bars           ╠──────╣
+╠──────╣         Black Wyvern Arts - RPGMaker-X Monster HP Bars         ╠──────╣
+╠──────╣         Black Wyvern Arts - RPGMaker-X Parameter Bars          ╠──────╣
+╠──────╝       Black Wyvern Arts - RPGMaker-X Dragon Combat Bars        ╚──────╣
+├──────────────────────────────────────────────────────────────────────────────┤
+│ Author:  Black Wyvern                                                        │
+│ Forum:   RPGMC /topic/37524-rpgm-x-sleeker-gauges-153/                       │
+│ Created: 02/01/16                                                            │
+│ Updated: 04/10/16                                                            │
+│ Version: 3.0.0 | 3.0.0 | 3.0.0 | NYI | NYI                                   │
+│ License: http://creativecommons.org/licenses/by-sa/3.0/                      │
+├──────────────────────────────────────────────────────────────────────────────┤
+╚──────╗               *** Only for RPG Maker VX Ace. ***               ╔──────╝
+=end # ╚═──────══╦════════════════════════════════════════════╦══──────═╝
+                   active = true # Turns the script on or off
+=begin ══════════╩════════════════════════════════════════════╩═════════════════
+
+  To install this script, open up your script editor and copy/paste this script
+  to an open slot below ▼ Materials but above ▼ Main. Remember to save.
+  
+  Terms of use:
+    1. Give credit where credit is due.
+    2. You may use my code in anything you like. Commercial, non-commercial.
+    3. If you edit my code in any way, please link back to the original source.
+    4. Support is always appreciated in form of gold, sacrificial virgins,
+        large quantaties of bacon (or other cooked meats), or free games.
+          I can be contacted at LuneTheWyvern@Gmail.com
+
+  Description:
+    ► Sleeker Gauges
+    Changes the appearance and function of gauges throughout
+    the game automatically. Can be modded to allow for custom gauge
+    definitions.
+
+    ► Sleeker ATB Systems
+    Provides methods for drawing ATB or Stamina from multiple sources.
+
+    ► Sleeker Monster HP Bars
+    Provides methods for drawing Enemy HP, MP, [ATB] and [Hit Chance] in combat.
+    Allows you to customize HP bar apperance for mobs and bosses individually.
+
+    ► Sleeker Parameter Bars (NOT YET IMPLIMENTED)
+    Provides methods for drawing focus major parameters.
+
+    ► Sleeker Dragon Combat Bars (NOT YET IMPLIMENTED)
+    Provides methods for drawing Dragon System resource and Parameter bars.
+  
+  Configuration:
+    Options below allow for customization. Options start on line 350.
+  
+  Instructions:
+    ► SG:   Plug 'n' Play
+    ► ATB:  Plug 'n' Play
+    ► Sleeker Monster HP Bars
+    Bars come currently in three styles. Use the following tags in the monster
+    notebox to determine behaviours.
+    "Hidden":   <no gauge>
+    "Scrub":     No servicable tag.
+    "Miniboss": <miniboss>
+    "Big Boss": <big boss>
+    ► Pram: Plug 'n' Play
+    ► Drgn: Plug 'n' Play
+
+  Optional: (Place this Above)
+    - None
+
+  Dependencies: (Place this Below)
+    - None
+  
+  Compatability: (Place This Below)
+    - Yanfly Battle Engine
+    - Yanfly AOE Targeting
+    - RPGM-X Dragon Combat
+
+    ► Sleeker ATB Systems: One of the following:
+    - Yami :: Classic ATB               (Confirmed working)
+    - Victor :: VE Engine ATB System    (Confirmed working)
+    - CCWinter :: ATB                   (Confirmed working)
+  
+  Credits:
+    - Vlue :: Sleek Gauges
+    - Syvkal :: Menu Gauges
+    - Yanfly :: AoE Targeting Support & Enemy HP Bars
+    - Yami :: Classic ATB
+    - Victor :: VE Engine ATB System
+    - CCWinter :: ATB  
+=end # ═════════════════════════════════════════════════════════════════════════
+
+=begin ═════════════════════════════════════════════════════════════════════════
+│ Sleeker Gauges Modding Guide V3.0
+│
+│ HOLY CRAP MAKING GAUGES IS EASY NOW. You're welcome.
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ＭＯＤＵＬＥ: BWX::SGV3::Vars::
+#═══════════════════════════════════════════════════════════════════════════════
+module BWX; module SGV3; module Vars
+  Gauge_Styles["Custom"] = '||' # <== Sets the style of your gauge
+  Realtime__Flags += ["Custom"] # <== Allows gauge to be rendered in realtime
+                                # whilst using Yanfly Engine Ace and displaying
+                                # the gauge on Window_Realtime
+end; end
+
+►►► Here's where you need to read a bit.
+
+  There's three different things you can with this segment, dpending on how you
+  need to impliment your gauge.
+
+  But what you need to keep in mind is that Color1 is the left side
+  and Color2 is the right side, and the two are blended into a gradient.
+  
+  The '@Colorspace ?' argument is if you want to use a set of colors defined in
+  the RPGM-X Core Colorspace. Look at it like this:
+
+  color_left  = Is the Colorspace    ? Look up this  : Otherwise, look up this
+  color_right = installed and active ? colorspace id : color with something
+
+  If you are not using the colorspace, or don't care, you do not need to add in
+  this argument.
+
+  ►►► Method 1: Manual Dynamic Color
+
+  This gives you the most control, but you do need to understand how rates
+  work. In this example.. The bar goes from 80,0,0 to 255,0,0 when full and
+  0,150,150 to 0,255,255 when empty. This means it will go from dark red to
+  a bright cyan as it increases.
+
+  color_left  = Color.new(0+(80*(1-rate)),(150*rate),(150*rate),192)
+  color_right = Color.new(0+(255*(1-rate)),(255*rate),(255*rate),192)
+
+  ►►► Method 2: Automatic Dynamic Color
+
+  You can set an automatic dynamic color, which will work similarly as the
+  above. This one however, is slightly easier to define.
+
+  What can be placed into the Auto_Color Module:
+    Direct Window_Base colors       IE: normal_color, system_color
+    Array of two Colorspace Indexes IE: [32,34]
+    Direct color methods            IE: Color.new(),Color.new()
+    text_color Indexes              IE: text_color(),text_color()
+    Colorspace Indexes              IE: Get_Color(),Get_Color()
+
+  Auto_Color requires 2..3 arguments. Any more, or less, will cause it to fail.
+  Failures will just be returned black with a warning dialog box.
+
+  color_left  = Auto_Color([32,34],rate)
+  color_right = Auto_Color([33,35],rate)
+    - or -
+  color_left  = Auto_Color( Color.new(<LEFT SIDE WHEN FULL>),
+                            Color.new(<LEFT SIDE WHEN EMPTY>),rate)
+  color_right = Auto_Color( text_color(<RIGHT SIDE WHEN FULL),
+                            Get_Color(<RIGHT SIDE WHEN EMPTY>),rate)
+
+  ►►► Method 3: Static Colors
+
+  You could also just set static colors. These won't change whilst moving, but
+  will still get the job done.
+
+  color_left  = Get_Color( 2)
+  color_right = Get_Color(10)
+
+module Gauges
+#═════════════════════════════════════════════════════════════════════════════
+# ＤＥＦＩＮＥ: BWX::SGV3::Gauges.Custom(focus,single=nil)
+#═════════════════════════════════════════════════════════════════════════════
+  def Custom(focus,single=nil)
+
+    # ＲＡＴＥ ==
+    # Formula / Method to fetch the current % of value.
+    rate = custom_rate
+    return rate if single == "R" # ＲＥＴＵＲＮ ->
+
+    # ＧＥＮＥＲＡＴＥ　ＣＯＬＯＲＳ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "C" || single.nil?
+      # ＣＯＬＯＲ　ＬＥＦＴ ==
+      # Define the colors for the left gradient half.
+      color_left =
+        @Colorspace ? Auto_Color([32,34],rate) :
+                      Color.new(80-(32*rate),(80*rate),(16*rate),192)
+
+      # ＣＯＬＯＲ　ＲＩＧＨＴ ==
+      # Define the colors for the right gradient half.
+      color_right =
+        @Colorspace ? Auto_Color([33,35],rate) :
+                      Color.new(240-(80*rate),(240*rate),(64*rate),192)
+      return [color_left,color_right] if single == "C" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＧＥＮＥＲＡＴＥ　ＤＩＳＰＬＡＹ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "D" || single.nil?
+      # ＤＩＳＰＬＡＹ ==
+      # Define the display for gauge text.
+      display = [Vocab, current_val, maximum_val]
+      return display if single == "D" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＲＥＴＵＲＮ ->
+    # The completed Gauge Container
+    [rate,color_left,color_right,display]
+  end # Close Custom
+end; end; end # Close BWX::SGV3::Gauges
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ＣＬＡＳＳ: Window_Base.
+#═══════════════════════════════════════════════════════════════════════════════
+class Window_Base < Window
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.draw_custom_gauge
+  # - (focus,x,y,[w,h,s,tpos,notext,notag])
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_custom_gauge(focus,x,y,
+                      w=124,tpos=:up,s="",nt1=false,nt2=false,h=@SG3__Height)
+    draw_sleek_gauge(x,y,w,"Custom",actor,h,s,tpos,nt1,nt2)
+  end
+end # Close Window Base
+
+│ GUESS WHAT? YOU'RE DONE! JUST LIKE THAT!
+│ 
+│ End of Sleeker Gauges Modding Guide
+=end # ═════════════════════════════════════════════════════════════════════════
+
+=begin ═════════════════════════════════════════════════════════════════════════
+│ Optional Scripts / Version Checking
+│ - Checking to see if you have optional scripts installed and active.
+│ - You probably shouldn't poke at this bit.
+╞═══════════════════════════════════════════════════════════════════════════════
+│ BWX::Core::Optionals.
+=end # ═════════════════════════════════════════════════════════════════════════
+module BWX; module Core; module Optionals
+  #═════════════════════════════════════════════════════════════════════════════
+  # Determine if the RPGM-X Core is installed and active.
+  #═════════════════════════════════════════════════════════════════════════════
+  def self.Core?
+    return false if $imported["BWA_RPGM-X"].nil?
+    return false unless $imported["BWA_RPGM-X"][0]
+    return true if $imported["BWA_RPGM-X"][1] >= 1.1
+  end
+  #═════════════════════════════════════════════════════════════════════════════
+  # Determine if the RPGM-X Colorspace is installed and active.
+  #═════════════════════════════════════════════════════════════════════════════
+  def self.Colorspace?
+    return false if $imported["RPGM-X_Colorspace"].nil?
+    return false unless $imported["RPGM-X_Colorspace"][0]
+    return true if $imported["RPGM-X_Colorspace"][1] >= 1.1
+  end
+  #═════════════════════════════════════════════════════════════════════════════
+  # Determine if the RPGM-X Performance Manager is installed and active.
+  #═════════════════════════════════════════════════════════════════════════════
+  def self.Perfman?
+    return false if $imported["RPGM-X_PerfMan"].nil?
+    return false unless $imported["RPGM-X_PerfMan"][0]
+    return true if $imported["RPGM-X_PerfMan"][1] >= 1.0
+  end
+  #═════════════════════════════════════════════════════════════════════════════
+  # Determine if a supported ATB system is installed.
+  #═════════════════════════════════════════════════════════════════════════════
+  def self.ATBLoaded?
+    return !(ATBSystem?.nil?)
+  end
+  #═════════════════════════════════════════════════════════════════════════════
+  # Determine which supported ATB system is installed.
+  #═════════════════════════════════════════════════════════════════════════════
+  def self.ATBSystem?
+    return "YSA" unless $imported["YSA-CATB"].nil?
+    return "VE"  unless $imported[:ve_active_time_battle].nil?
+    return "CCW" unless $cwinter_script_atb_version.nil?
+    return nil
+  end
+  #═════════════════════════════════════════════════════════════════════════════
+  # Determine if Yanfly Battle Engine is installed.
+  #═════════════════════════════════════════════════════════════════════════════
+  def self.YEA_Battle?
+    return false if $imported["YEA-BattleEngine"].nil?
+    return true
+  end
+  #═════════════════════════════════════════════════════════════════════════════
+  # Determine if RPGM-X Dragon Combat Overhaul is installed and active.
+  #═════════════════════════════════════════════════════════════════════════════
+  def self.Dragon?
+    return false if $imported["RPGM-X_Dragon"].nil?
+    return false unless $imported["RPGM-X_Dragon"][0]
+    return true if $imported["RPGM-X_Dragon"][1] >= 1.0
+  end
+end; end; end # Close BWX::Core::Optionals
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ＭＯＤＵＬＥ: BWX::SGV3::Vars:: - Enable/Disable Sleeker Addons
+#═══════════════════════════════════════════════════════════════════════════════
+module BWX; module SGV3; module Vars
+  # SLEEK GAUGE ADDON FLAGS ════════════════════════════════════════════════════
+  MODULES_SG_ATBS = true  # Enable RPGM-X Sleeker ATB System Bars
+  MODULES_SG_MHPB = true  # Enable RPGM-X Sleeker Monster HP Bars
+  MODULES_SG_PRAM = false  # Enable RPGM-X Sleeker Parameter Bars
+  MODULES_SG_DRGN = false  # Enable RPGM-X Sleeker Dragon Bars
+end; end; end # ════════════════════════════════════════════════════════════════
+
+#     ╔════════════════════════╗ Liek omg, actual script-like stuff starts here!
+# ════╝ New Activation Handler ╚════════════════════════════════════════════════
+sg_global = $Global_Enable unless $Global_Enable.nil?
+($imported||={})["RPGM-X_SleekerCore"]=[sg_global,3.0]; if sg_global
+
+sg_atb  = BWX::SGV3::Vars::MODULES_SG_ATBS && BWX::Core::Optionals.ATBLoaded?
+($imported||={})["RPGM-X_SleekerATBs"]=[sg_atb,3.0]
+
+sg_mhpb = BWX::SGV3::Vars::MODULES_SG_MHPB
+($imported||={})["RPGM-X_SleekerEHPB"]=[sg_mhpb,3.0]
+
+sg_pram = BWX::SGV3::Vars::MODULES_SG_PRAM
+($imported||={})["RPGM-X_SleekerPram"]=[sg_pram,1.0]
+
+sg_drgn = BWX::SGV3::Vars::MODULES_SG_DRGN && BWX::Core::Optionals.Dragon?
+($imported||={})["RPGM-X_SleekerDrgn"]=[sg_drgn,1.0]
+# ══════════════════════════════════════════════════════════════════════════════
+
+=begin ═════════════════════════════════════════════════════════════════════════
+│ STREWN BEFORE YOU IS A VIRTUAL CORNICOPIA OF OPTIONS AND SETTINGS FOR WHICH
+│ NO ONE IN YOUR PARTY KNOWS WHAT DOES. YOU ARE TEMPTED TO PICK ONE UP AND
+│ EXAMINE IT. COULD IT BE VALUABLE? COULD YOU BREW IT INTO A POTENT POLTICE?
+│ PROBABLY NOT. THESE ARE SIMPLE VARIABLES AFTERALL. OH, AND IF THERE ISN'T A
+│ "VIRTUAL CORNICOPIA OF OPTIONS AND SETTINGS" DISREGARD THAT MESSAGE. *WHISTLE*
+=end # ═════════════════════════════════════════════════════════════════════════
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ＭＯＤＵＬＥ: BWX::SGV3::
+#═══════════════════════════════════════════════════════════════════════════════
+module BWX; module SGV3
+#═══════════════════════════════════════════════════════════════════════════════
+# ＭＯＤＵＬＥ: BWX::SGV3::Vars::
+#═══════════════════════════════════════════════════════════════════════════════
+module Vars
+
+  # BASE GAUGE BEHAVIOR FLAGS ══════════════════════════════════════════════════
+  BASE_Bar_Height = 8     # Default bar height
+  BASE_TwinBorder = true  # Draw two/one pixel borders
+  BASE_Static_Num = false # Draw static/dynamic numeric gauge values
+  BASE_Static_BGd = false # Draw black/dynamic gauge backgrounds
+  BASE_Static_GMv = false # Draw static/dynamic gauge movements
+
+  BASE_Alpha_Corr = true  # Fixes gauge visibility when window opacity == zero.
+
+  BASE_Move_Style = :fancy# This sets the movement for gauge fill rate changes.
+                          # ► if !"Static_GaugeMv" use :normal, :fancy, or :fall
+                          #   Setting :fall will override all styles to ||.
+
+  BASE_MultiStyle = false # Allow use of individual gauge styles?
+
+                          # DEPRECIATED: BASE_Frame_Skip = 0
+                          # Restrict gauge updates to once every x frames.
+                          # ► This dramatically cuts down on rendering lag, but
+                          #   also makes bar animations look choppy. Try to keep
+                          #   this set to something under 10 if needed.
+
+  # MHPB GAUGE BEHAVIOR FLAGS ══════════════════════════════════════════════════
+  # - If you have disabled Monster HP Bars, these will not apply to you.
+  # ════════════════════════════════════════════════════════════════════════════
+  MHPB_Show_Names = true  # Show the enemy's name.
+  MHPB_Show_MobMP = true  # Show enemy MP gauge.
+  MHPB_Show_BosMP = true  # Show the boss' MP gauge. (respects CAN_SEE_MP)
+  MHPB_Show_FCATB = true  # Hide/Show Enemy ATB Gauges (Req. RPGM-X ATB Bars)
+  MHPB_Show_Accur = true  # Show the chance to hit target with selected skill.
+
+  MHPB_Base_Width = 128   # Width of Monster HP Bars
+  MHPB_Base_MBMod = 2.5   # Modifier for width when it's a miniboss bar.
+  MHPB__Big_Width = 512   # Width of the Big Boss Bar
+
+  MHPB_Bar_Height = 8     # How tall the enemy gauges are.
+  MHPB_Big_Height = 20    # How tall the Big Boss Bars are.
+
+  MHPB_Frame_Skip = 4     # Restrict gauge updates to once every x frames.
+                          # ► This dramatically cuts down on rendering lag, but
+                          #   also makes bar animations look choppy. Try to keep
+                          #   this set to something under 10 if needed.
+
+  # YANFLY ENGINE FLAGS ════════════════════════════════════════════════════════
+  # - If you are not using YEA - Ace Battle Engine these do not apply to you.
+  # ════════════════════════════════════════════════════════════════════════════
+                          # DEPRECIATED: REAL_Frame_Skip = 0     
+                          # Restrict realtime updates to once every x frames.
+
+  YPOP_Frame_Skip = 4     # Restrict popup updates to once every x frames.
+
+  Realtime__Flags =       # List the IDs of the gauges you wish to render.
+    ["FATB","CATB",       # ► Enables Realtime rendering of listed gauge types
+    "HP","MP","TP"]       #   in Window_BattleStatus
+
+  # GAUGE STYLE SETTINGS ═══════════════════════════════════════════════════════
+  # Available Styles = | : ( : ) : < : > : / : \\
+  # - Will use "Def", unless "BASE_MultiStyle" is true.
+  #   If you are using \, you will need two per instance. If the script goes
+  #     purple you need another one. Or one less. Either or. \\\\ for dual.
+  #   If you are using <> or any variant of, it works best on odd heights. IE: 9
+  #   Example: '<>' will make a gauge that looks like this: ◄■■■■■■■■■■►
+  #            '//' will make a guage that looks like this: ◢■■■■■■■■■■◤
+  #   ►►► MHPB Gauges ignore the BASE_MultiStyle setting. This is because MHPB
+  #     gauges can be EXCEEDINGLY laggy if you are using anything except ||.
+  #     If you encounter unreasonable lag, FIRST adjust the frameskip, THEN the
+  #     gauge style. That frameskip shiz works, yo.
+  # ════════════════════════════════════════════════════════════════════════════
+  Gauge_Styles = {
+    "Def"   => '//',              # Style of the Default Gauge
+
+    "HP"    => '||',              # Style of the HP Gauge
+    "MP"    => '||',              # Style of the MP Gauge
+    "TP"    => '||',              # Style of the TP Gauge
+    "XP"    => '||',              # Style of the XP Gauge
+    "Lvl"   => '||',              # Style of the Level Gauge
+    "Eval"  => '||',              # Style of the Eval Gauge
+
+    "FATB"  => '||',              # Style of the Free ATB Gauge
+    "CATB"  => '||',              # Style of the Casting ATB Gauge
+
+    "MHPB"  => '//',              # Style of the Enemy HP Bars
+  }
+end; end; end # Close BWX::SGV3::Vars::
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ＭＯＤＵＬＥ: Vocab.
+#═══════════════════════════════════════════════════════════════════════════════
+module Vocab
+  def self.xp;    "Expertise";  end         # XP
+  def self.xp_a;  "Ex";         end         # XP (short)
+
+  if BWX::SGV3::Vars::MODULES_SG_PRAM
+    def self.xparam(id)
+      case id
+      when 0 ; "Accuracy Bonus"             # HIT
+      when 1 ; "Evasion Chance"             # EVA
+      when 2 ; "Critical Chance"            # CRI
+      when 3 ; "Critical Evasion"           # CEV
+      when 4 ; "Magic Evasion"              # MEV
+      when 5 ; "Magic Reflection"           # MRF
+      when 6 ; "Counter Attack"             # CNT
+      when 7 ; hp_a + " Regen / Turn"       # HRG
+      when 8 ; mp_a + " Regen / Turn"       # MRG
+      when 9 ; tp_a + " Regen / Turn"       # TRG
+      end
+    end
+
+    def self.sparam(id)
+      case id
+      when 0 ; "Threat Modifier"            # TGR
+      when 1 ; "Guard Power"                # GRD
+      when 2 ; "Healing Power"              # REC
+      when 3 ; "Consumable Power"           # PHA
+      when 4 ; "Magic Fatigue"              # MCR
+      when 5 ; tp_a + " Restore Power"      # TCR
+      when 6 ; "Phys Damage Rate"           # PDR
+      when 7 ; "Mag Damage Rate"            # MDR
+      when 8 ; "Terrain Damage Rate"        # FDR
+      when 9 ; "Expertise Boost"            # EXR
+      end
+    end
+  end
+
+  if BWX::SGV3::Vars::MODULES_SG_ATBS
+    def self.atb;     "Active Time";   end  # ATB
+    def self.atb_a;   "Act";           end  # ATB (short)
+    def self.catb;    "Cast Progress"; end  # CATB
+    def self.catb_a;  "Cast";          end  # CATB (short)
+  end
+end # Close Vocab
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ＭＯＤＵＬＥ: BWX::SGV3::
+#═══════════════════════════════════════════════════════════════════════════════
+module BWX; module SGV3
+#═══════════════════════════════════════════════════════════════════════════════
+# ＣＬＡＳＳ: BWX::SGV3::Gauges.
+#═══════════════════════════════════════════════════════════════════════════════
+class Gauges
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.BG(position)
+  #═════════════════════════════════════════════════════════════════════════════
+  def BG(position)
+    case position
+    when 1; return Color.new(255, 255, 255, 192)  # Outer Border
+    when 2; return Color.new(0,   0,   0,   192)  # Inner Border
+    when 3; return Color.new(0,   0,   0,    16)  # Half of Inner Shading
+    when 4; return Color.new(0,   0,   0,    96)  # Half of Inner Shading
+    end
+  end # Close BG
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.HP(focus,single=nil)
+  #═════════════════════════════════════════════════════════════════════════════
+  def HP(focus,single=nil)
+
+    # ＲＡＴＥ ==
+    # Formula / Method to fetch the current % of value.
+    rate = focus.hp_rate
+    return rate if single == "R" # ＲＥＴＵＲＮ ->
+
+    # ＧＥＮＥＲＡＴＥ　ＣＯＬＯＲＳ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "C" || single.nil?
+      # ＣＯＬＯＲ　ＬＥＦＴ ==
+      # Define the colors for the left gradient half.
+      color_left =
+        @Colorspace ? Auto_Color([32,34],rate) :
+                      Color.new(80-(32*rate),(80*rate),(16*rate),192)
+
+      # ＣＯＬＯＲ　ＲＩＧＨＴ ==
+      # Define the colors for the right gradient half.
+      color_right =
+        @Colorspace ? Auto_Color([33,35],rate) :
+                      Color.new(240-(80*rate),(240*rate),(64*rate),192)
+      return [color_left,color_right] if single == "C" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＧＥＮＥＲＡＴＥ　ＤＩＳＰＬＡＹ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "D" || single.nil?
+      # ＤＩＳＰＬＡＹ ==
+      # Define the display for gauge text.
+      display = [Vocab::hp_a, focus.hp, focus.mhp]
+      return display if single == "D" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＲＥＴＵＲＮ ->
+    # The completed Gauge Container
+    [rate,color_left,color_right,display]
+  end # Close HP
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.MP(focus,single=nil)
+  #═════════════════════════════════════════════════════════════════════════════
+  def MP(focus,single=nil)
+
+    # ＲＡＴＥ ==
+    # Formula / Method to fetch the current % of value.
+    rate = focus.mp_rate
+    return rate if single == "R" # ＲＥＴＵＲＮ ->
+
+    # ＧＥＮＥＲＡＴＥ　ＣＯＬＯＲＳ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+      if single == "C" || single.nil?
+      # ＣＯＬＯＲ　ＬＥＦＴ ==
+      # Define the colors for the left gradient half.
+      color_left =
+        @Colorspace ? Auto_Color([36,38],rate) :
+                      Color.new((16*rate),80-(32*rate),(80*rate),192)
+
+      # ＣＯＬＯＲ　ＲＩＧＨＴ ==
+      # Define the colors for the right gradient half.
+      color_right =
+        @Colorspace ? Auto_Color([37,39],rate) :
+                      Color.new((64*rate),240-(80*rate),(240*rate),192)
+      return [color_left,color_right] if single == "C" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＧＥＮＥＲＡＴＥ　ＤＩＳＰＬＡＹ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "D" || single.nil?
+      # ＤＩＳＰＬＡＹ ==
+      # Define the display for gauge text.
+      display = [Vocab::mp_a, focus.mp, focus.mmp]
+      return display if single == "D" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＲＥＴＵＲＮ ->
+    # The completed Gauge Container
+    [rate,color_left,color_right,display]
+  end # Close MP
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.TP(focus,single=nil)
+  #═════════════════════════════════════════════════════════════════════════════
+  def TP(focus,single=nil)
+
+    # ＲＡＴＥ ==
+    # Formula / Method to fetch the current % of value.
+    rate = focus.tp_rate
+    return rate if single == "R" # ＲＥＴＵＲＮ ->
+
+    # ＧＥＮＥＲＡＴＥ　ＣＯＬＯＲＳ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "C" || single.nil?
+      # ＣＯＬＯＲ　ＬＥＦＴ ==
+      # Define the colors for the left gradient half.
+      color_left =
+        @Colorspace ? Auto_Color([40,42],rate) :
+                      Color.new(128-(128*rate),80-(80*rate),255*rate,192)
+
+      # ＣＯＬＯＲ　ＲＩＧＨＴ ==
+      # Define the colors for the right gradient half.
+      color_right =
+        @Colorspace ? Auto_Color([41,43],rate) :
+                      Color.new(255-(255*rate),160-(160*rate),255*rate,192)
+      return [color_left,color_right] if single == "C" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＧＥＮＥＲＡＴＥ　ＤＩＳＰＬＡＹ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "D" || single.nil?
+      # ＤＩＳＰＬＡＹ ==
+      # Define the display for gauge text.
+      display = [Vocab::tp_a, focus.tp, focus.max_tp]
+      return display if single == "D" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＲＥＴＵＲＮ ->
+    # The completed Gauge Container
+    [rate,color_left,color_right,display]
+  end # Close TP
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.XP(actor,single=nil)
+  #═════════════════════════════════════════════════════════════════════════════
+  def XP(actor,single=nil)
+
+    # ＲＡＴＥ ==
+    # Formula / Method to fetch the current % of value.
+    rate = focus.xp_rate
+    return rate if single == "R" # ＲＥＴＵＲＮ ->
+
+    # ＧＥＮＥＲＡＴＥ　ＣＯＬＯＲＳ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "C" || single.nil?
+      # ＣＯＬＯＲ　ＬＥＦＴ ==
+      # Define the colors for the left gradient half.
+      color_left =
+        @Colorspace ? Auto_Color([68,70],rate) :
+                      Color.new(80,144,176,192)
+
+      # ＣＯＬＯＲ　ＲＩＧＨＴ ==
+      # Define the colors for the right gradient half.
+      color_right =
+        @Colorspace ? Auto_Color([69,71],rate) :
+                      Color.new(128,176,208,192)
+      return [color_left,color_right] if single == "C" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＧＥＮＥＲＡＴＥ　ＤＩＳＰＬＡＹ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "D" || single.nil?
+      # ＤＩＳＰＬＡＹ ==
+      # Define the display for gauge text.
+      display = (focus.level != focus.max_level) ?
+                  [Vocab::xp_a, focus.xp_in_level,focus.xp_to_next] :
+                  [Vocab::xp_a,0,0]
+      return display if single == "D" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＲＥＴＵＲＮ ->
+    # The completed Gauge Container
+    [rate,color_left,color_right,display]
+  end # Close XP
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.Lvl(actor,single=nil)
+  #═════════════════════════════════════════════════════════════════════════════
+  def Lvl(actor,single=nil)
+
+    # ＲＡＴＥ ==
+    # Formula / Method to fetch the current % of value.
+    rate = factor.level.to_f / actor.max_level
+    return rate if single == "R" # ＲＥＴＵＲＮ ->
+
+    # ＧＥＮＥＲＡＴＥ　ＣＯＬＯＲＳ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "C" || single.nil?
+      # ＣＯＬＯＲ　ＬＥＦＴ ==
+      # Define the colors for the left gradient half.
+      color_left = Color.new(0,64,256,192)
+
+      # ＣＯＬＯＲ　ＲＩＧＨＴ ==
+      # Define the colors for the right gradient half.
+      color_right = Color.new(0,64,256,192)
+      return [color_left,color_right] if single == "C" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＧＥＮＥＲＡＴＥ　ＤＩＳＰＬＡＹ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "D" || single.nil?
+      # ＤＩＳＰＬＡＹ ==
+      # Define the display for gauge text.
+      display = [Vocab::level, actor.level, actor.max_level]
+      return display if single == "D" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＲＥＴＵＲＮ ->
+    # The completed Gauge Container
+    [rate,color_left,color_right,display]
+  end # Close Lvl
+
+  if BWX::SGV3::Vars::MODULES_SG_PRAM
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.Param(focus,param_id,single=nil)
+  #═════════════════════════════════════════════════════════════════════════════
+  def Param(focus,param_id,single=nil)
+
+    # ＲＡＴＥ ==
+    # Formula / Method to fetch the current % of value.
+
+    # COMPLICATED RATE CALCULATION THINGIE ═══════════════════════════════════
+    maximum = 1
+    minimum = focus.param_max(2)
+    for i in 2..7
+      maximum = [focus.param(i), maximum].max
+      minimum = [focus.param(i), minimum].min
+    end
+    if BWX::SGV3::Vars::MODULES_SG_DRGN
+      maximum = [focus.dparam(0), maximum].max
+      minimum = [focus.dparam(0), minimum].min
+      maximum = [focus.dparam(1), maximum].max
+      minimum = [focus.dparam(1), minimum].min
+    end
+
+    # SOME ACTUAL NUMBERS FOR THE RATE ═══════════════════════════════════════
+    if maximum == minimum
+      rate = 1.0
+    else
+      case param_id
+        when 2..7
+          rate=(focus.param(param_id).to_f-minimum)/(maximum-minimum).to_f
+        when 8..9
+          rate=(focus.dparam(param_id-8).to_f-minimum)/(maximum-minimum).to_f
+      end
+      rate += 0.15.clamp 0,1
+    end
+    return rate if single == "R" # ＲＥＴＵＲＮ ->
+
+    # ＧＥＮＥＲＡＴＥ　ＣＯＬＯＲＳ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "C" || single.nil?
+      # ＰＡＲＡＭ　ＣＯＬＯＲＳ
+      # Define the colors for the parameters.
+      case param_id
+
+      # ＡＴＴＡＣＫ
+      when 2
+        if @Colorspace
+          color_left  = SGauge_GC(16)
+          color_right = SGauge_GC(17)
+        else
+          color_left  = text_color(2)
+          color_right = text_color(2)
+        end
+
+      # ＤＥＦＥＮＳＥ
+      when 3 
+        if @Colorspace
+          color_left  = SGauge_GC(18)
+          color_right = SGauge_GC(19)
+        else
+          color_left  = text_color(10)
+          color_right = text_color(10)
+        end
+
+      # ＭＡＧＩＣ　ＡＴＴＡＣＫ
+      when 4
+        if @Colorspace
+          color_left  = SGauge_GC(20)
+          color_right = SGauge_GC(21)
+        else
+          color_left  = text_color(5)
+          color_right = text_color(5)
+        end
+
+      # ＭＡＧＩＣ　ＤＥＦＥＮＳＥ
+      when 5
+        if @Colorspace
+          color_left  = SGauge_GC(22)
+          color_right = SGauge_GC(23)
+        else
+          color_left  = text_color(13)
+          color_right = text_color(13)
+        end
+
+      # ＡＧＩＬＩＴＹ
+      when 6
+        if @Colorspace
+          color_left  = SGauge_GC(24)
+          color_right = SGauge_GC(25)
+        else
+          color_left  = text_color(3)
+          color_right = text_color(3)
+        end
+
+      # ＬＵＣＫ
+      when 7
+        if @Colorspace
+          color_left  = SGauge_GC(26)
+          color_right = SGauge_GC(27)
+        else
+          color_left  = text_color(6)
+          color_right = text_color(6)
+        end
+      end
+
+      if BWX::Core::Optionals.Dragon? && BWX::SGV3::Vars::MODULES_SG_DRGN
+        case param_id
+        # ＤＥＸＴＥＲＩＴＹ
+        when 8
+          if @Colorspace
+            color_left  = SGauge_GC(28)
+            color_right = SGauge_GC(29)
+          else
+            color_left  = text_color(14)
+            color_right = text_color(22)
+          end
+
+        # ＦＯＣＵＳ
+        when 9
+          if @Colorspace
+            color_left  = SGauge_GC(30)
+            color_right = SGauge_GC(31)
+          else
+            color_left  = text_color(15)
+            color_right = text_color(23)
+          end
+        end
+      end
+      return [color_left,color_right] if single == "C" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＧＥＮＥＲＡＴＥ　ＤＩＳＰＬＡＹ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "D" || single.nil?
+      # ＤＩＳＰＬＡＹ ==
+      # Define the display for gauge text.
+      display = [Vocab::param(param_id),focus.param(param_id),0]
+      return display if single == "D" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＲＥＴＵＲＮ ->
+    # The completed Gauge Container
+    [rate,color_left,color_right,display]
+  end; end # Close Main Parameter
+
+  if BWX::SGV3::Vars::MODULES_SG_PRAM
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.Sub(param_type,param_id,single=nil)
+  #═════════════════════════════════════════════════════════════════════════════
+  def Sub(focus,param_type,param_id,single=nil)
+    # ＦＵＮＣＴＩＯＮ <-
+    # Do something complicated to get something simple. Don't poke at it.
+    info = SG_Sub_Info(focus,param_type,param_id)
+
+    # ＲＡＴＥ ==
+    # Formula / Method to fetch the current % of value.
+    rate = info[0]
+    return rate if single == "R" # ＲＥＴＵＲＮ ->
+
+    # ＧＥＮＥＲＡＴＥ　ＣＯＬＯＲＳ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "C" || single.nil?
+      # ＳＵＢＰＡＲＡＭ　ＣＯＬＯＲＳ
+      # Define the colors for the parameters.
+      if @Colorspace
+        color_left  = Auto_Color([64,66],rate)
+        color_right = Auto_Color([65,67],rate)
+      else
+        color_left  = Color.new(0+(80*(1-rate)),(144*rate),(144*rate),192)
+        color_right = Color.new(0+(255*(1-rate)),(255*rate),(255*rate),192)
+      end
+      return [color_left,color_right] if single == "C" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＧＥＮＥＲＡＴＥ　ＤＩＳＰＬＡＹ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "D" || single.nil?
+      # ＤＩＳＰＬＡＹ ==
+      # Define the display for gauge text.
+      display = info[1]
+      return display if single == "D" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＲＥＴＵＲＮ ->
+    # The completed Gauge Container
+    [rate,color_left,color_right,display]
+  end; end # Close Subparameter
+
+  if BWX::SGV3::Vars::MODULES_SG_ATBS
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.FATB(focus,single=nil)
+  #═════════════════════════════════════════════════════════════════════════════
+  def FATB(focus,single=nil)
+
+    # ＲＡＴＥ ==
+    # Formula / Method to fetch the current % of value.
+    rate = focus.SG_FATB_Rate
+    return rate if single == "R" # ＲＥＴＵＲＮ ->
+
+    # ＧＥＮＥＲＡＴＥ　ＣＯＬＯＲＳ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "C" || single.nil?
+      # ＣＯＬＯＲ　ＬＥＦＴ ==
+      # Define the colors for the left gradient half.
+      color_left =
+        @Colorspace ? Auto_Color([30,18],rate) : Auto_Color([30,18],rate)
+
+      # ＣＯＬＯＲ　ＲＩＧＨＴ ==
+      # Define the colors for the right gradient half.
+      color_right =
+        @Colorspace ? Auto_Color([31,19],rate) : Auto_Color([31,19],rate)
+      return [color_left,color_right] if single == "C" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＧＥＮＥＲＡＴＥ　ＤＩＳＰＬＡＹ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "D" || single.nil?
+      # ＤＩＳＰＬＡＹ ==
+      # Define the display for gauge text.
+      display = [Vocab::atb_a, rate, 1]
+      return display if single == "D" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＲＥＴＵＲＮ ->
+    # The completed Gauge Container
+    [rate,color_left,color_right,display]
+  end; end # Close FATB
+
+  if BWX::SGV3::Vars::MODULES_SG_ATBS
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.CATB(focus,single=nil)
+  #═════════════════════════════════════════════════════════════════════════════
+  def CATB(focus,single=nil)
+
+    # ＲＡＴＥ ==
+    # Formula / Method to fetch the current % of value.
+    rate = focus.SG_CATB_Rate
+    return rate if single == "R" # ＲＥＴＵＲＮ ->
+
+    # ＧＥＮＥＲＡＴＥ　ＣＯＬＯＲＳ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "C" || single.nil?
+      # ＣＯＬＯＲ　ＬＥＦＴ ==
+      # Define the colors for the left gradient half.
+      color_left =
+        @Colorspace ? Auto_Color([18,30],rate) : Auto_Color([18,30],rate)
+
+      # ＣＯＬＯＲ　ＲＩＧＨＴ ==
+      # Define the colors for the right gradient half.
+      color_right =
+        @Colorspace ? Auto_Color([19,30],rate) : Auto_Color([19,31],rate)
+      return [color_left,color_right] if single == "C" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＧＥＮＥＲＡＴＥ　ＤＩＳＰＬＡＹ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "D" || single.nil?
+      # ＤＩＳＰＬＡＹ ==
+      # Define the display for gauge text.
+      display = [Vocab::catb_a, rate, 1]
+      return display if single == "D" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＲＥＴＵＲＮ ->
+    # The completed Gauge Container
+    [rate,color_left,color_right,display]
+  end; end # Close CATB
+
+  if BWX::SGV3::Vars::MODULES_SG_MHPB
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.MHPB(battler,single=nil)
+  #═════════════════════════════════════════════════════════════════════════════
+  def MHPB(battler,single=nil)
+    # ＴＹＰＥ <-
+    # The type of enemy this is.
+    type = battler.enemy.MHPB_MobType
+
+    # ＲＡＴＥ ==
+    # Formula / Method to fetch the current % of value.
+    rate = battler.hp_rate
+    return rate if single == "R" # ＲＥＴＵＲＮ ->
+
+    # ＧＥＮＥＲＡＴＥ　ＣＯＬＯＲＳ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "C" || single.nil?
+      # ＣＯＬＯＲ　ＬＥＦＴ ==
+      # Define the colors for the left gradient half.
+      if type == 2
+        color_left = @Colorspace ?
+          Auto_Color([76,78],rate) :
+          text_color(BWX::Gauge::Variables::MHPB_BIGG_COLF1)
+                          
+      elsif type == 1
+        color_left = @Colorspace ?
+          Auto_Color([76,78],rate) :
+          text_color(BWX::Gauge::Variables::MHPB_BOSS_COLF1)
+
+      elsif type == 0
+        color_left = @Colorspace ?
+          Auto_Color([72,74],rate) :
+          text_color(BWX::Gauge::Variables::MHPB_BASE_COLF1)
+      end
+
+      # ＣＯＬＯＲ　ＲＩＧＨＴ ==
+      # Define the colors for the right gradient half.
+      if type == 2
+        color_right = @Colorspace ?
+          Auto_Color([77,79],rate) :
+          text_color(BWX::Gauge::Variables::MHPB_BIGG_COLF2)
+
+      elsif type == 1
+        color_right = @Colorspace ?
+          Auto_Color([77,79],rate) :
+          text_color(BWX::Gauge::Variables::MHPB_BOSS_COLF2)
+
+      elsif type == 0
+        color_right = @Colorspace ?
+          Auto_Color([73,75],rate) :
+          text_color(BWX::Gauge::Variables::MHPB_BASE_COLF2)
+      end
+      return [color_left,color_right] if single == "C" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＧＥＮＥＲＡＴＥ　ＤＩＳＰＬＡＹ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "D" || single.nil?
+      # ＤＩＳＰＬＡＹ ==
+      # Define the display for gauge text.
+      display = [battler.name, battler.hp, battler.mhp]
+      return display if single == "D" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＲＥＴＵＲＮ ->
+    # The completed Gauge Container
+    [rate,color_left,color_right,display]
+  end; end # Close MHPB
+end; end; end # Close BWX::SGV3::Gauges
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ＣＬＡＳＳ: Window_Base.
+#═══════════════════════════════════════════════════════════════════════════════
+class Window_Base < Window
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＲＥＤＥＦＩＮＥ: Window_Base.draw_actor_hp
+  # - (actor,x,y,[w,h,s,tpos,notext,notag])
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_actor_hp(actor,x,y,
+                      w=124,tpos=:up,s="",nt1=false,nt2=false,h=@SG3__Height)
+    draw_sleek_gauge(x,y,w,"HP",actor,h,s,tpos,nt1,nt2)
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＲＥＤＥＦＩＮＥ: Window_Base.draw_actor_mp
+  # - (actor,x,y,[w,h,s,tpos,notext,notag])
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_actor_mp(actor,x,y,
+                      w=124,tpos=:up,s="",nt1=false,nt2=false,h=@SG3__Height)
+    draw_sleek_gauge(x,y,w,"MP",actor,h,s,tpos,nt1,nt2)
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＲＥＤＥＦＩＮＥ: Window_Base.draw_actor_tp
+  # - (actor,x,y,[w,h,s,tpos,notext,notag])
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_actor_tp(actor,x,y,
+                      w=124,tpos=:up,s="",nt1=false,nt2=false,h=@SG3__Height)
+    draw_sleek_gauge(x,y,w,"TP",actor,h,s,tpos,nt1,nt2)
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.draw_focus_hp
+  # - (focus,x,y,[w,h,s,tpos,notext,notag])
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_focus_hp(focus,x,y,
+                      w=124,tpos=:up,s="",nt1=false,nt2=false,h=@SG3__Height)
+    draw_sleek_gauge(x,y,w,"HP",focus,h,s,tpos,nt1,nt2)
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.draw_focus_mp
+  # - (focus,x,y,[w,h,s,tpos,notext,notag])
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_focus_mp(focus,x,y,
+                      w=124,tpos=:up,s="",nt1=false,nt2=false,h=@SG3__Height)
+    draw_sleek_gauge(x,y,w,"MP",focus,h,s,tpos,nt1,nt2)
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.draw_focus_tp
+  # - (focus,x,y,[w,h,s,tpos,notext,notag])
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_focus_tp(focus,x,y,
+                      w=124,tpos=:up,s="",nt1=false,nt2=false,h=@SG3__Height)
+    draw_sleek_gauge(x,y,w,"TP",focus,h,s,tpos,nt1,nt2)
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.draw_actor_xp
+  # - (actor,x,y,[w,h,s,tpos,notext,notag])
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_actor_xp(actor,x,y,
+                      w=124,tpos=:up,s="",nt1=false,nt2=false,h=@SG3__Height)
+    draw_sleek_gauge(x,y,w,"XP",actor,h,s,tpos,nt1,nt2)
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.draw_actor_lvl
+  # - (actor,x,y,[w,h,s,tpos,notext,notag])
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_actor_lvl(actor,x,y,
+                      w=124,tpos=:up,s="",nt1=false,nt2=false,h=@SG3__Height)
+    draw_sleek_gauge(x,y,w,"Lvl",actor,h,s,tpos,nt1,nt2)
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.draw_eval_gauge
+  # - (actor,x,y,w,rate,col1,col2,disp,[h,s,tpos,notext,notag])
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_eval_gauge(x,y,w,eval_rate,eval_col1,eval_col2,eval_disp,
+                      tpos=:up,s="",nt1=false,nt2=false,h=@SG3__Height)
+    args = [eval_rate,eval_col1,eval_col2,eval_disp]
+    draw_sleek_gauge(x,y,w,"Eval",nil,h,s,tpos,nt1,nt2,args)
+  end
+
+  if BWX::SGV3::Vars::MODULES_SG_PRAM
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.draw_focus_param
+  # - (focus,x,y,w,p_id,[h,s,tpos,notext,notag])
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_focus_param(focus,x,y,w,p_id,
+                      tpos=:up,s="",nt1=false,nt2=false,h=@SG3__Height)
+    draw_sleek_gauge(x,y,w,"Param",focus,h,s,tpos,nt1,nt2,[p_id])
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.draw_focus_subparam
+  # - (focus,x,y,w,p_type,p_id,[h,s,tpos,notext,notag])
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_focus_subp(focus,x,y,w,p_type,p_id,disptype="N",
+                      tpos=:up,s="",nt1=false,nt2=false,h=@SG3__Height)
+    args = [p_type,p_id,disptype]
+    draw_sleek_gauge(x,y,w,"Sub",focus,h,s,tpos,nt1,nt2,args)
+  end; end
+
+  if BWX::SGV3::Vars::MODULES_SG_ATBS
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.draw_sg_atb
+  # - (focus,x,y,[w,h,s,tpos,notext,notag])
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_sg_atb(focus,x,y,
+                      w=124,tpos=:up,s="",nt1=true,nt2=true,h=@SG3__Height)
+    draw_focus_fatb(focus,x,y,w,tpos,s,nt1,nt2,h) unless focus.SG_ATB_Casting?
+    draw_focus_catb(focus,x,y,w,tpos,s,nt1,nt2,h) if focus.SG_ATB_Casting?
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.draw_focus_fatb
+  # - (focus,x,y,[w,h,s,tpos,notext,notag])
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_focus_fatb(focus,x,y,
+                      w=124,tpos=:up,s="",nt1=true,nt2=true,h=@SG3__Height)
+    draw_sleek_gauge(x,y,w,"FATB",focus,h,s,tpos,nt1,nt2)
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.draw_focus_catb
+  # - (focus,x,y,[w,h,s,tpos,notext,notag])
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_focus_catb(focus,x,y,
+                      w=124,tpos=:up,s="",nt1=true,nt2=true,h=@SG3__Height)
+    draw_sleek_gauge(x,y,w,"CATB",focus,h,s,tpos,nt1,nt2)
+  end; end
+
+  if BWX::SGV3::Vars::MODULES_SG_MHPB
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.draw_battler_hp
+  # - (battler,x,y,[w,h,s,tpos,notext,notag])
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_battler_hp(battler,x,y,
+                      w=124,h=@SG3__Height,tpos=:up,s="",nt1=true,nt2=true)
+    s = BWX::SGV3::Vars::Gauge_Styles["MHPB"]
+    draw_sleek_gauge(x,y,w,"MHPB",battler,h,s,tpos,nt1,nt2)
+    ModifySGAddonType(x,y,"MHPB")
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.draw_battler_mp
+  # - (battler,x,y,[w,h,s,tpos,notext,notag])
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_battler_mp(battler,x,y,
+                      w=124,h=@SG3__Height,tpos=:up,s="",nt1=true,nt2=true)
+    s = BWX::SGV3::Vars::Gauge_Styles["MHPB"]
+    draw_focus_mp(battler,x,y,w,tpos,s,nt1,nt2,h)
+    ModifySGAddonType(x,y,"MHPB")
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.draw_battler_atb
+  # - (battler,x,y,[w,h,s,tpos,notext,notag])
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_battler_atb(battler,x,y,
+                      w=124,h=@SG3__Height,tpos=:up,s="",nt1=true,nt2=true)
+    s = BWX::SGV3::Vars::Gauge_Styles["MHPB"]
+    draw_sg_atb(battler,x,y,w,tpos,s,nt1,nt2,h)
+    ModifySGAddonType(x,y,"MHPB")
+  end; end
+end # Close Window_Base
+
+=begin ═════════════════════════════════════════════════════════════════════════
+│ YOU ARE FILLED WITH A SENSE OF DREAD WHEN YOU REALIZE YOU HAVE RUN OUT OF FUN
+│ AND INTERESTING OPTIONS YOU CAN MESS WITH. LOOKING AROUND, ALL YOU SEE IS
+│ JAGGED, UNKEPT CODE.. AND IS THAT.. BLOOD? NO, IT CAN'T BE.. BEFORE MOVING ON
+│ YOU MUST MAKE AND SUCCEED A FORTITUDE CHECK. HOW'S THOSE NATURAL 20 ROLLS
+│ HOLDING OUT FOR YOU NOWADAYS? OH AND SPIDERS. DID I FORGET THE SPIDERS? BIG.
+=end # ═════════════════════════════════════════════════════════════════════════
+
+unless BWX::Core::Optionals.Perfman?
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＣＬＡＳＳ: BWX_FrameSkip.
+  #═════════════════════════════════════════════════════════════════════════════
+  class BWX_FrameSkip
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: BWX_FrameSkip.Skip?(frames)
+    #═══════════════════════════════════════════════════════════════════════════
+    def Skip?(frames)
+      return false if frames.abs <= 1
+      return (Graphics.frame_count % frames).to_b
+    end
+  end # Close BWX_FrameSkip
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＣＬＡＳＳ: SceneManager.
+  #═════════════════════════════════════════════════════════════════════════════
+  class << SceneManager
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＡＬＩＡＳ: SceneManager.perfman_run < SceneManager.run
+    # - Initialize Frameskip monitoring. return if $FSX.Skip?(frames)
+    #═══════════════════════════════════════════════════════════════════════════
+    alias perfman_run run
+    def run
+      $FSX = BWX_FrameSkip.new unless $FSX
+      perfman_run
+    end
+  end # Close SceneManager
+end # Close Perfomance Manager Check
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ＣＬＡＳＳ: Bitmap.
+#═══════════════════════════════════════════════════════════════════════════════
+class Bitmap
+  attr_reader :ClearAll, :ClearArea
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＡＬＩＡＳ: Bitmap.sg3_clear < Bitmap.clear
+  #═════════════════════════════════════════════════════════════════════════════
+  alias sg3_clear clear
+  def clear
+    sg3_clear
+    @ClearAll = true
+    @ClearArea = {}
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＡＬＩＡＳ: Bitmap.sg3_clear_rect < Bitmap.clear_rect
+  #═════════════════════════════════════════════════════════════════════════════
+  alias sg3_clear_rect clear_rect
+  def clear_rect(*args)
+    sg3_clear_rect(*args)
+    cr_args = [*args]
+    if cr_args[0].is_a?(Rect)
+      cr_args = cr_args[0]
+      cr_args = [cr_args.x,cr_args.y,cr_args.width,cr_args.height]
+    end
+    (@ClearArea||={})[cr_args]=true
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＡＬＩＡＳ: Bitmap.sg3_fill_rect < Bitmap.fill_rect
+  #═════════════════════════════════════════════════════════════════════════════
+  alias sg3_fill_rect fill_rect
+  def fill_rect(*args)
+    sg3_fill_rect(*args)
+    fr_args = [*args]
+    if fr_args[0].is_a?(Rect)
+      fr_args = fr_args[0]
+      fr_args = [fr_args.x,fr_args.y,fr_args.width,fr_args.height]
+    end
+    (@ClearArea||={})[fr_args[0,4]]=false
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＡＬＩＡＳ: Bitmap.sg3_gradient_fill_rect < Bitmap.gradient_fill_rect
+  #═════════════════════════════════════════════════════════════════════════════
+  alias sg3_gradient_fill_rect gradient_fill_rect
+  def gradient_fill_rect(*args)
+    sg3_gradient_fill_rect(*args)
+    gfr_args = [*args]
+    if gfr_args[0].is_a?(Rect)
+      gfr_args = gfr_args[0]
+      gfr_args = [gfr_args.x,gfr_args.y,gfr_args.width,gfr_args.height]
+    end
+    (@ClearArea||={})[gfr_args[0,4]]=false
+  end
+end # Close Bitmap
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ＣＬＡＳＳ: Numeric.
+#═══════════════════════════════════════════════════════════════════════════════
+class Numeric
+  def clamp min, max
+    self < min ? min : (self > max ? max : self)
+  end
+  def max!(max)
+    self > max ? max : self
+  end
+  def min!(min)
+    self < min ? min : self
+  end
+  def round_to(places)
+    power = 10.0**places
+    (self * power).round / power
+  end
+  def to_b; self >= 1; end
+  def !; !self.to_b; end
+  def comp_tri(value)
+    return -1 if self <  value
+    return  0 if self == value
+    return  1 if self >  value
+  end
+  def percent; (self * 100).round; end
+end
+
+class Rext
+  def fit?(rect)
+  end
+end
+
+class Float
+  def clone
+  return self + 0
+  end
+end
+
+class String
+  def ^; self.upcase; end
+end
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ＣＬＡＳＳ: Window_Inactive.
+#═══════════════════════════════════════════════════════════════════════════════
+class Window_Inactive < Window_Base
+  attr_reader :colorspace
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＩＮＩＴＩＡＬＩＺＥ
+  #═════════════════════════════════════════════════════════════════════════════
+  def initialize
+    super(0,0,0,0)
+    opacity = openness = 0
+    active = visisble = false
+    @colorspace = Cache.system(BWX::Core::Colorspace::COLORSPACE) if
+      BWX::Core::Optionals.Colorspace?
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＧＲＡＶＥＹＡＲＤ
+  #═════════════════════════════════════════════════════════════════════════════
+  def update; end
+  def refresh; end
+end # Close Window_Inactive
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ＣＬＡＳＳ: BWX::SGV3::Gauges.
+#═══════════════════════════════════════════════════════════════════════════════
+module BWX; module SGV3; class Gauges
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＩＮＩＴＩＡＬＩＺＥ
+  #═════════════════════════════════════════════════════════════════════════════
+  def initialize
+    @Colorspace = Core::Optionals.Colorspace?
+    @ColorWindow = Window_Inactive.new
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.Auto_Color(*args)
+  #═════════════════════════════════════════════════════════════════════════════
+  def Auto_Color(*args)
+    acargs = [*args]
+    case acargs.length
+    when 2
+      colors = acargs[0]
+      col1 = Get_Color(colors[0])
+      col2 = Get_Color(colors[1])
+      rate = acargs[1]
+    when 3
+      col1 = acargs[0]
+      col2 = acargs[1]
+      rate = acargs[2]
+    else; fail = true
+    end
+
+    if fail
+      Debug("Auto_Color Error","Wrong number of arguments",
+        acargs.length.to_s + " for (2..3)",false, true) rescue
+      msgbox("Auto_Color Error \n Wrong number of arguments\n",
+        acargs.length.to_s + " for (2..3)",)
+      return Color.new(0,0,0)
+    end
+
+    a_col = Color.new
+    a_col.red    = (1 - rate) * col2.red +    rate * col1.red
+    a_col.green  = (1 - rate) * col2.green +  rate * col1.green
+    a_col.blue   = (1 - rate) * col2.blue +   rate * col1.blue
+    a_col.alpha  = (1 - rate) * col2.alpha +  rate * col1.alpha
+    return a_col
+  end # Close Auto_Color
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.text_color(n)
+  #═════════════════════════════════════════════════════════════════════════════
+  def text_color(n)
+    Index_Color(false,n)
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.Get_Color(n)
+  #═════════════════════════════════════════════════════════════════════════════
+  def Get_Color(n)
+    Index_Color(true,n)
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.Index_Color(colorspace,n)
+  #═════════════════════════════════════════════════════════════════════════════
+  def Index_Color(colorspace,n)
+    if @Colorspace && colorspace
+      row = (n / 16).to_i; col = (n % 16); off = [0,0]
+      case row
+        when 0 || 4 ||  8 || 12;  col.even? ? off = [0,0] : off = [3,0]
+        when 1 || 5 ||  9 || 13;  col.even? ? off = [3,3] : off = [0,3]
+        when 2 || 6 || 10 || 14;  col.even? ? off = [3,0] : off = [0,0]
+        when 3 || 7 || 11 || 15;  col.even? ? off = [0,3] : off = [3,3]
+      end
+      return @ColorWindow.colorspace.get_pixel(
+        (col*4)+off[0],(((row/2).floor)*4)+off[1])
+    else
+      if n.is_a?(String)
+        color = @ColorWindow.n
+      else
+        color = @ColorWindow.windowskin.get_pixel(64+(n%8)*8,96+(n/8)*8)
+      end
+      return color
+    end
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.SG_Sub_Info(type,id)
+  #═════════════════════════════════════════════════════════════════════════════
+  def SG_Sub_Info(focus,type,id)
+    Display("DO SHIT HERE LINE 1298")
+    case type
+    when 1
+      #case id
+      #end
+    when 2
+      #case id
+      #end
+    when 3
+      #case id
+      #end
+    end
+    return [rate,display]
+  end # Close SG_Sub_Info
+
+end; end; end # Close BWX::SGV3::Gauges
+
+# INITIALIZE GAUGE CONSTRUCTORS ════════════════════════════════════════════════
+$SG3_Gauges = BWX::SGV3::Gauges.new
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ＣＬＡＳＳ: Window_Base.
+#═══════════════════════════════════════════════════════════════════════════════
+class Window_Base < Window
+  attr_accessor :SG3__Gauges
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＲＥＩＮＩＴＩＡＬＩＺＥ
+  #═════════════════════════════════════════════════════════════════════════════
+  alias gauges_init initialize
+  def initialize(*args)
+    gauges_init(*args)
+    @SG3__Height = BWX::SGV3::Vars::BASE_Bar_Height
+    @SG3__Loaded = false
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.initialize_sg_values
+  # - Do not initialize gauge variables if there's no gauges.
+  #═════════════════════════════════════════════════════════════════════════════
+  def initialize_sg_values
+    @SG3_MultiSt = BWX::SGV3::Vars::BASE_MultiStyle
+    @SG3_RealTGF = BWX::SGV3::Vars::Realtime__Flags
+    @SG3_LoadATB = BWX::SGV3::Vars::MODULES_SG_ATBS &&
+                   BWX::Core::Optionals.ATBLoaded?
+
+    @SG3__Loaded = true
+  end
+
+=begin ═════════════════════════════════════════════════════════════════════════
+│ ＤＥＦＩＮＥ: Window_Base.draw_sleek_gauge(x,y,w,t,focus,h,s,tpos,nt1,nt2,[args])
+│
+│ - args is an array of values that is used to determine specialized gauge
+│   type behavior and function. Evaluation, Parameter, and Subparameter are the 
+│   only gauges to use this.
+│
+│     Evaluation:
+│       args[0] == [eval_rate]
+│       args[1] == [eval_color1]
+│       args[2] == [eval_color2]
+│       args[3] == [eval_display_array]
+│
+│     Parameter
+│       args[0] == [param_id]
+│
+│     Subparameter
+│       args[0] == [param_type]
+│       args[1] == [param_id]
+=end # ═════════════════════════════════════════════════════════════════════════
+  def draw_sleek_gauge(x,y,w,t,focus,h,s,tpos,nt1,nt2,args=[])
+    initialize_sg_values unless @SG3__Loaded
+
+    t = "Def" if t.empty? || t.nil?
+    s = "Def" if s.empty?
+    if BWX::SGV3::Vars::Gauge_Styles.include?(s)
+      s = BWX::SGV3::Vars::Gauge_Styles[@SG3_MultiSt ? s : "Def"]
+    end
+
+    # CONSTRUCT [RATE,COLOR1,COLOR2,DISPLAY] ARRAY ═════════════════════════════
+    case t
+    when "Eval"
+      eval_rate   = args[0]
+      eval_col1   = args[1]
+      eval_col2   = args[2]
+      eval_disp   = args[3]
+      ary         = [eval_rate,eval_col1,eval_col2,eval_disp]
+    when "Param"
+      param_id    = args[0]
+      ary         = $SG3_Gauges.send(t.^,focus,param_id)
+    when "Sub"
+      param_type  = args[0]
+      param_id    = args[1]
+      ary         = $SG3_Gauges.send(t.^,focus,param_type,param_id)
+    else
+      ary         = $SG3_Gauges.send(t.^,focus)
+    end
+    ary[0] = ary[0].round(3)
+
+    if @SG3_RealTGF.include?(t)
+      SendToSGProcessor("RTG",t,x,y,w,ary[0],ary[1],ary[2],s,h,args)
+    else
+      SendToSGProcessor("SG3",t,x,y,w,ary[0],ary[1],ary[2],s,h,args)
+    end
+    ModifySGProcessor(x,y,focus,ary[3],tpos,nt1,nt2)
+  end # Close draw_sleek_gauge
+
+=begin ═════════════════════════════════════════════════════════════════════════
+│ ＲＥＤＥＦＩＮＥ: Window_Base.draw_gauge(x,y,w,r,col1,col2,[height=8,style=""])
+│
+│ - This is a redefinition of the default draw_gauge behaviour. It will indeed
+│     draw a Sleeker Gauge, however, it will be of limited function, so I have
+│     decided to call these Sleek Gauges for sake of differentiation.
+│
+│   The only new additions are the height and style parameters, if you wish your
+│     Sleek Gauge to use a specific geometry.
+=end # ═════════════════════════════════════════════════════════════════════════
+  def draw_gauge(x,y,w,r,col1,col2,h=@SG3__Height,style="")
+    initialize_sg_values unless @SG3__Loaded
+    style = "Def" if style.empty?
+    if BWX::SGV3::Vars::Gauge_Styles.include?(style)
+      style = BWX::SGV3::Vars::Gauge_Styles[@SG3_MultiSt ? style : "Def"]
+    end
+    SendToSGProcessor("BASE","Def",x,y,w,r,col1,col2,style,h,[])
+  end # Close draw_gauge
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.SendToSGProcessor(sg3,t,x,y,w,r,col1,col2,s,h,a)
+  #═════════════════════════════════════════════════════════════════════════════
+  def SendToSGProcessor(sg3,t,x,y,w,r,col1,col2,s,h,a)
+    @SG3__Gauges = {} unless @SG3__Gauges
+    @SG3__RealTG = [] unless @SG3__RealTG
+    # IF GAUGE EXISTS ══════════════════════════════════════════════════════════
+    if @SG3__Gauges[[x,y]]
+
+      # SET GAUGE RATE VALUE ═══════════════════════════════════════════════════
+      @SG3__Gauges[[x,y]].set_rate(r)
+
+      # IF GAUGE SG3 TYPE HAS CHANGED ══════════════════════════════════════════
+      if @SG3__Gauges[[x,y]].type != t
+        @SG3__Gauges[[x,y]].retype(t)
+      end
+
+      # IF GAUGE WIDTH HAS CHANGED ═════════════════════════════════════════════
+      if @SG3__Gauges[[x,y]].w != w
+        @SG3__Gauges[[x,y]].up_width(w)
+      end
+
+      # IF GAUGE STYLE HAS CHANGED ═════════════════════════════════════════════
+      if @SG3__Gauges[[x,y]].s != s
+        @SG3__Gauges[[x,y]].restyle(s)
+      end
+
+    # OTHERWISE GENERATE A NEW GAUGE ═══════════════════════════════════════════
+    else
+      @SG3__Gauges[[x,y]]=Sleeker_Gauge.new(sg3,t,x,y,w,r,col1,col2,s,self,h,a)
+      if @SG3_RealTGF.include?(t)
+        unless @SG3__RealTG.include?([x,y])
+          if SceneManager.scene_is?(Scene_Battle)
+            if self.class == Window_Realtime
+              @SG3__RealTG += [[x,y]]
+              @SG3__Gauges[[x,y]].set_addon("RTG")
+            end
+          end
+        end
+      end
+    end
+  end # Close SendToSGProcessor
+
+=begin ═════════════════════════════════════════════════════════════════════════
+│ ＤＥＦＩＮＥ: Window_Base.ModifySGProcessor(x,y,focus,h,s,disp,tpos,nt1,nt2)
+│ - In the event that you wish your custom gauge to have actual display values
+│     managed by this script, instead of drawing it in manually post render,
+│     you will need to use the ModifySGProcessor function. This will effectively
+│     upgrade your Sleek Gauge into a Sleeker Gauge.
+=end # ═════════════════════════════════════════════════════════════════════════
+  def ModifySGProcessor(x,y,focus,disp,tpos,nt1,nt2)
+    if @SG3__Gauges[[x,y]]
+      @SG3__Gauges[[x,y]].set_advanced(focus,disp,tpos,nt1,nt2)
+    else
+      Debug("Sleeker Gauge Error","Attempting to modify non-existant gauge.",
+      "Called nil Gauge at ["+x.to_s+","+y.to_s+"]",false,true) rescue
+      msgbox("Sleek Gauge Error: Gauge ["+x.to_s+","+y.to_s+"] does not exist.")
+    end
+  end # Close ModifySGProcessor
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.ModifySGAddonType(x,y,addon)
+  #═════════════════════════════════════════════════════════════════════════════
+  def ModifySGAddonType(x,y,addon)
+    if @SG3__Gauges[[x,y]]
+      @SG3__Gauges[[x,y]].set_addon(addon)
+    else
+      Debug("Sleeker Gauge Error","Attempting to modify non-existant gauge.",
+      "Called nil gauge at ["+x.to_s+","+y.to_s+"]",false,true) rescue
+      msgbox("Sleek Gauge Error: Gauge ["+x.to_s+","+y.to_s+"] does not exist.")
+    end
+  end # Close ModifySGAddonType
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＡＬＩＡＳ: Window_Base.gauge_update < Window_Base.update
+  #═════════════════════════════════════════════════════════════════════════════
+  alias gauge_update update
+  def update
+    gauge_update
+    if @gauges
+      @gauges.each {|k,gauge| gauge.update}
+    end
+  end
+end # Close Window_Base
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ＣＬＡＳＳ: Sleeker_Gauge.
+#═══════════════════════════════════════════════════════════════════════════════
+class Sleeker_Gauge
+  attr_reader :x, :y, :w, :s, :type, :focus, :GaugeRect
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＩＮＩＴＩＡＬＩＺＥ
+  #═════════════════════════════════════════════════════════════════════════════
+  def initialize(sg3,t,x,y,w,r,col1,col2,s,win,h,a)
+    @adv,@sg3,@type,@x,@y,@w,@s,@win,@h,@args=false,sg3,t,x,y,w,s,win,h,a
+
+    r = r.is_a?(String) ? eval(@eval_rate = r) : r
+    @cur_rate = @max_rate = r.round_to(4)
+
+    @col1 = col1.is_a?(String) ? eval(@eval_col1 = col1) : col1
+    @col2 = col2.is_a?(String) ? eval(@eval_col2 = col2) : col2
+
+    @TwoBorder = BWX::SGV3::Vars::BASE_TwinBorder
+    @StaticNum = BWX::SGV3::Vars::BASE_Static_Num
+    @StaticBGd = BWX::SGV3::Vars::BASE_Static_BGd
+    @StaticGMv = BWX::SGV3::Vars::BASE_Static_GMv
+    @MoveStyle = BWX::SGV3::Vars::BASE_Move_Style
+    @AlphaCorr = BWX::SGV3::Vars::BASE_Alpha_Corr
+    #@FrameSkip = BWX::SGV3::Vars::BASE_Frame_Skip
+    @MoveStyle = BWX::SGV3::Vars::BASE_Move_Style
+    @MultStyle = BWX::SGV3::Vars::BASE_MultiStyle
+
+    @SG3_Brdr_C1 = $SG3_Gauges.send("BG",1)
+    @SG3_Brdr_C2 = $SG3_Gauges.send("BG",2)
+    @SG3_Back_C1 = $SG3_Gauges.send("BG",3)
+    @SG3_Back_C2 = $SG3_Gauges.send("BG",4)
+
+    @GaugeHide = false
+    @GaugeMode = :dyn
+    @NeedsRedraw = true
+    @SpeedRate = @SpeedVal = 0
+
+    @FallTypeSprites = []
+    @MoveFrames = 60.0# / @FrameSkip.min!(1)
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Sleeker_Gauge.set_advanced(focus,disp,tpos,nt1,nt2)
+  #═════════════════════════════════════════════════════════════════════════════
+  def set_advanced(focus,disp,tpos,nt1,nt2)
+    @adv,@focus,@display,@tpos,@notext,@notag =
+      true,focus,disp,tpos,nt1,nt2
+
+    if @type == "Eval"
+      @eval_display = @display
+      @vocab    = eval(@eval_display[0])
+      @max_val  = eval(@eval_display[2])
+    else
+      @vocab    = @display[0]
+      @max_val  = @display[2]
+    end
+
+    update_display
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Sleeker_Gauge.update_realtime(r,display)
+  #═════════════════════════════════════════════════════════════════════════════
+  def update_realtime(r,display)
+    r = r.is_a?(String) ? eval(@eval_rate = r) : r
+    @display = display
+    set_rate(r)
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Sleeker_Gauge.update
+  #═════════════════════════════════════════════════════════════════════════════
+  def update
+    return if @FrameCompleted == Graphics.frame_count;
+    return if @GaugeHide
+
+    update_fall_sprites unless @FallTypeSprites.empty?
+    needs_update = false
+
+    unless @rate_latch
+      if @MoveStyle == :fall || @StaticGMv || @sg3 == "BASE" ||
+        ((@cur_rate - @max_rate).abs < @SpeedRate)
+        
+        @cur_rate = @max_rate
+      else
+        ratecomp = @cur_rate.comp_tri(@max_rate)
+        @cur_rate -= @SpeedRate * ratecomp
+        @cur_rate = @cur_rate.round_to(4).clamp -1,1
+      end
+      needs_update = true
+    end
+    @rate_latch = @cur_rate == @max_rate
+
+    @vocab = "" if @vocab.nil?
+    unless @val_latch
+      if @vocab.empty? || @StaticNum || @sg3 == "BASE" || @notext ||
+        ((@cur_val - @max_val).abs < @SpeedVal) || @max_val == 0
+
+        @cur_val = @set_val
+      else
+        ratecomp = @cur_val.comp_tri(@max_val)
+        @cur_val -= @SpeedVal * ratecomp
+        @cur_val = @cur_val.round_to(2).max!(@max_val)
+      end
+      needs_update = true
+    end
+    @val_latch = @cur_val == @set_val
+
+    needs_update = true if @NeedsRedraw
+    redraw if needs_update
+    @FrameCompleted = Graphics.frame_count
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Sleeker_Gauge.set_rate(r)
+  #═════════════════════════════════════════════════════════════════════════════
+  def set_rate(r)
+    return if @GaugeHide
+    r = r.round_to(4).clamp 0,1
+    reset_speed = r != @max_rate
+    @max_rate = r
+
+    if reset_speed
+      @SpeedRate = (@cur_rate - @max_rate).abs / @MoveFrames
+      set_fall_rate(r) if @MoveStyle == :fall
+    end
+    update
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Sleeker_Gauge.update_display
+  #═════════════════════════════════════════════════════════════════════════════
+  def update_display
+    return if @GaugeHide || @notext
+    if @type == "Eval"
+       set_val  = eval(@eval_display[1])
+    else
+       set_val  = @display[1]
+    end
+
+    set_val = set_val.round_to(2)
+    #if @sg3 == "BASE" || @StaticNum || (@max_val == 0 || @max_val.nil?)
+    #  @cur_val = set_val
+    #else
+      reset_speed = set_val != @set_val
+
+      if @cur_val
+        @set_val = set_val
+      else
+        @cur_val = set_val
+        @set_val = set_val
+      end
+
+      if reset_speed
+        @SpeedVal = (@cur_val - @set_val).abs / @MoveFrames
+      end
+    #end
+    update
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Sleeker_Gauge.redraw
+  #═════════════════════════════════════════════════════════════════════════════
+  def redraw
+    return if @GaugeHide
+    #check_waiting
+
+    calc_rect("TXCSize1")
+    unless @val_latch
+      unless @sg3 == "BASE"
+        if @GaugeMode == :dyn
+          if @w >= 120
+            unless @notag
+              @win.contents.clear_rect(calc_rect("TXCSize1"))
+            end
+          end
+
+          unless @Numeric.nil? && @notext
+            @win.contents.clear_rect(calc_rect("TXCSize2"))
+          end
+        end
+      end
+    end
+
+    case @type
+    when "Eval"
+      @col1 = eval(@eval_col1)
+      @col2 = eval(@eval_col2)
+    when "Def"
+      @col1 = @col1
+      @col2 = @col2
+    when "Param"
+      gauge = $SG3_Gauges.send(type.^,@focus,@args[0],"C")
+      @col1 = gauge[0]
+      @col2 = gauge[1]
+    when "Sub"
+      gauge = $SG3_Gauges.send(type.^,@focus,@args[1],@args[2],"C")
+      @col1 = gauge[0]
+      @col2 = gauge[1]
+    else
+      gauge = $SG3_Gauges.send(type.^,@focus,"C")
+      @col1 = gauge[0]
+      @col2 = gauge[1]
+    end
+
+    unless @rate_latch && !@sg3 == "BASE"
+      DrawGauge(@x,@oy,@w,@cur_rate,@col1,@col2,@s,@h)
+      draw_display unless @notext && @notag
+    end
+
+    # This is a bit of Debug code used to determine if the bars are being
+    # rendered, or skipped, this particular frame. You won't see this happen
+    # unless using the Core Debugger and set the flag to true. It's also slow.
+    if $Rapid_Debug && $TEST && false
+      @win.contents.font.size = 12
+      @win.draw_text_dex(@x,@y,"Render " + Graphics.frame_count.to_s + 
+        " " + @cur_rate.to_s + " " + @max_rate.to_s +
+        " " + @set_val.to_s + " " + @cur_val.to_s)
+      @win.reset_font_settings
+    end
+
+    @NeedsRedraw = false if @NeedsRedraw
+  end # Close Redraw
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Sleeker_Gauge.DrawDisplay(y)
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_display
+    return unless @cur_val
+    y = @oy.clone
+
+    # DRAW GAUGE TAG ═══════════════════════════════════════════════════════════
+    if @w > 120
+      unless @notag || @vocab.empty?
+        calc_rect("TXDSize1")
+        if @tpos == :def;     (y -= @TXDSize1.height/2.0)
+        elsif @tpos == :up;   (y -= @TXDSize1.height/1.5)
+        elsif @tpos == :down; (y += @h-3)
+        end
+
+        @win.change_color(@win.system_color)
+        @type == "Eval" ? 
+          @win.draw_text_ex(@x,y,eval(@vocab)) :
+          @win.draw_text(@x,y,@TXDSize1.width,@TXDSize1.height,@vocab)
+        @win.change_color(@win.normal_color)
+
+        if (@type == "HP" || @type == "SP") && (@cur_val < @max_val / 4)
+          critical = true
+          @win.change_color(@win.crisis_color)
+        end
+      end
+    end
+
+    # DRAW GAUGE NUMERIC DISPLAY ═══════════════════════════════════════════════
+    if @w > 80
+      if @max_val.to_b
+        @Numeric = @cur_val.to_i.group + "/" + @max_val.to_i.group
+      else
+        @Numeric = @cur_val.to_i.group
+        if @type == "XP"
+          @Numeric = "Max " + Vocab::level_a
+        elsif @arg[2] == "%"
+          @Numeric += "%"
+        else
+          @Numeric = "" unless @cur_val.to_b
+        end
+      end
+    else
+      if !@max_val.to_b
+        @Numeric = ""
+        @Numeric = "Max " + Vocab::level_a if @type == "XP"
+      else
+        @Numeric = @cur_val.to_i.group
+      end
+    end
+
+    unless @notext
+      calc_rect("TXDSize2")
+      xr = x + w - @TXDSize2.width
+      @win.draw_text(xr,y,@TXDSize2.width,@TXDSize2.height,@Numeric,2)
+    end
+    @win.change_color(@win.normal_color) if critical
+  end # Close DrawDisplay
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Sleeker_Gauge.DrawGauge(x,y,w,rate,col1,col2,style,h)
+  #═════════════════════════════════════════════════════════════════════════════
+  def DrawGauge(x,y,w,rate,col1,col2,style,h)
+    # GET GAUGE BORDER AND BG COLORS ═══════════════════════════════════════════
+    if @SG3_SttcBgc
+      backcol1 = @SG3_Back_C1
+      backcol2 = @SG3_Back_C2
+    else
+      backcol1 = col1.clone
+      backcol1.alpha = 16
+      backcol2 = col2.clone
+      backcol2.alpha = 96
+    end
+
+    if @AlphaCorr && @win.class != Window_Realtime
+      if @win.opacity == 0
+        col1.alpha = 255
+        col2.alpha = 255
+        backcol1 = @SG3_Back_C1
+        backcol2 = @SG3_Back_C2
+      end
+    end
+
+    bordercol1 = @SG3_Brdr_C1
+    bordercol2 = @SG3_Brdr_C2
+
+    style.slice!(/\s*/); style = style.split(/\s*/)
+
+    # DRAW SQUARE STYLE GAUGE ══════════════════════════════════════════════════
+    if style.empty? or (style[0] == "|" && style[1] == "|")
+      # DRAW GAUGE BACKGROUND ══════════════════════════════════════════════════
+      fill_w  = (w * rate).round
+      fill_ww = (w * @max_rate).round unless @sg3 == "BASE"
+      if(@TwoBorder)
+        @win.contents.fill_rect(x-2,y-2,w+4,h+4,bordercol1)
+        @win.contents.fill_rect(x-1,y-1,w+2,h+2,bordercol2)
+      else
+        @win.contents.fill_rect(x-1,y-1,w+2,h+2,bordercol1)
+      end # Close Draw Background
+
+      # DRAW GAUGE FOREGROUND ══════════════════════════════════════════════════
+      if rate == 1
+        @win.contents.gradient_fill_rect(x,y,fill_w,h,col1,col2)
+      else
+        @win.contents.gradient_fill_rect(x,y,w,h,backcol1,backcol2)
+        if @sg3 == "BASE" || rate == @max_rate
+          @win.contents.gradient_fill_rect(x,y,fill_w,h,col1,col2)
+        else
+          case @MoveStyle
+          when :fancy
+            col1.alpha -= 50; col2.alpha -= 50
+            if rate > @max_rate
+              @win.contents.gradient_fill_rect(x,y,fill_w,h,col1,col2)
+              col1.alpha += 50; col2.alpha += 50
+              @win.contents.gradient_fill_rect(x,y,fill_ww,h,col1,col2)
+            elsif rate < @max_rate
+              @win.contents.gradient_fill_rect(x,y,fill_ww,h,col1,col2)
+              col1.alpha += 50; col2.alpha += 50
+              @win.contents.gradient_fill_rect(x,y,fill_w,h,col1,col2)
+            end
+          when :normal
+            @win.contents.gradient_fill_rect(x,y,fill_w,h,col1,col2)
+          when :fall
+            if rate > @max_rate
+              @win.contents.gradient_fill_rect(x,y,fill_ww,h,col1,col2)
+            else
+              @win.contents.gradient_fill_rect(x,y,fill_w,h,col1,col2)
+            end
+          end
+        end
+      end # Close Draw Foreground
+    # DRAW DYNAMIC STYLE GAUGE ═════════════════════════════════════════════════
+    else
+      adj1 = style_adj_string(style[0]); adj2 = style_adj_string(style[1], true)
+
+      # DRAW GAUGE BACKGROUND ══════════════════════════════════════════════════
+      if(@TwoBorder)
+        h += 4
+        for i in 0...h
+          a1 = eval(adj1[0]); a2 = eval(adj2[0])
+          a3 = adj1[2]; a4 = adj2[4].nil? ? adj2[2] : adj2[4]
+          @win.contents.fill_rect(
+            x-a3+a1,y-2+i,w+(a3+a4)-a1-a2,1,
+            bordercol1)
+        end
+      
+        h -= 2
+        for i in 0...h
+          a1 = eval(adj1[0]); a2 = eval(adj2[0])
+          a3 = adj1[1]; a4 = adj2[3].nil? ? adj2[1] : adj2[3]
+          @win.contents.fill_rect(
+            x-a3+a1,y-1+i,w+(a3+a4)-a1-a2,1,
+            bordercol2)
+        end
+      else
+        h += 2
+        for i in 0...h
+          a1 = eval(adj1[0]); a2 = eval(adj2[0])
+          a3 = adj1[1]; a4 = adj2[3].nil? ? adj2[1] : adj2[3]
+          @win.contents.fill_rect(
+            x-a3+a1,y-1+i,w+(a3+a4)-a1-a2,1,
+            bordercol1)
+        end
+      end # Close Draw Borders
+
+      h -= 2
+      unless rate == @max_rate
+        for i in 0...h
+          a1 = eval(adj1[0]); a2 = eval(adj2[0])
+          @win.contents.gradient_fill_rect(
+            x+a1,y+i,w-a1-a2,1,
+            backcol1,backcol2)
+        end
+      end # Close Draw Background
+
+      # DRAW GAUGE FOREGROUND ══════════════════════════════════════════════════
+      for i in 0...h
+        a1 = eval(adj1[0]); a2 = eval(adj2[0])
+        
+        # Rate inaccuracy fix...
+        fill_w  = ((w-a1-a2) * rate).round
+        fill_ww = ((w-a1-a2) * @max_rate).round
+        if rate == 1
+          @win.contents.gradient_fill_rect(x+a1,y+i,fill_w,1,col1,col2)
+        else
+          @win.contents.gradient_fill_rect(x+a1,y+i,w-a1-a2,1,backcol1,backcol2)
+          if @sg3 == "BASE" || rate == @max_rate
+            @win.contents.gradient_fill_rect(x+a1,y+i,fill_w,1,col1,col2)
+          else
+            case @MoveStyle
+            when :fancy
+              col1.alpha -= 50; col2.alpha -= 50
+              if rate > @max_rate
+                @win.contents.gradient_fill_rect(x+a1,y+i,fill_w,1,col1,col2)
+                col1.alpha += 50; col2.alpha += 50
+                @win.contents.gradient_fill_rect(x+a1,y+i,fill_ww,1,col1,col2)
+              else rate < @max_rate
+                @win.contents.gradient_fill_rect(x+a1,y+i,fill_ww,1,col1,col2)
+                col1.alpha += 50; col2.alpha += 50
+                @win.contents.gradient_fill_rect(x+a1,y+i,fill_w,1,col1,col2)
+              end
+            when :normal
+              @win.contents.gradient_fill_rect(x+a1,y+i,fill_w,1,col1,col2)
+            when :fall
+              if rate > @max_rate
+                @win.contents.gradient_fill_rect(x,y+1,fill_ww,1,col1,col2)
+              else
+                @win.contents.gradient_fill_rect(x,y+1,fill_w,1,col1,col2)
+              end
+            end
+          end
+        end
+      end
+    end # Close Draw Foreground
+  end # Close DrawGauge
+
+  #╒══════════════════════════════════════════════════════════════════════════╤╗
+  #│Syvkal::Define:Sleeker_Gauge.style_adj_string(sym, edge = false)          │║
+  #│  Obv', I've changed values, but I still have no idea how it makes it go. │║
+  #╘══════════════════════════════════════════════════════════════════════════╧╝
+  def style_adj_string(sym, edge = false) 
+    case sym
+    when '/'
+      [(edge ? 'i+4' : '(h+2) - i'), 3, 5]
+    when '\\'
+      [(edge ? '(h+2) - i' : 'i+4'), 3, 5]
+    when '<'
+      [(edge ? '(h/2+2)-((h/2) - i).abs' : '((h/2) - i).abs'), 3, 5]
+    when '>'
+      [(edge ? '((h/2) - i).abs' : '(h/2)-((h/2) - i).abs'), 3, 5]
+    when '('
+      [(edge ?
+        '((h/2) * Math.sin(i * 1.0 * Math::PI / (h-1))).round.to_i' :
+        '(h-1) - ((h/2) * Math.sin(i * 1.0 * Math::PI / (h-1))).round.to_i'), 
+        2, 5, 2, 5]
+    when ')'
+      [(edge ?
+        '(h-1) - ((h/2) * Math.sin(i * 1.0 * Math::PI / (h-1))).round.to_i' :
+        '((h/2) * Math.sin(i * 1.0 * Math::PI / (h-1))).round.to_i'), 
+        2, 5, 2, 5]
+    else # eg. | or invalid sym
+      ['0', 1, 2]
+    end
+  end
+
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Sleeker_Gauge.set_addon(addon)
+  #═════════════════════════════════════════════════════════════════════════════
+  def set_addon(addon)
+    @Addon = addon
+    if @Addon == "MHPB"
+      @FrameSkip = BWX::SGV3::Vars::MHPB_Frame_Skip
+    #elsif @Addon == "RTG"
+    #  @FrameSkip = BWX::SGV3::Vars::REAL_Frame_Skip
+    else
+      return
+    end
+    @MoveFrames = 60.0 / @FrameSkip.min!(1)
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Sleeker_Gauge.hide_gauge(bool,overlap=0)
+  #═════════════════════════════════════════════════════════════════════════════
+  def hide_gauge(bool,overlap=0)
+    return if bool == @GaugeHide
+    @GaugeHide = bool
+    if @GaugeHide
+      @win.contents.clear_rect(gauge_rect(overlap))
+    else
+      @NeedsRedraw = !bool
+    end
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Sleeker_Gauge.gauge_rect(overlap)
+  #═════════════════════════════════════════════════════════════════════════════
+  def gauge_rect(overlap)
+    return unless @oy
+    x,y,w,h = @x,@oy,@w,@h
+
+    if @TwoBorder
+      x-=2; y-=2; h+=4; w+=4
+    else
+      x-=1; y-=1; h+=2; w+=2
+    end
+    return Rect.new(x,y+overlap,w,h-overlap)
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Sleeker_Gauge.OverrideAlphaCorrection(bool)
+  #═════════════════════════════════════════════════════════════════════════════
+  def OverrideAlphaCorrection(bool)
+    return if bool == @AlphaCorr
+    @AlphaCorr = bool
+    redraw
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Sleeker_Gauge.retype(type)
+  #═════════════════════════════════════════════════════════════════════════════
+  def retype(type)
+    return if @StoreChangeType == type
+    s = BWX::SGV3::Vars::Gauge_Styles[@MultStyle ? type : "Def"]
+    if s == @s
+      @type = type
+      @NeedsRedraw = true
+    else
+      wait_for_clear("T",type)
+      wait_for_clear("S",s)
+    end
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Sleeker_Gauge.up_width(w)
+  #═════════════════════════════════════════════════════════════════════════════
+  def up_width(w)
+    return if @StoreChangeWidth == w
+    wait_for_clear("W",w)
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Sleeker_Gauge.restyle(s)
+  #═════════════════════════════════════════════════════════════════════════════
+  def restyle(s)
+    return if @StoreChangeStyle == s
+    wait_for_clear("S",s)
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Sleeker_Gauge.wait_for_clear(what,how)
+  #═════════════════════════════════════════════════════════════════════════════
+  def wait_for_clear(what,how)
+    if what == "S"
+      if how == @s
+        @StoreChangeStyle = false
+      else
+        @StoreChangeStyle = how
+      end
+    elsif what == "W"
+      if how == @w
+        @StoreChangeWidth = false
+      else
+        @StoreChangeWidth = how
+      end
+    elsif what == "T"
+      if how == @type
+        @StoreChangeType  = false
+      else
+        @StoreChangeType  = how
+      end
+    end
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Sleeker_Gauge.check_waiting
+  #═════════════════════════════════════════════════════════════════════════════
+  def check_waiting
+    return unless @StoreChangeStyle && @StoreChangeWidth && @StoreChangeType
+    if @win.contents.ClearAll || @win.contents.ClearArea.fit?(gauge_rect)
+      unless @StoreChangeStyle.nil?
+        @s = @StoreChangeStyle
+        @StoreChangeStyle = nil
+      end
+
+      unless @StoreChangeWidth
+        @w = @StoreChangeWidth
+        @StoreChangeWidth = nil
+      end
+
+      unless @StoreChangeType
+        @type = @StoreChangeType
+        @StoreChangeType  = nil
+      end
+
+      @NeedsRedraw = true
+    end
+  end
+
+  #╒══════════════════════════════════════════════════════════════════════════╤╗
+  #│Vlue::Define: Sleeker_Gauge.update_fall_sprites                           │║
+  #╘══════════════════════════════════════════════════════════════════════════╧╝
+  def update_fall_sprites
+    @FallTypeSprites.each do |sprite|
+      sprite.y += 1 * (sprite.opacity < 175 ? 1 : -1)
+      
+      if @win.viewport.nil?
+        xx = @win.x + @win.padding
+        yy = @win.y + @win.padding
+      else
+        xx = @win.x + @win.padding +
+             @win.viewport.rect.x - @win.viewport.ox
+      end
+      sprite.x = xx + @x + @w * @max_rate
+      
+      sprite.opacity -= 5
+      sprite.dispose if sprite.opacity == 0
+    end
+    @FallTypeSprites = @FallTypeSprites.select {|sprite| !sprite.disposed? }
+  end
+
+  #╒══════════════════════════════════════════════════════════════════════════╤╗
+  #│Vlue::Define: Sleeker_Gauge.set_fall_rate(rate)                           │║
+  #╘══════════════════════════════════════════════════════════════════════════╧╝
+  def set_fall_rate(rate)
+    if @cur_rate > @max_rate
+      sprite = Sprite.new()
+      if @win.viewport.nil?
+        xx = @win.x + @win.padding
+        yy = @win.y + @win.padding
+      else
+        xx = @win.x + @win.padding +
+             @win.viewport.rect.x - @win.viewport.ox
+        yy = @win.y + @win.padding +
+             @win.viewport.rect.y - @win.viewport.oy
+      end
+      sprite.x = xx + @x + @w * @max_rate
+      sprite.y = yy + @y + @win.line_height - @h
+      sprite.z = @win.z + 1
+      width = (@w * @Cur_Rate).to_i - (@w * @max_rate).to_i
+      if width > 1
+        sprite.bitmap = Bitmap.new(width,@h-2)
+        sprite.bitmap.gradient_fill_rect(sprite.bitmap.rect,@col1,@col2)
+        @FallTypeSprites.push(sprite)
+      else
+        sprite.dispose
+      end
+    end
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Sleeker_Gauge.calc_rect(rect_id)
+  #═════════════════════════════════════════════════════════════════════════════
+  def calc_rect(rect_id)
+    case rect_id
+    when "TXSize1" # Text Size for the Gauge Tag
+      return @win.text_size("") unless @vocab
+      return @TXSize1 = @type == "Eval" ? 
+        @win.text_size(eval(@vocab.gsub(/((\e)|(\i))([A-Z]+)(\[\d\])/,""))) :
+        @win.text_size(@vocab)
+
+    when "TXSize2" # Text Size for the Gauge Numeric Display
+      return @TXSize2 = @win.text_size(@Numeric)
+
+    when "TXCSize1" # Clear Rect Size and Offset for Gauge Tags
+      txcr1 = calc_rect("TXSize1")
+      txcr1.height = Font.default_size if txcr1.height == 0
+      txcr1.height -= 4
+
+      y = @y + @win.line_height - 8
+      y -= txcr1.height/2.0
+      @oy = y.clone
+
+      rect = Rect.new(@x,@y,txcr1.width,txcr1.height)
+      rect.y += 1 if @tpos == :def
+      rect.y -= 2 if @tpos == :up
+      rect.y += txcr1.height + 1 if @tpos == :down
+      return @TXCSize1 = rect
+
+    when "TXCSize2" # Clear Rect Size and Offset for the Gauge Numeric Display
+      txcr2 = calc_rect("TXSize2")
+      txcr2.height -= 4
+
+      xr = @x + @w - txcr2.width
+      rect = Rect.new(xr,@y,txcr2.width,txcr2.height)
+      rect.y += 1 if @tpos == :def
+      rect.y -= 2 if @tpos == :up
+      rect.y += txcr2.height + 1 if @tpos == :down
+      return @TXCSize2 = rect
+
+    when "TXDSize1" # Rect Size for the Gauge Tags
+      @TXDSize1 = calc_rect("TXCSize1")
+      return @TXDSize1.height += 4
+
+    when "TXDSize2" # Rect Size for the Gauge Numeric Display
+      @TXDSize2 = calc_rect("TXCSize2")
+      return @TXDSize2.height += 4
+
+    end
+  end # Close calc_rect
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Sleeker_Gauge.Display(*args)
+  #═════════════════════════════════════════════════════════════════════════════
+  def Display(*args)
+    unless @type == "Def" || @sge == "BASE"
+      super(*args) rescue nil
+    end
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Sleeker_Gauge.DamnitDisplay(*args)
+  #═════════════════════════════════════════════════════════════════════════════
+  def DamnitDisplay(*args)
+    Object.Display(*args)
+  end
+
+end # Close Sleeker_Gauge
+
+=begin ═════════════════════════════════════════════════════════════════════════
+│ YEA - Ace Battle Engine Compatibility / Realtime Module
+│ Are you using YEA - Ace Battle Engine? No? This section does not apply to you.
+│
+│ If however, you are, and you are needing to change the position of gauges on
+│ Window_BattleStatus, this is where you would look.
+=end # ═════════════════════════════════════════════════════════════════════════
+
+if BWX::Core::Optionals.YEA_Battle?
+#═══════════════════════════════════════════════════════════════════════════════
+# ＣＬＡＳＳ: Sprite_Popup.
+#═══════════════════════════════════════════════════════════════════════════════
+  class Sprite_Popup < Sprite_Base
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＲＥＩＮＩＴＩＡＬＩＺＥ
+    #═══════════════════════════════════════════════════════════════════════════
+    alias satb_sp_init initialize
+    def initialize(*args)
+      satb_sp_init(*args)
+      @YPOP_FS = BWX::SGV3::Vars::YPOP_Frame_Skip
+      if @YPOP_FS.to_b
+        @fade = YEA::BATTLE::POPUP_SETTINGS[:fade] * @YPOP_FS
+        @full = YEA::BATTLE::POPUP_SETTINGS[:full] / @YPOP_FS
+        @zval = 0.075 * @YPOP_FS
+      end
+    end
+    
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＲＥＤＥＦＩＮＥ: Sprite_Popup.update
+    #═══════════════════════════════════════════════════════════════════════════
+    def update
+      return if $FSX.Skip?(@YPOP_FS)
+      super
+      #---
+      if @flags.include?("critical") && YEA::BATTLE::FLASH_CRITICAL
+        @hue_duration = 2 if @hue_duration == nil || @hue_duration == 0
+        @hue_duration -= 1
+        self.bitmap.hue_change(15) if @hue_duration <= 0
+      end
+      #---
+      if @zoom_direction == "up"
+        self.zoom_x = [self.zoom_x + @zval, @target_zoom].min
+        self.zoom_y = [self.zoom_y + @zval, @target_zoom].min
+      else
+        self.zoom_x = [self.zoom_x - @zval, @target_zoom].max
+        self.zoom_y = [self.zoom_y - @zval, @target_zoom].max
+      end
+      #---
+      @full -= 1
+      return if @full > 0
+      self.y -= @YPOP_FS
+      self.opacity -= @fade
+    end
+  end # Close Sprite Popup
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ＣＬＡＳＳ: Window_Realtime.
+#═══════════════════════════════════════════════════════════════════════════════
+  class Window_Realtime < Window_BattleStatus
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＩＮＩＴＩＡＬＩＺＥ
+    # - ♫ At first I was afraid, I was petrified.
+    #   Kept thinking I could never draw without this on my side..
+    #   But then I spent so many nights thinking how it drew it wrong.
+    #   And I grew strong. And I learned how to code along...
+    #═══════════════════════════════════════════════════════════════════════════
+    def initialize(x,y,width,height)
+      super()
+      initialize_sg_values unless @SG3__Loaded
+      self.openness = 0
+      draw_all_items
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Window_Realtime.draw_all_items
+    # - ♫ AND SO IT'S BACK, FROM OUTER SPACE. -RIOT-
+    #   It just walked in to find you here with salty looks upon your face.
+    #   You should'nt've clicked that stupid link,
+    #   you should have used some different code..
+    #   If you had known for just one second
+    #   It'd be back to bother you..!
+    #═══════════════════════════════════════════════════════════════════════════
+    def draw_all_items
+      item_max.times {|i|
+        draw_item(i)
+      }
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Window_Realtime.draw_item(index)
+    # - ♫ Go on now, go.. Comment the code.
+    #   Just remove it now; 'Cause I'm not welcome anymore.
+    #   Weren't I the one who tried to hurt you with Realtime?
+    #   Did you think I'd give up? Did you think my compiler would die?
+    #═══════════════════════════════════════════════════════════════════════════
+    def draw_item(index)
+      return if index.nil?
+      actor = battle_members[index]
+      return if actor.nil?
+      rect = item_rect(index)
+
+      # Rect
+      rx = rect.x+3
+      ry = rect.y
+      rw = rect.width-6
+      # Half
+      hw = (rect.width-12)/2
+      # Divided
+      dw = (rw-6)/2
+      dy = line_height*3-4
+
+      if draw_tp?(actor) && draw_mp?(actor)
+        draw_actor_tp(actor, rx,      dy, dw, :down)
+        draw_actor_mp(actor, rx + hw, dy, dw, :down)
+      elsif draw_tp?(actor) && !draw_mp?(actor)
+        draw_actor_tp(actor, rx,      dy, rw, :down)
+      elsif !draw_tp?(actor) && draw_mp?(actor)
+        draw_actor_mp(actor, rx,      dy, rw, :down)
+      end
+      draw_higher_gauges(actor,rx,rw,dy)
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Window_Realtime.draw_higher_gauges(focus,x,w,y)
+    # - ♫ OH NO, NOT I! I have Realtime!
+    #   Oh as long as I know how to code, I know I'll optimize!
+    #   I've got all my lines to live.. I've got all my code to give..
+    #   And I have Realtime; I have Realtime! Hey-Hey!(Hey!)
+    #═══════════════════════════════════════════════════════════════════════════
+    def draw_higher_gauges(focus,x,w,y)
+      ry = y - (@SG3__Height + 3)
+      if @SG3_LoadATB
+        draw_sg_atb(focus,x,ry,w,:up)
+        ry -= @SG3__Height + 3
+      end
+      draw_actor_hp(focus,x,ry,w,:up)
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＲＥＤＥＦＩＮＥ: Window_Realtime.update (Realtime, yo.)
+    #═══════════════════════════════════════════════════════════════════════════
+    def update
+      super
+      return if self.openness != 255
+      if @SG3__RealTG
+        @SG3__RealTG.each {|gauge|
+          gauge = @SG3__Gauges[gauge]
+          type = gauge.type
+          focus = gauge.focus
+          case gauge.type
+          when "Eval"
+            rate = gauge.args[0]
+            disp = gauge.args[3]
+          when "Param"
+            p_id = gauge.args[0]
+            rate = $SG3_Gauges.send(type.^,focus,p_id,"R")
+            disp = $SG3_Gauges.send(type.^,focus,p_id,"D")
+          when "Sub"
+            ptyp = gauge.args[0]
+            p_id = gauge.args[1]
+            rate = $SG3_Gauges.send(type.^,focus,ptyp,p_id,"R")
+            disp = $SG3_Gauges.send(type.^,focus,ptyp,p_id,"D")
+          else     
+            rate = $SG3_Gauges.send(type.^,focus,"R")
+            disp = $SG3_Gauges.send(type.^,focus,"D")
+          end
+
+          gauge.update_realtime(rate,disp)
+        }
+      end
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Window_Realtime.col_max
+    # - ♫ It took all the strength I had, not to fall apart.
+    #   Kept trying hard to mend the pieces of my broken art.
+    #   And I spent oh so many nights just feeling angry at myself.
+    #   Wanted to cry, but now I hold my head up high.
+    #═══════════════════════════════════════════════════════════════════════════
+    def col_max
+      $game_party.max_battle_members
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Window_Realtime.battle_members
+    # - ♫ And you see it, something brand new.
+    #   It's not that lagged up little coding
+    #   still rend'rin at you.
+    #═══════════════════════════════════════════════════════════════════════════
+    def battle_members
+      $game_party.battle_members
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Window_Realtime.actor
+    # - ♫ And so we felt like dropping in.
+    #   And just like that, my code, it's free.
+    #   So, I'm not saving all my coding
+    #   For someone who's paying me.
+    #═══════════════════════════════════════════════════════════════════════════
+    def actor
+      battle_members[@index]
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Window_Realtime.draw_tp?(actor)
+    # - ♫ Go on now, go.. Comment the code.
+    #   Just remove it now; 'Cause I'm not welcome anymore.
+    #   Weren't I the one who tried to hurt you with Realtime?
+    #   Did you think I'd give up? Did you think my compiler would die?
+    #═══════════════════════════════════════════════════════════════════════════
+    def draw_tp?(actor)
+      actor.draw_tp?
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Window_Realtime.draw_mp?(actor)
+    # - ♫ OH NO, NOT I! I have Realtime!
+    #   Oh as long as I know how to code, I know I'll optimize!
+    #   I've got all my lines to live.. I've got all my code to give..
+    #   And I have Realtime; I have Realtime! Oh...!
+    #═══════════════════════════════════════════════════════════════════════════
+    def draw_mp?(actor)
+      actor.draw_mp?
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Window_Realtime.item_max
+    # - ♫ Go on now, go.. Comment the code.
+    #   Just remove it now; 'Cause I'm not welcome anymore.
+    #   Weren't I the one who tried to hurt you with Realtime?
+    #   Did you think I'd give up? Did you think my compiler would die?
+    #═══════════════════════════════════════════════════════════════════════════
+    def item_max
+      $game_party.max_battle_members
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＲＥＦＡＣＴＯＲ: Draw Actor Gauges
+    # - ♫ OH NO, NOT I! I have Realtime!
+    #   Oh as long as I know how to code, I know I'll optimize!
+    #   I've got all my lines to live.. I've got all my code to give..
+    #   And I have Realtime; I have Realtime! -Fade Out-
+    #═══════════════════════════════════════════════════════════════════════════
+    def draw_actor_hp(focus,x,y,w,*args);super(focus,x,y,w,*args);end
+    def draw_actor_mp(focus,x,y,w,*args);super(focus,x,y,w,*args);end
+    def draw_actor_tp(focus,x,y,w,*args);super(focus,x,y,w,*args);end
+  end # Close Window_Sleeker_Realtime
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ＣＬＡＳＳ: Window_BattleStatus. (I regret and apologize for NOTHING. ~.=.^ \/,)
+#═══════════════════════════════════════════════════════════════════════════════
+  class Window_BattleStatus < Window_Selectable
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Window_BattleStatus.draw_item(index)
+    #═══════════════════════════════════════════════════════════════════════════
+    def draw_item(index)
+      return if index.nil?
+      actor = battle_members[index]
+      return if actor.nil?
+      rect = item_rect(index)
+      contents.clear_rect(rect)
+
+      rx = rect.x+2
+      ry = rect.y
+      rw = rect.width-4
+      hw = rect.width/2
+      dw = (rw+4)/2-2
+      dy = line_height*3-1
+
+      draw_actor_face(actor,    rx,   ry+2, actor.alive?)
+      draw_actor_name(actor,    rx-2, ry,   rw-4)
+      draw_actor_action(actor,  rx-2, ry)
+      draw_actor_icons(actor,   rx-2, line_height*1, rw+4)
+
+      @SGWindow.draw_item(index)
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＲＥＤＥＦＩＮＥ: Update
+    #═══════════════════════════════════════════════════════════════════════════
+    def update
+      super
+      if @SGWindow
+        @SGWindow.x = self.x
+        @SGWindow.y = self.y
+        @SGWindow.z = self.z+1
+        @SGWindow.width = self.width
+        @SGWindow.height = self.height
+        @SGWindow.openness = self.openness
+        @SGWindow.update
+      end
+      return if @party == $game_party.battle_members
+      @party = $game_party.battle_members.clone
+      refresh
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＡＬＩＡＳ: Window_BattleStatus.sg3_wbs_refresh < Window_BattleStatus.refresh
+    #═══════════════════════════════════════════════════════════════════════════
+	  alias sg3_wbs_refresh refresh
+	  def refresh
+      unless @SGWindow
+        @SGWindow = Window_Realtime.new(self.x,self.y,self.width,self.height)
+        @SGWindow.viewport = self.viewport
+        @SGWindow.opacity = 0
+        @SGWindow.openness = self.openness
+        @SGWindow.draw_all_items
+      end
+      sg3_wbs_refresh
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＡＬＩＡＳ: Window_BattleStatus.sg3_wbs_close < Window_BattleStatus.close
+    #═══════════════════════════════════════════════════════════════════════════
+    alias sg3_wbs_close close
+    def close
+      @SGWindow.close if @SGWindow
+      sg3_wbs_close
+    end
+    
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＡＬＩＡＳ: Window_BattleStatus.sg3_wbs_hide < Window_BattleStatus.hide
+    #═══════════════════════════════════════════════════════════════════════════
+    alias sg3_wbs_hide hide
+    def hide
+      @SGWindow.hide if @SGWindow
+      sg3_wbs_hide
+    end
+    
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＡＬＩＡＳ: Window_BattleStatus.sg3_wbs_show < Window_BattleStatus.show
+    #═══════════════════════════════════════════════════════════════════════════
+    alias sg3_wbs_show show
+    def show
+      @SGWindow.show if @SGWindow
+      sg3_wbs_show
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＲＥＦＡＣＴＯＲ： Super gauges
+    # - They're really not 'Super'. It's just the code.
+    #═══════════════════════════════════════════════════════════════════════════
+    def draw_actor_hp(focus,x,y,w,*args);super(focus,x,y,w,*args);end
+    def draw_actor_mp(focus,x,y,w,*args);super(focus,x,y,w,*args);end
+    def draw_actor_tp(focus,x,y,w,*args);super(focus,x,y,w,*args);end
+  end # Close Window_BattleStatus
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ＣＬＡＳＳ: Window_BattleStatusAid.
+#═══════════════════════════════════════════════════════════════════════════════
+  class Window_BattleStatusAid < Window_BattleStatus
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＡＬＩＡＳ: Window_BattleStatusAid.sg3_wbsa_update < self.update
+    #═══════════════════════════════════════════════════════════════════════════
+    alias sg3_wbsa_update update
+    def update
+      @SGWindow.update if @SGWindow
+      sg3_wbsa_update
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＡＬＩＡＳ: Window_BattleStatusAid.sg3_wbsa_hide < self.hide
+    #═══════════════════════════════════════════════════════════════════════════
+    alias sg3_wbsa_hide hide
+    def hide
+      @SGWindow.hide if @SGWindow
+      sg3_wbsa_hide
+    end
+  
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＡＬＩＡＳ: Window_BattleStatusAid.sg3_wbsa_show < self.show
+    #═══════════════════════════════════════════════════════════════════════════
+    alias sg3_wbsa_show show
+    def show
+      refresh
+      @SGWindow.show
+      sg3_wbsa_show
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＡＬＩＡＳ: Window_BattleStatusAid.sg3_wbsa_refresh < self.refresh
+    #═══════════════════════════════════════════════════════════════════════════
+    alias sg3_wbsa_refresh refresh
+    def refresh
+      if !@SGWindow
+        @SGWindow = Window_Realtime.new(self.x,self.y,self.width,self.height)
+        @SGWindow.viewport = self.viewport
+        @SGWindow.opacity = 0
+        @SGWindow.hide
+      end
+      @SGWindow.contents.clear
+      sg3_wbsa_refresh
+    end
+  end # Close Window_BattleStatusAid
+end # Close YEA Import Check
+
+=begin ═════════════════════════════════════════════════════════════════════════
+│ RPGM-X Sleeker ATB System Bars
+│ Are you using a supported ATB System? No? This section does not apply to you.
+│
+│ If however, you are, and you are needing to change the way something works in
+│ here.. It should all be fairly readable.
+=end # ═════════════════════════════════════════════════════════════════════════
+
+if BWX::Core::Optionals.ATBLoaded? && BWX::SGV3::Vars::MODULES_SG_ATBS
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＣＬＡＳＳ: Game_Battler.
+  #═════════════════════════════════════════════════════════════════════════════
+  class Game_Battler < Game_BattlerBase
+    attr_accessor :SG_ATB_Type
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＲＥＩＮＩＴＩＡＬＩＺＥ
+    #═══════════════════════════════════════════════════════════════════════════
+    alias sg_atb_gb_init initialize
+    def initialize
+      sg_atb_gb_init.inspect
+      @SG_ATB_Type = BWX::Core::Optionals.ATBSystem?
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Game_Battler.SG_ATB_Casting?
+    #═══════════════════════════════════════════════════════════════════════════
+    def SG_ATB_Casting?
+      return if @SG_ATB_Type.nil?
+      case @SG_ATB_Type
+      when "YSA"; return catb_ct_filled_rate > 0
+      when "VE" ; return cast_action?
+      when "CCW"; return !chanting?.nil?
+      end
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Game_Battler.SG_FATB_Rate
+    #═══════════════════════════════════════════════════════════════════════════
+    def SG_FATB_Rate
+      return if @SG_ATB_Type.nil?
+      case @SG_ATB_Type
+      when "YSA"; return catb_filled_rate
+      when "VE" ; return atb_rate
+      when "CCW"; return (@ap.to_f / ATB::MAX_AP)
+      end
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Game_Battler.SG_CATB_Rate
+    #═══════════════════════════════════════════════════════════════════════════
+    def SG_CATB_Rate
+      return if @SG_ATB_Type.nil?
+      case @SG_ATB_Type
+      when "YSA"; return catb_ct_filled_rate
+      when "VE" ; return atb_rate
+      when "CCW"; return (@chant_count.to_f / @max_chant_count) rescue 0
+      end
+    end
+  end # Close Game_Battler
+
+  if BWX::Core::Optionals.ATBSystem? == "YSA"
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＣＬＡＳＳ: Window_BattleStatus.
+    #═══════════════════════════════════════════════════════════════════════════
+    class Window_BattleStatus < Window_Selectable
+      #═════════════════════════════════════════════════════════════════════════
+      # ＧＲＡＶＥＹＡＲＤ
+      #═════════════════════════════════════════════════════════════════════════
+      def catb_draw_item(i);        end
+      def draw_item_actor_catb(i);  end
+      def refresh_catb;             end
+      def draw_actor_atb(*args);    end
+      def draw_actor_catb(*args);   end
+    end # Close Window_BattleStatus
+
+  elsif BWX::Core::Optionals.ATBSystem? == "VE"
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＣＬＡＳＳ: Scene_Battle Attribue Reader for Victor Engine Support
+    #═══════════════════════════════════════════════════════════════════════════
+    class Scene_Battle < Scene_Base
+        attr_accessor :enemy_window
+    end # Close Scene_Battle
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＣＬＡＳＳ: Window_BattleStatus.
+    #═══════════════════════════════════════════════════════════════════════════
+    class Window_BattleStatus < Window_Selectable
+      #═════════════════════════════════════════════════════════════════════════
+      # ＲＥＦＡＣＴＯＲ： Window_BattleStatus.draw_actor_atb
+      #═════════════════════════════════════════════════════════════════════════
+      def draw_actor_atb(actor, x, y, width = 124)
+        draw_sg_atb(actor,x,y,width,:up)
+      end
+    end # Close Window_BattleStatus
+
+  elsif BWX::Core::Optionals.ATBSystem? == "CCW"
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＣＬＡＳＳ: Window_BattleStatus.
+    #═══════════════════════════════════════════════════════════════════════════
+    class Window_BattleStatus < Window_Selectable
+      #═════════════════════════════════════════════════════════════════════════
+      # ＲＥＦＡＣＴＯＲ： Window_BattleStatus.draw_actor_ap_index(index)
+      #═════════════════════════════════════════════════════════════════════════
+      def draw_actor_ap_index(index)
+        rect  = gauge_area_rect(index)
+        actor = $game_party.battle_members[index]
+        dtp   = $data_system.opt_display_tp
+        x     = rect.x + (dtp ? 260 : 230) + ATBS[:apx]
+        y     = rect.y
+        width = ATB_STATUS.atbs_ap_gauge_width
+        contents.clear_rect(x, y, width, line_height)
+        draw_sg_atb(actor,x,y,width,:up)
+      end
+    end # Close Window_BattleStatus
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＣＬＡＳＳ: Window_Base.
+    #═══════════════════════════════════════════════════════════════════════════
+    class Window_Base < Window
+      #═════════════════════════════════════════════════════════════════════════
+      # ＧＲＡＶＥＹＡＲＤ
+      #═════════════════════════════════════════════════════════════════════════
+      def draw_actor_ap(*args);     end
+      def draw_ap_gauge(*args);     end
+    end # Close Window_Base
+  end # Close ATB Install Compatibility
+end # Close ATB Install and Active Check
+
+=begin ═════════════════════════════════════════════════════════════════════════
+│ RPGM-X Sleeker Monster HP Bars
+│ This one's a bit of a doozy. Hope you know what you're doing if you want to go
+│ diving around in here.
+│
+│ If you so insist, I can't gauentee that you'll understand how it works. Half
+│ the time, it doesn't.. Which is why I keep ending up recoding it obessively.
+=end # ═════════════════════════════════════════════════════════════════════════
+
+if BWX::SGV3::Vars::MODULES_SG_MHPB
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＣＬＡＳＳ: Window_MHPB.
+  #═════════════════════════════════════════════════════════════════════════════
+  class Window_MHPB < Window_Base
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＩＮＩＴＩＡＬＩＺＥ
+    #═══════════════════════════════════════════════════════════════════════════
+    def initialize(battler)
+      super(0,0,0,0)
+      initialize_mhpb_values(battler)
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Window_MHPB.initialize_mhpb_values(battler)
+    # - Do not initialize MHPB variables if there's no MHPB to display.
+    #═══════════════════════════════════════════════════════════════════════════
+    def initialize_mhpb_values(battler)
+      self.opacity = 0
+
+      @MHPB__Height = BWX::SGV3::Vars::MHPB_Bar_Height
+      @MHPB_BHeight = BWX::SGV3::Vars::MHPB_Big_Height
+      @MHPB___Width = BWX::SGV3::Vars::MHPB_Base_Width
+      @MHPB_MBWidth = BWX::SGV3::Vars::MHPB_Base_MBMod
+      @MHPB_BBWidth = BWX::SGV3::Vars::MHPB__Big_Width
+
+      @MHPB_ShowNam = BWX::SGV3::Vars::MHPB_Show_Names
+      @MHPB_ShowMMP = BWX::SGV3::Vars::MHPB_Show_MobMP
+      @MHPB_ShowBMP = BWX::SGV3::Vars::MHPB_Show_BosMP
+      @MHPB_ShowATB = BWX::SGV3::Vars::MHPB_Show_FCATB
+      @MHPB_ShowHit = BWX::SGV3::Vars::MHPB_Show_Accur
+
+      @MHPB_FrameSk = BWX::SGV3::Vars::MHPB_Frame_Skip
+
+      @MHPB__Target = battler
+      @MHPB_MobType = @MHPB__Target.enemy.MHPB_MobType
+
+      size_mhpb_window
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Window_MHPB.size_mhpb_window
+    #═══════════════════════════════════════════════════════════════════════════
+    def size_mhpb_window
+      npy = 6
+      case @MHPB_MobType
+      when 0
+        @mbhp_w  = @MHPB___Width
+        @mbhp_h  = @MHPB__Height
+        @mbhp_bn = @SG3_LoadATB ? 0 : @mbhp_h
+      when 1
+        @mbhp_w  = @MHPB___Width
+        @mbhp_w *= @MHPB_MBWidth
+        @mbhp_h  = @MHPB__Height
+        @mbhp_bn = @SG3_LoadATB ? 0 : @mbhp_h
+      when 2
+        @mbhp_w  = @MHPB_BBWidth
+        @mbhp_h  = @MHPB_BHeight
+        @mbhp_bn = @SG3_LoadATB ? 0 : @mbhp_h
+        npy += 24 - Font.default_size if @MHPB_ShowNam
+      end
+
+      @hity = (@mbhp_h * 5 + 15) - @mbhp_bn
+      @mpy  = (@mbhp_h * 4 +  8) - @mbhp_bn
+      @hpy  = (@mbhp_h * 3 +  4) - @mbhp_bn
+      @atby = (@mbhp_h * 2 +  0) - @mbhp_bn
+
+      npy+= @MHPB_ShowNam ? Font.default_size : 0
+      hpy = @MHPB_ShowHit ? 15 + Font.default_size : 0
+
+      self.width  = @mbhp_w + (height * 2) + 36
+      self.height = hpy + npy + @mbhp_h * 4
+
+      if @MHPB_MobType == 2
+        self.x = Graphics.width / 2 - @mbhp_w / 2
+        self.y = 100
+      else
+        self.x= @MHPB__Target.screen_x - @mbhp_w / 2
+        self.y=[@MHPB__Target.screen_y,Graphics.height-self.height/7-120].min-10
+      end
+
+      @visible_counter = 0
+      create_contents
+    end # Close size_mhpb_window
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Window_MHPB.window_visible?
+    #═══════════════════════════════════════════════════════════════════════════
+    def window_visible?
+      if SceneManager.scene_is?(Scene_Battle)
+        return false if @MHPB__Target.dead?
+        return true if @MHPB_MobType == 2
+        return true if @SG3_LoadATB && @MHPB_ShowATB
+        return true if targeted?
+        return @visible_counter.to_b
+      else
+        Debug("WHAT DID YOU DO!?",
+          "Window_MHPB.window_visible? was called outside of battle.",
+          "Caught on fire and was thrown out of the nearest airlock.",
+          true, true) rescue msg_box("Doot, Doot! Mr. Skeltal says:" + 
+            "\n\"good bones and much calcium comes your way~\"" +
+            "\nSo helpful, I know. Thanks Mr. Skeltal")
+      end
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Window_MHPB.element_visible?(type)
+    #═══════════════════════════════════════════════════════════════════════════
+    def element_visible?(type)
+      case type
+      when "Name"
+        return true if targeted?
+        if @MHPB_MobType == 2
+          return true
+        else
+          return @MHPB_ShowNam && @visible_counter.to_b
+        end
+      when "HP"
+        return true if targeted?
+        if @MHPB_MobType == 2
+          return true
+        else
+          return @visible_counter.to_b
+        end
+      when "MP"
+        see_mp = @MHPB_ShowMMP && (@visible_counter.to_b || targeted?)
+        if @MHPB_MobType >= 1
+          return @MHPB_ShowBMP && see_mp 
+        else
+          return see_mp
+        end
+      when "ATB"
+        return @SG3_LoadATB && @MHPB_ShowATB
+      when "Hit Chart"
+        return @MHPB_ShowHit && targeted?
+      end
+    end # Close element_visisble
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Window_MHPB.targeted?
+    #═══════════════════════════════════════════════════════════════════════════
+    def targeted?
+      unless SceneManager.scene.enemy_window.nil?
+        if SceneManager.scene.enemy_window.active
+          return true if SceneManager.scene.enemy_window.enemy == @MHPB__Target
+          return true if SceneManager.scene.enemy_window.select_all?
+          return true if highlight_aoe? if $imported["YEA-AreaofEffect"]
+        end
+      end
+      return false
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Window_MHPB.highlight_aoe?
+    #═══════════════════════════════════════════════════════════════════════════
+    def highlight_aoe?
+      return false if @MHPB__Target.enemy? && @MHPB__Target.hidden
+      return SceneManager.scene.enemy_window.hightlight_aoe?(@MHPB__Target)
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Window_MHPB.update_visible_counter
+    #═══════════════════════════════════════════════════════════════════════════
+    def update_visible_counter
+      @visible_counter = 45
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Window_MHPB.update
+    #═══════════════════════════════════════════════════════════════════════════
+    def update
+      visible = window_visible?
+      self.visible = visible
+      return unless visible
+
+      @visible_counter -= 1 if @visible_counter.to_b
+      draw_gauges
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Window_MHPB.draw_gauges
+    #═══════════════════════════════════════════════════════════════════════════
+    def draw_gauges
+      return if $FSX.Skip?(BWX::SGV3::Vars::MHPB_Frame_Skip)
+      if element_visible?("Name")
+        unless @NameLatch
+          contents.font.size += 8 if @MHPB_MobType == 2
+          draw_text(0,0,
+            text_size(@MHPB__Target.name).width,
+            text_size(@MHPB__Target.name).height,
+            @MHPB__Target.name)
+          reset_font_settings if @MHPB_MobType == 2
+        end
+        @NameLatch = true
+      else
+        if @NameLatch
+          contents.font.size += 8 if @MHPB_MobType == 2
+          contents.clear_rect(0,0,
+            text_size(@MHPB__Target.name).width+5,
+            text_size(@MHPB__Target.name).height)
+          reset_font_settings if @MHPB_MobType == 2
+          @NameLatch = false
+        end
+      end
+
+      gv_mp  = element_visible?("MP")
+      gv_hp  = element_visible?("HP")
+      gv_atb = element_visible?("ATB")
+
+      draw_battler_mp(@MHPB__Target,8,@mpy, @mbhp_w,@mbhp_h) if gv_mp
+      draw_battler_hp(@MHPB__Target,5,@hpy, @mbhp_w,@mbhp_h) if gv_hp
+      draw_battler_atb(@MHPB__Target,2,@atby,@mbhp_w,@mbhp_h) if gv_atb
+
+      if @SG3__Gauges
+        unless gv_mp  == @GV_MP ; if @SG3__Gauges[[8,@mpy]]
+          @SG3__Gauges[[8,@mpy]].hide_gauge(!gv_mp)
+        end; end
+        unless gv_hp  == @GV_HP ; if @SG3__Gauges[[5,@hpy]]
+          @SG3__Gauges[[5,@hpy]].hide_gauge(!gv_hp)
+        end; end
+        unless gv_atb == @GV_ATB; if @SG3__Gauges[[2,@atby]]
+          @SG3__Gauges[[2,@atby]].hide_gauge(!gv_atb)
+        end; end
+      end
+
+      if element_visible?("Hit Chart")
+        unless @HitLatch
+          actor = BattleManager.actor
+          item = actor.input.item
+          if item.physical? || item.magical?
+            @hit = @MHPB__Target.item_hit(actor,item)
+            eva = @MHPB__Target.item_eva(actor,item)
+            @hit -= eva
+            draw_text_ex(9,@hity,
+              "\eC[1]Hit Chance: \eC[0]" + @hit.percent.to_s + "%")
+            @HitLatch = true
+          end
+        end
+      else
+        if @HitLatch
+          contents.clear_rect(9,@hity+4,
+            text_size("Hit Chance: " + @hit.percent.to_s + "%").width+5,
+            text_size("Hit Chance: " + @hit.percent.to_s + "%").height)
+          @HitLatch = false
+        end
+      end
+
+      @GV_MP  = gv_mp
+      @GV_HP  = gv_hp
+      @GV_ATB = gv_atb
+    end # Close DrawGauges
+  end # Close Window_MHPB
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＣＬＡＳＳ: DataManager.
+  #═════════════════════════════════════════════════════════════════════════════
+  module DataManager
+    class << self; alias ehpb_def_ldb load_database; end
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＡＬＩＡＳ: DataManager.ehpb_def_ldb < DataManager.load_database
+    #═══════════════════════════════════════════════════════════════════════════
+    def self.load_database
+      ehpb_def_ldb
+      ehpb_hpb_nt
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: DataManager.ehpb_hpb_nt
+    #═══════════════════════════════════════════════════════════════════════════
+    def self.ehpb_hpb_nt
+      groups = [$data_enemies]
+      for group in groups
+        for obj in group
+          next if obj.nil?
+          obj.ehpb_hpb_nt
+        end
+      end
+    end
+  end # Close DataManager
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＣＬＡＳＳ: RPG::Enemy
+  #═════════════════════════════════════════════════════════════════════════════
+  class RPG::Enemy < RPG::BaseItem
+    attr_accessor :MHPB_MobType
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: RPG::Enemy.ehpb_hpb_nt
+    #═══════════════════════════════════════════════════════════════════════════
+    def ehpb_hpb_nt
+      @MHPB_MobType = 0
+      self.note.split(/[\r\n]+/).each { |line|
+        case line
+        when /<no(?:_| )gauge>/i;   @MHPB_MobType = -1
+        when /<miniboss>/i;         @MHPB_MobType = 1
+        when /<big(?:_| )boss>/i;   @MHPB_MobType = 2
+        end
+      }
+    end
+  end # Close RPG::Enemy
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＣＬＡＳＳ: Game_BattlerBase
+  #═════════════════════════════════════════════════════════════════════════════
+  class Game_BattlerBase
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＡＬＩＡＳ: Game_BattlerBase.hpb_gbb_refresh < Game_BattlerBase.refresh
+    #═══════════════════════════════════════════════════════════════════════════
+    alias ehpb_gbb_refresh refresh
+    def refresh
+      ehpb_gbb_refresh
+      return unless SceneManager.scene_is?(Scene_Battle)
+      return if actor?
+      sprite.update_visible_counter
+    end
+  end # Close Game_BattlerBase
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＣＬＡＳＳ: Game_Battler
+  #═════════════════════════════════════════════════════════════════════════════
+  class Game_Battler < Game_BattlerBase
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＡＬＩＡＳ: Game_Battler.ehpb_gb_hpe < Game_Battler.hp=
+    #═══════════════════════════════════════════════════════════════════════════
+    alias ehpb_gb_hpe hp=
+    def hp=(value)
+      ehpb_gb_hpe(value)
+      return unless SceneManager.scene_is?(Scene_Battle) 
+      return if actor? || value == 0
+      sprite.update_visible_counter
+    end
+  end # Close Game_Battler
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＣＬＡＳＳ: Sprite_Battler
+  #═════════════════════════════════════════════════════════════════════════════
+  class Sprite_Battler < Sprite_Base
+    attr_reader :MHPB_Window
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＲＥＩＮＩＴＩＡＬＩＺＥ
+    #═══════════════════════════════════════════════════════════════════════════
+    alias ehpb_sb_init initialize
+    def initialize(viewport, battler = nil)
+      ehpb_sb_init(viewport, battler)
+      return if @battler.nil? || @battler.actor?
+      precheck = @battler.enemy.MHPB_MobType
+      return if precheck == -1
+      @MHPB_Window = Window_MHPB.new(@battler)
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＡＬＩＡＳ: Sprite_Battler.ehpb_sb_disp < Sprite_Battler.dispose
+    #═══════════════════════════════════════════════════════════════════════════
+    alias ehpb_sb_disp dispose
+    def dispose
+      ehpb_sb_disp
+      @MHPB_Window.dispose if @MHPB_Window
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＡＬＩＡＳ: Sprite_Battler.ehpb_sb_update < Sprite_Battler.update
+    #═══════════════════════════════════════════════════════════════════════════
+    alias ehpb_sb_update update
+    def update
+      ehpb_sb_update
+      @MHPB_Window.update if @MHPB_Window
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＤＥＦＩＮＥ: Sprite_Battler.update_visible_counter
+    #═══════════════════════════════════════════════════════════════════════════
+    def update_visible_counter
+      @MHPB_Window.update_visible_counter if @MHPB_Window
+    end
+  end # Close Sprite_Battler
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＧＲＡＶＥＹＡＲＤ
+  #═════════════════════════════════════════════════════════════════════════════
+  graveyard = BWX::Core::Optionals.ATBSystem?
+  if graveyard == "YSA"
+    class Sprite_Battler < Sprite_Base
+      def create_enemy_gauges_catb; end
+    end
+  elsif graveyard == "CCW"
+    class Sprite_Enemy_Gauge < Sprite_Base
+      def draw_gauge; end
+    end
+  end
+end
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ════╗ End Activation Handler ╔════════════════════════════════════════════════
+end # ╚════════════════════════╝ End of File - Srsly, there's nothing more here!
