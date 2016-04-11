@@ -6,7 +6,7 @@
 ╠──────╝       Black Wyvern Arts - RPGMaker-X Dragon Combat Bars        ╚──────╣
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ Author:  Black Wyvern                                                        │
-│ Forum:   RPGMC /topic/37524-rpgm-x-sleeker-gauges-301/                       │
+│ Forum:   RPGMC /topic/37524-rpgm-x-sleeker-gauges-153/                       │
 │ Created: 02/01/16                                                            │
 │ Updated: 04/10/16                                                            │
 │ Version: 3.0.1 | 3.0.0 | 3.0.0 | NYI | NYI                                   │
@@ -298,20 +298,20 @@ end; end; end # ═════════════════════�
 
 #     ╔════════════════════════╗ Liek omg, actual script-like stuff starts here!
 # ════╝ New Activation Handler ╚════════════════════════════════════════════════
-sg_global = ($Global_Enable.nil? && active) || ($Global_Enable && active)
-($imported||={})["RPGM-X_SleekerCore"]=[sg_global,3.01]; if sg_global
+active = ($Global_Enable.nil? && active) || ($Global_Enable && active)
+($imported||={})["RPGM-X_SleekerCore"]=[active,3.01]; if active
 
-sg_atb  = BWX::SGV3::Vars::MODULES_SG_ATBS && BWX::Core::Optionals.ATBLoaded?
-($imported||={})["RPGM-X_SleekerATBs"]=[sg_atb,3.0]
+active = BWX::SGV3::Vars::MODULES_SG_ATBS && BWX::Core::Optionals.ATBLoaded?
+($imported||={})["RPGM-X_SleekerATBs"]=[active,3.0]
 
-sg_mhpb = BWX::SGV3::Vars::MODULES_SG_MHPB
-($imported||={})["RPGM-X_SleekerEHPB"]=[sg_mhpb,3.0]
+active = BWX::SGV3::Vars::MODULES_SG_MHPB
+($imported||={})["RPGM-X_SleekerEHPB"]=[active,3.0]
 
-sg_pram = BWX::SGV3::Vars::MODULES_SG_PRAM
-($imported||={})["RPGM-X_SleekerPram"]=[sg_pram,1.0]
+active = BWX::SGV3::Vars::MODULES_SG_PRAM
+($imported||={})["RPGM-X_SleekerPram"]=[active,1.0]
 
-sg_drgn = BWX::SGV3::Vars::MODULES_SG_DRGN && BWX::Core::Optionals.Dragon?
-($imported||={})["RPGM-X_SleekerDrgn"]=[sg_drgn,1.0]
+active = BWX::SGV3::Vars::MODULES_SG_DRGN && BWX::Core::Optionals.Dragon?
+($imported||={})["RPGM-X_SleekerDrgn"]=[active,1.0]
 # ══════════════════════════════════════════════════════════════════════════════
 
 =begin ═════════════════════════════════════════════════════════════════════════
