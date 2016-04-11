@@ -3279,6 +3279,68 @@ if BWX::SGV3::Vars::MODULES_SG_MHPB
   end
 end
 
+=begin ═════════════════════════════════════════════════════════════════════════
+│ RPGM-X Sleek Performance Manager
+│ Since I haven't yet made the full Performance Manager to solve the issues in
+│ Spriteset_Map and a few other places due to high-rez, I have included a lite
+│ version to shore up all the lag I can in the immediate.
+=end # ═════════════════════════════════════════════════════════════════════════
+unless BWX::Core::Optionals.Perfman?
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＣＬＡＳＳ: Window_Base.
+  #═════════════════════════════════════════════════════════════════════════════
+  class Window_Base < Window
+    #═══════════════════════════════════════════════════════════════════════════
+    # ＲＥＩＮＩＴＩＡＬＩＺＥ
+    #═══════════════════════════════════════════════════════════════════════════
+    alias perfmon_update update
+    def update
+      return if @FrameCompleted == Graphics.frame_count;
+      return if self.visible == false
+      return if close? && !@opening
+      return if contents_opacity == 0
+      perfmon_update
+      @FrameCompleted = Graphics.frame_count
+    end
+  end # Close Window Base
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＡＢＳＴＲＡＣＴ: Inject anti-lag methods into Viewport and Sprite
+  #═════════════════════════════════════════════════════════════════════════════
+  pfm_set = ["Viewport","Sprite"]
+  pfm_set.each do |klass|
+    Kernel.const_get(klass).class_eval(
+      "alias perfmon_update update;
+      def update;
+        return if @FrameCompleted == Graphics.frame_count;
+        perfmon_update
+        @FrameCompleted = Graphics.frame_count
+      end"
+    )
+  end # End Abstract
+end # End Perfman LITE
+
 # ══════════════════════════════════════════════════════════════════════════════
 # ════╗ End Activation Handler ╔════════════════════════════════════════════════
 end # ╚════════════════════════╝ End of File - Srsly, there's nothing more here!
+=begin ═════════════════════════════════════════════════════════════════════════
+│
+│   BWX Refined Style Key: (I lied, lol.)
+│   #═════════════════════════════════
+│   # ＴＹＰＥ: Code by script Author
+│   #═════════════════════════════════
+│
+│   # MINOR SECTION HEADER ═══════════
+│   # Section description, if any
+│   # ════════════════════════════════
+│
+│   #╒══════════════════════════════╤╗
+│   #│Type: Code by credited Author │║
+│   #╘══════════════════════════════╧╝
+│
+│   =begin ═══════════════════════════
+│   │ Block Comment
+│   =end # ═══════════════════════════
+│
+│
+=end # ═════════════════════════════════════════════════════════════════════════
