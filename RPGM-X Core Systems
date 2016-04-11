@@ -156,14 +156,13 @@ end; end; end # ═════════════════════�
 
 #     ╔════════════════════════╗ Liek omg, actual script-like stuff starts here!
 # ════╝ New Activation Handler ╚════════════════════════════════════════════════
-xc_global = true
-($imported||={})["BWA_RPGM-X"]=[xc_global,1.1]; if xc_global
+($imported||={})["BWA_RPGM-X"]=[active,1.1]; if active
 
-xc_debg   = BWX::Core::Vars::MODULES_XC_DEBG
-($imported||={})["RPGM-X_Debugging"]=[xc_debg,1.1]
+active = BWX::Core::Vars::MODULES_XC_DEBG
+($imported||={})["RPGM-X_Debugging"]=[active,1.1]
 
-xc_cspc   = BWX::Core::Vars::MODULES_XC_CSPC
-($imported||={})["RPGM-X_Colorspace"]=[xc_cspc,1.1]
+active = BWX::Core::Vars::MODULES_XC_CSPC
+($imported||={})["RPGM-X_Colorspace"]=[active,1.1]
 # ══════════════════════════════════════════════════════════════════════════════
 
 =begin ═════════════════════════════════════════════════════════════════════════
