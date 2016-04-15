@@ -521,7 +521,7 @@ class Game_Map
 end # Close Game Map
 
 #╒════════════════════════════════════════════════════════════════════════════╤╗
-#│BW::Class: Destory My Sanity but fix my graphics.                           │║
+#│BW::Class: Destroy My Sanity but fix my graphics.                           │║
 #│  Quite literally the single dirtiest, hackiest fix I've ever seen or done. │║
 #╘════════════════════════════════════════════════════════════════════════════╧╝
 class Game_Map
