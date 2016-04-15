@@ -9,7 +9,7 @@
 │           2012/04/15/ace-mgc-tilemap-ace-reecriture-de-la-classe-tilemap/    │
 │ Created: Unknown                                                             │
 │ Updated: 04/14/16                                                            │
-│ Version: 1.3.1                                                               │
+│ Version: 1.3.2                                                               │
 ╚══════════════╦═─═─═─═─═─═─═─═─═─═─═─══─═─═─═─═─═─═─═─═─═─═╦══════════════════╝
 =end #         │                                            │
                  active = true # Turns the script on or off
@@ -78,7 +78,7 @@
 =end #══════════════════════════════════════════════════════════════════════════
 
 if active
-  ($imported||={})["MGC_Tilemap_Ace"]=[active,1.30]
+  ($imported||={})["MGC_Tilemap_Ace"]=[active,1.32]
   # ^ Signifies that the script is installed to other scripts.
 
 #═══════════════════════════════════════════════════════════════════════════════
@@ -294,13 +294,14 @@ class MGCTilemap
         end
       end
       @oy = new_oy.to_i
-      oy_zoom = (@oy << 10) / @parameters[14]
+      oy_zoom = ((@oy << 10) / @parameters[14])
       oy_floor = oy_zoom >> 5 << 5
       unless oy_floor == @parameters[9]
         @parameters[13] = oy_floor - @parameters[9] >> 5
         @need_refresh = true
       end
-      @parameters[9] = oy_floor
+      @parameters[9] = oy_floor # DUDE ADD A NEGATIVE 32 TO THIS THING AND TRIP
+      oy_actual = oy_zoom - oy_floor
       @sprite_render.oy = oy_zoom - oy_floor
       @sprite_render_layer2.oy = @sprite_render.oy
     end
@@ -518,6 +519,36 @@ class Game_Map
       MGC::TilemapsForIDs.include?($game_map.map_id)
   end
 end # Close Game Map
+
+#╒════════════════════════════════════════════════════════════════════════════╤╗
+#│BW::Class: Destory My Sanity but fix my graphics.                           │║
+#│  Quite literally the single dirtiest, hackiest fix I've ever seen or done. │║
+#╘════════════════════════════════════════════════════════════════════════════╧╝
+class Game_Map
+  #╒══════════════════════════════════════════════════════════════════════════╤╗
+  #│BW::Redefine: Game_Map.height                                             │║
+  #╘══════════════════════════════════════════════════════════════════════════╧╝
+  def height
+    @map.height-1
+  end
+end
+
+#╒════════════════════════════════════════════════════════════════════════════╤╗
+#│BW::Class: Game_Map.                                                        │║
+#╘════════════════════════════════════════════════════════════════════════════╧╝
+class << SceneManager
+  #╒══════════════════════════════════════════════════════════════════════════╤╗
+  #│BW::Alias: SceneManager.mgc_sm_run < SceneManager.run                     │║
+  #╘══════════════════════════════════════════════════════════════════════════╧╝
+  alias mgc_sm_run run
+  def run
+    if Graphics.height % 32 == 0
+      Graphics.resize_screen(Graphics.width,Graphics.height-1)
+    end
+    mgc_sm_run
+  end
+end
+
 =begin ═══════════════════════════════════════════════════════════════════════╤╗
 │ End Of File                                                                 │║
 │                                                                             │║
