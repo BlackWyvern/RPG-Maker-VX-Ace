@@ -1,0 +1,532 @@
+=begin
+  ╔─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─══─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─╗
+  │ MGC Tilemap Ace                                                          │
+╔═╩─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─══─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─╩═╗
+│ Author:  MGC                                                                 │
+│ Translation: Black Wyvern                                                    │
+│ Modifications: etude87, Black Wyvern                                         │
+│ Source:  http://www.rgss-factory.net/                                        │
+│           2012/04/15/ace-mgc-tilemap-ace-reecriture-de-la-classe-tilemap/    │
+│ Created: Unknown                                                             │
+│ Updated: 04/14/16                                                            │
+│ Version: 1.3.1                                                               │
+╚══════════════╦═─═─═─═─═─═─═─═─═─═─═─══─═─═─═─═─═─═─═─═─═─═╦══════════════════╝
+=end #         │                                            │
+                 active = true # Turns the script on or off
+=begin         │                                            │
+═══════════════╩═─═─═─═─═─═─═─═─═─═─═─══─═─═─═─═─═─═─═─═─═─═╩═══════════════════
+                     *** Only for RPG Maker VX Ace. ***
+  ────────────────────────────────────────────────────────────────────────────
+  To install this script open up your script editor and copy/paste this script
+  to an open slot below ▼ Materials but above ▼ Main. Remember to save.
+  
+  Terms of use:
+    1. Give credit where credit is due.
+    2. This code is a modification of an existing, but hidden class within RPGM.
+        As such, it violates no existing protections on Enterbrain software.
+    3. This code is considered Public Domain. The spice must flow.
+        Ref: http://www.rgss-factory.net/conditions-dutilisation/
+    4. If you edit this code, please link back to the original source.
+
+  Description:
+    Rewrites the hidden class Tileset.
+
+    What this script DOES NOT DO
+      - Does not handle flash_data
+      - Does not support changing of Autotileset A2 and "counters"
+
+    What this script DOES DO
+      - Manages all remaining properties of the origional Tileset functions.
+      - Adds other properties / methods for use with MGC Map Zoom
+
+    In class Sprite, handles or adds the following properties:
+      - Opacity
+      - Blend_type
+      - Color
+      - Tone
+      - Wave_amp
+      - Wave_length
+      - Wave_speed
+      - Wave_phase
+      - zoom
+      - Flash
+      - Adds a to_zoom method (new_zoom, duration) to zoom progressively
+  
+  Configuration:
+    - Settings to determine wether to use the modified Tileset for all maps, or
+      select problem ones.
+  
+  Instructions: Plug 'n' Play
+    - None
+
+  Optional:
+    - None
+  
+  Dependencies:
+    - File: MGC_Map_Ace_1_5.dll in project root.
+    - File: 3 following graphic files, placed into in Data/Pictures/
+        Autotiles_data.png
+        Autotiles_data_small.png
+        Autotiles_data_xsmall.png
+  
+  Compatability:
+    - None
+
+  Credits:
+    - MGC :: script.self
+    - etude87 :: Minor bugfix to correct map transitions
+=end #══════════════════════════════════════════════════════════════════════════
+
+if active
+  ($imported||={})["MGC_Tilemap_Ace"]=[active,1.30]
+  # ^ Signifies that the script is installed to other scripts.
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ＭＯＤＵＬＥ: MGC::
+#═══════════════════════════════════════════════════════════════════════════════
+module MGC
+  # TILEMAP ASSIGNMENT ═════════════════════════════════════════════════════════
+  TilemapsForEveryone = true
+  TilemapsForIDs = [001, 002] # If !TilemapsForEveryone, use specific Map IDs
+end
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ＣＬＡＳＳ: MGCTilemap.
+# - BW: Renamed from MGC.Tilemap to just MGCTilemap
+#═══════════════════════════════════════════════════════════════════════════════
+class MGCTilemap
+  attr_reader   :viewport, :visible, :ox, :oy, :opacity, :blend_type, :color,
+                :tone, :wave_amp, :wave_length, :wave_speed, :wave_phase,
+                :zoom, :map_data, :flags
+  attr_accessor :flash_data
+  attr_writer   :bitmaps
+
+  # INITIALIZE THE CUSTOM DLL FILE ═════════════════════════════════════════════
+  RENDER = Win32API.new("MGC_Map_Ace_1_5", "renderMap", "l", "l")
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＩＮＩＴＩＡＬＩＺＥ
+  #═════════════════════════════════════════════════════════════════════════════
+  def initialize(viewport)
+    @viewport = viewport
+    self.bitmaps = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    @map_data = 0
+    @flags = 0
+    self.flash_data = nil
+    @cx = Graphics.width >> 1
+    @cy = Graphics.height >> 1
+    @sprite_render = Sprite.new(viewport)
+
+    @render = Bitmap.new(Graphics.width + 64, Graphics.height + 64)
+    @sprite_render.bitmap = @render
+    @sprite_render.x = -32
+    @sprite_render.y = -32
+    @sprite_render.z = 0
+
+    @sprite_render_layer2 = Sprite.new(viewport)
+    @render_layer2 = Bitmap.new(Graphics.width + 64, Graphics.height + 64)
+    @sprite_render_layer2.bitmap = @render_layer2
+    @sprite_render_layer2.x = -32
+    @sprite_render_layer2.y = -32
+    @sprite_render_layer2.z = 200
+
+    @zoom_incr = 0.0
+    @zoom_duration = 0
+
+    @parameters = [
+      @render,
+      @render_layer2,
+      map_data,
+      bitmaps,
+      Cache.picture('autotiles_data'),
+      Cache.picture('autotiles_data_small'),
+      Cache.picture('autotiles_data_xsmall'),
+      flags,
+      0, 0, 0, 0, 0, 0, 1024, 100,
+      $game_map.loop_horizontal?,
+      $game_map.loop_vertical?
+    ]
+
+    self.visible = true
+    self.zoom = 1.0
+    self.ox = 0
+    self.oy = 0
+    self.opacity = 255
+    self.blend_type = 0
+    self.color = Color.new
+    self.tone = Tone.new
+    self.wave_amp = 0
+    self.wave_length = 180
+    self.wave_speed = 360
+    self.wave_phase = 0.0
+    @refresh_all = true
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: MGCTilemap.bitmaps
+  #═════════════════════════════════════════════════════════════════════════════
+  def bitmaps
+    force_refresh
+    return @bitmaps
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: MGCTilemap.force_refresh
+  #═════════════════════════════════════════════════════════════════════════════
+  def force_refresh
+    @need_refresh = true # [1.2]
+    @refresh_all = true # [1.2]
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: MGCTilemap.map_data=(new_map_data)
+  #═════════════════════════════════════════════════════════════════════════════
+  def map_data=(new_map_data)
+    @map_data = new_map_data
+    @parameters[2] = @map_data
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: MGCTilemap.flags=(new_flags)
+  #═════════════════════════════════════════════════════════════════════════════
+  def flags=(new_flags)
+    @flags = new_flags
+    @parameters[7] = @flags
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: MGCTilemap.zoom=(new_zoom)
+  # - Set the zoom level
+  #═════════════════════════════════════════════════════════════════════════════
+  def zoom=(new_zoom)
+    unless zoom == new_zoom
+      if new_zoom < 0.125 || new_zoom > 8.0 then return end
+      @zoom = new_zoom
+      @parameters[14] = (1024.0 / new_zoom).to_i
+      vox = @ox
+      @ox = nil
+      self.ox = vox
+      voy = @oy
+      @oy = nil
+      self.oy = voy
+      @need_refresh = true
+      @refresh_all = true
+    end
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: MGCTilemap.incr_zoom(val = 0.02)
+  # - Increase zoom factor
+  #═════════════════════════════════════════════════════════════════════════════
+  def incr_zoom(val = 0.02)
+    @zoom_incr += val
+    new_zoom = 2 ** @zoom_incr
+    self.zoom = new_zoom
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: MGCTilemap.to_zoom(new_zoom, duration)
+  # - Progressively transition to new zoom factor
+  #═════════════════════════════════════════════════════════════════════════════
+  def to_zoom(new_zoom, duration)
+    unless zoom == new_zoom
+      if new_zoom < 0.125 || new_zoom > 8.0 then return end
+      @zoom_duration = duration
+      target_zoom_incr = Math.log(new_zoom) / Math.log(2)
+      @zoom_step = (target_zoom_incr - @zoom_incr) / duration
+      @target_zoom = new_zoom
+    end
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: MGCTilemap.shadow_opacity=(value)
+  #═════════════════════════════════════════════════════════════════════════════
+  def shadow_opacity=(value)
+    @parameters[15] = [[value, 0].max, 255].min
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: MGCTilemap.visible=(flag)
+  #═════════════════════════════════════════════════════════════════════════════
+  def visible=(flag)
+    @visible = flag
+    @sprite_render.visible = flag
+    @sprite_render_layer2.visible = flag
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: MGCTilemap.ox=(new_ox)
+  #═════════════════════════════════════════════════════════════════════════════
+  def ox=(new_ox)
+    @parameters[12] = 0
+    unless new_ox == @ox
+      if ox && $game_map.loop_horizontal?
+        if (new_ox.to_i - ox >> 5) == $game_map.width - 1 ||
+          (ox - new_ox.to_i >> 5) == $game_map.width - 1
+        then
+          @refresh_all = true
+        end
+      end
+      @ox = new_ox.to_i
+      ox_zoom = (@ox << 10) / @parameters[14]
+      ox_floor = ox_zoom >> 5 << 5
+      unless ox_floor == @parameters[8]
+        @parameters[12] = ox_floor - @parameters[8] >> 5
+        @need_refresh = true
+      end
+      @parameters[8] = ox_floor
+      @sprite_render.ox = ox_zoom - ox_floor
+      @sprite_render_layer2.ox = @sprite_render.ox
+    end
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: MGCTilemap.oy=(new_oy)
+  #═════════════════════════════════════════════════════════════════════════════
+  def oy=(new_oy)
+    @parameters[13] = 0
+    unless new_oy == @oy
+      if oy && $game_map.loop_vertical?
+        if (new_oy.to_i - oy >> 5) == $game_map.height - 1 ||
+          (oy - new_oy.to_i >> 5) == $game_map.height - 1
+        then
+          @refresh_all = true
+        end
+      end
+      @oy = new_oy.to_i
+      oy_zoom = (@oy << 10) / @parameters[14]
+      oy_floor = oy_zoom >> 5 << 5
+      unless oy_floor == @parameters[9]
+        @parameters[13] = oy_floor - @parameters[9] >> 5
+        @need_refresh = true
+      end
+      @parameters[9] = oy_floor
+      @sprite_render.oy = oy_zoom - oy_floor
+      @sprite_render_layer2.oy = @sprite_render.oy
+    end
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: MGCTilemap.opacity=(new_opacity)
+  #═════════════════════════════════════════════════════════════════════════════
+  def opacity=(new_opacity)
+    @opacity = new_opacity
+    @sprite_render.opacity = new_opacity
+    @sprite_render_layer2.opacity = new_opacity
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: MGCTilemap.blend_type=(new_blend_type)
+  #═════════════════════════════════════════════════════════════════════════════
+  def blend_type=(new_blend_type)
+    @blend_type = new_blend_type
+    @sprite_render.blend_type = new_blend_type
+    @sprite_render_layer2.blend_type = new_blend_type
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: MGCTilemap.color=(new_color)
+  #═════════════════════════════════════════════════════════════════════════════
+  def color=(new_color)
+    @color = new_color
+    @sprite_render.color = new_color
+    @sprite_render_layer2.color = new_color
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: MGCTilemap.tone=(new_tone)
+  #═════════════════════════════════════════════════════════════════════════════
+  def tone=(new_tone)
+    @tone = new_tone
+    @sprite_render.tone = new_tone
+    @sprite_render_layer2.tone = new_tone
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: MGCTilemap.wave_amp=(new_wave_amp)
+  #═════════════════════════════════════════════════════════════════════════════
+  def wave_amp=(new_wave_amp)
+    @wave_amp = new_wave_amp
+    @sprite_render.wave_amp = new_wave_amp
+    @sprite_render_layer2.wave_amp = new_wave_amp
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: MGCTilemap.wave_length=(new_wave_length)
+  #═════════════════════════════════════════════════════════════════════════════
+  def wave_length=(new_wave_length)
+    @wave_length = new_wave_length
+    @sprite_render.wave_length = new_wave_length
+    @sprite_render_layer2.wave_length = new_wave_length
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: MGCTilemap.wave_speed=(new_wave_speed)
+  #═════════════════════════════════════════════════════════════════════════════
+  def wave_speed=(new_wave_speed)
+    @wave_speed = new_wave_speed
+    @sprite_render.wave_speed = new_wave_speed
+    @sprite_render_layer2.wave_speed = new_wave_speed
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: MGCTilemap.wave_phase=(new_wave_phase)
+  #═════════════════════════════════════════════════════════════════════════════
+  def wave_phase=(new_wave_phase)
+    @wave_phase = new_wave_phase
+    @sprite_render.wave_phase = new_wave_phase
+    @sprite_render_layer2.wave_phase = new_wave_phase
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: MGCTilemap.dispose
+  #═════════════════════════════════════════════════════════════════════════════
+  def dispose
+    @render.dispose
+    @render_layer2.dispose
+    @sprite_render.dispose
+    @sprite_render_layer2.dispose
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: MGCTilemap.disposed?
+  #═════════════════════════════════════════════════════════════════════════════
+  def disposed?
+    return @render.disposed?
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: MGCTilemap.update
+  #═════════════════════════════════════════════════════════════════════════════
+  def update
+    if @visible
+      if @zoom_duration > 0
+        @zoom_duration -= 1
+        if @zoom_duration == 0
+          self.zoom = @target_zoom
+        else
+          incr_zoom(@zoom_step)
+        end
+      end
+      if Graphics.frame_count & 31 == 0
+        @parameters[10] += 1
+        @parameters[10] %= 3
+        unless @need_refresh
+          @need_refresh_anim = true
+        end
+      end
+      if @need_refresh
+        if @refresh_all
+          @render.clear
+          @render_layer2.clear
+          @parameters[12] = 0
+          @parameters[13] = 0
+          @refresh_all = false
+        end
+        @parameters[11] = 0
+        RENDER.call(@parameters.__id__)
+        @need_refresh = false
+      elsif @need_refresh_anim
+        @parameters[11] = 1
+        @parameters[12] = 0
+        @parameters[13] = 0
+        RENDER.call(@parameters.__id__)
+        @need_refresh_anim = false
+      end
+      @sprite_render.update
+      @sprite_render_layer2.update
+    end
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: MGCTilemap.flash(color, duration)
+  #═════════════════════════════════════════════════════════════════════════════
+  def flash(color, duration)
+    @sprite_render.flash(color, duration)
+    @sprite_render_layer2.flash(color, duration)
+  end
+end # Close MGCTilemap
+
+#╒════════════════════════════════════════════════════════════════════════════╤╗
+#│BW::Class: Spriteset_Map.                                                   │║
+#╘════════════════════════════════════════════════════════════════════════════╧╝
+class Spriteset_Map
+  #╒══════════════════════════════════════════════════════════════════════════╤╗
+  #│BW::Redefine: Spriteset_Map.create_tilemap                                │║
+  #╘══════════════════════════════════════════════════════════════════════════╧╝
+  def create_tilemap
+    @Tilemap = $game_map.AltTilemap
+    if @Tilemap
+      @tilemap = MGCTilemap.new(@viewport1)
+      @tilemap.force_refresh
+    else
+      @tilemap = Tilemap.new(@viewport1)
+    end
+    @tilemap.map_data = $game_map.data
+    load_tileset
+    $game_player.center($game_player.x, $game_player.y)
+  end
+
+  #╒══════════════════════════════════════════════════════════════════════════╤╗
+  #│BW::Alias: Spriteset_Map.mgc_ssm_update < Spriteset_Map.update            │║
+  #╘══════════════════════════════════════════════════════════════════════════╧╝
+  alias mgc_ssm_update update
+  def update
+    mgc_ssm_update
+    create_tilemap if $game_map.AltTilemap != @Tilemap
+  end
+
+  #╒══════════════════════════════════════════════════════════════════════════╤╗
+  #│BW::Redefine: Spriteset_Map.update_tilemap                                │║
+  #╘══════════════════════════════════════════════════════════════════════════╧╝
+  def update_tilemap
+    if $game_map.ReloadTMap
+      load_tileset
+      $game_map.ReloadTMap = false
+    end
+    unless @tilemap.map_data == $game_map.data
+      @tilemap.map_data = $game_map.data
+    end
+    @tilemap.ox = $game_map.display_x * 32
+    @tilemap.oy = $game_map.display_y * 32
+    @tilemap.update
+  end
+end # Close Spriteset Map
+
+#╒════════════════════════════════════════════════════════════════════════════╤╗
+#│BW::Class: Game_Map.                                                        │║
+#╘════════════════════════════════════════════════════════════════════════════╧╝
+class Game_Map
+  attr_reader :AltTilemap
+  attr_accessor :ReloadTMap
+  #╒══════════════════════════════════════════════════════════════════════════╤╗
+  #│BW::Alias: Game_Map.mgc_gm_setup < Game_Map.setup                         │║
+  #╘══════════════════════════════════════════════════════════════════════════╧╝
+  alias mgc_gm_setup setup
+  def setup(map_id)
+    mgc_gm_setup(map_id)
+    use_new_tilemap?
+    @ReloadTMap = true
+  end
+
+  #╒══════════════════════════════════════════════════════════════════════════╤╗
+  #│BW::Define: Game_Map.use_new_tilemap?                                     │║
+  #╘══════════════════════════════════════════════════════════════════════════╧╝
+  def use_new_tilemap?
+    @AltTilemap = 
+      MGC::TilemapsForEveryone ||
+      MGC::TilemapsForIDs.include?($game_map.map_id)
+  end
+end # Close Game Map
+=begin ═══════════════════════════════════════════════════════════════════════╤╗
+│ End Of File                                                                 │║
+│                                                                             │║
+│ BWX Method Style Key:                                                       │║
+│ #═══════════════════════════                                                │║
+│ # Code by script Author                                                     │║
+│ #═══════════════════════════                                                │║
+│ #╒════════════════════════╤╗                                                │║
+│ #│Code by credited Author │║                                                │║
+│ #╘════════════════════════╧╝                                                │║
+=end #════════════════════════════════════════════════════════════════════════╧╝
+end # End Activation Handler
