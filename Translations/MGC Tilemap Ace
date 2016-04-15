@@ -529,7 +529,7 @@ class Game_Map
   #│BW::Redefine: Game_Map.height                                             │║
   #╘══════════════════════════════════════════════════════════════════════════╧╝
   def height
-    @map.height-1
+    @map.height-1 if Graphics.height > 480
   end
 end
 
@@ -542,7 +542,7 @@ class << SceneManager
   #╘══════════════════════════════════════════════════════════════════════════╧╝
   alias mgc_sm_run run
   def run
-    if Graphics.height % 32 == 0
+    if Graphics.height % 32 == 0 && Graphics.height > 480
       Graphics.resize_screen(Graphics.width,Graphics.height-1)
     end
     mgc_sm_run
