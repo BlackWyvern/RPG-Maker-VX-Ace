@@ -1,0 +1,1201 @@
+=begin
+  ╔─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─══─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─╗
+  │ Σ Fullscreen / Resolution Breaker                                        │
+╔═╩─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─══─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─═─╩═╗
+│ Author:  Gabriel "Gab" Teles                                                 │
+│ Translation: Black Wyvern                                                    │
+│ Modifications: FenixFyreX, Azuma-01, Black Wyvern                            │
+│ Source:  http://pastebin.com/q4Hr6FsW                                        │
+│ Forum:   RPGMW /topic/32410-fullscreen-high-resolution/                      │
+│ Created: 09/27/14                                                            │
+│ Updated: 04/02/16                                                            │
+│ Version: 0.9.3                                                               │
+╚══════════════╦═─═─═─═─═─═─═─═─═─═─═─══─═─═─═─═─═─═─═─═─═─═╦══════════════════╝
+=end #         │                                            │
+                 active = true # Turns the script on or off
+=begin         │                                            │
+═══════════════╩═─═─═─═─═─═─═─═─═─═─═─══─═─═─═─═─═─═─═─═─═─═╩═══════════════════
+                     *** Only for RPG Maker VX Ace. ***
+  ────────────────────────────────────────────────────────────────────────────
+  To install this script open up your script editor and copy/paste this script
+  to an open slot below ▼ Materials but above ▼ Main. Remember to save.
+  
+  Terms of use:
+    1. Give credit where credit is due.
+    2. This code is a modification of memory addresses. As such, it violates
+        no existing protections on Enterbrain software. It is preferable to
+        use this, or similar code, over an illegally modified DLL file.
+    3. This code is considered Public Domain. The spice must flow.
+    4. If you edit this code, please link back to the original source.
+
+  Description:
+    Enables true fullscreen (Fullscreen at game resolution)
+    Enables resizing of game to previously unsupported resolutions.
+    Comes with code to handle issues caused by breaking the limits on things.
+  
+  Configuration:
+    - None
+  
+  Instructions: Plug 'n' Play
+    To change resolutions, call this somewhere.
+    Graphics.resize_screen(x,y) Note: Due to the way maps are rendered, for
+    best performance, x and y should be perfect multiples of 32. There are
+    fixes for this, but, just in general.
+
+  Optional:
+    - None
+  
+  Dependencies:
+    - None
+  
+  Compatability:
+    - None
+
+  Credits:
+    - Gabriel "Gab" Teles :: script.self
+    - FenixFyreX :: Plane Rewrite
+    - Azuma-01 :: Patches to FenixFyreX's Plane
+=end #══════════════════════════════════════════════════════════════════════════
+
+if active
+  ($imported||={})["Σ_Res"]=[active,0.93,nil]
+  # ^ Signifies that the script is installed to other scripts.
+
+#═══════════════════════════════════════════════════════════════════════════════
+# Graphics Module
+#═══════════════════════════════════════════════════════════════════════════════
+class << Graphics
+  Graphics::PlaneSpeedUp = true
+  # - Rewrite the Plane class. Not mandatory, but you certainly should do it
+  #     as Spriteset_Map will become exceedingly slow otherwise.
+  
+  # BW - Added variable: Plane_Method
+  Graphics::Plane_Method = "BWX"
+  # - Select the plane rewrite to use. Available options are:
+  #     "Gab" : "Fyre" : "BWX"
+  
+  #═════════════════════════════════════════════════════════════════════════════
+  # Initialize API
+  #═════════════════════════════════════════════════════════════════════════════
+  User32   = DL.dlopen('user32')
+  Kernel32 = DL.dlopen('kernel32')
+  GetActiveWindow  = DL::CFunc.new(  User32['GetActiveWindow' ], DL::TYPE_LONG)
+  GetSystemMetrics = DL::CFunc.new(  User32['GetSystemMetrics'], DL::TYPE_LONG)
+  GetWindowRect    = DL::CFunc.new(  User32['GetWindowRect'   ], DL::TYPE_LONG)
+  SetWindowLong    = DL::CFunc.new(  User32['SetWindowLong'   ], DL::TYPE_LONG)
+  SetWindowPos     = DL::CFunc.new(  User32['SetWindowPos'    ], DL::TYPE_LONG)
+  GetModuleHandle  = DL::CFunc.new(Kernel32['GetModuleHandle' ], DL::TYPE_LONG)
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # Fetch DLL Name
+  #═════════════════════════════════════════════════════════════════════════════
+  _DLLName = DL::CPtr.malloc(140)
+  s = DL::CFunc.new(Kernel32['GetPrivateProfileString'], DL::TYPE_LONG).call([
+    DL::CPtr["Game"].to_i,
+    DL::CPtr["Library"].to_i,
+    0, _DLLName.to_i,
+    140,
+    DL::CPtr["./Game.ini"].to_i
+  ])
+  @@DLLName = File.basename(_DLLName.to_s(s))
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # Verify RGSS30x.dll
+  #═════════════════════════════════════════════════════════════════════════════
+  if @@DLLName.match(/^RGSS3(\d{2})\.dll$/)
+    @@DLLVersion = $1.to_i
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # Determine Ver 0..1?
+    #═══════════════════════════════════════════════════════════════════════════
+    if @@DLLVersion.between?(0, 1)
+      @@inFullscreen = false # Flag Fullscreen
+
+      #═════════════════════════════════════════════════════════════════════════
+      # Call Dll version. Requires 300..1 as memory pointers are file-specific.
+      # This also means using a modified dll will cause this process to fail.
+      #═════════════════════════════════════════════════════════════════════════
+      @@DLLHandle   = GetModuleHandle.call([DL::CPtr[@@DLLName].to_i])
+
+      #═════════════════════════════════════════════════════════════════════════
+      # Instance the current game window.
+      #═════════════════════════════════════════════════════════════════════════
+      @@hWnd       = GetActiveWindow.call([])
+
+      #═════════════════════════════════════════════════════════════════════════
+      # Screen Size
+      #═════════════════════════════════════════════════════════════════════════
+      @@screenSize = [  GetSystemMetrics.call([0]), 
+                        GetSystemMetrics.call([1])]
+
+      #═════════════════════════════════════════════════════════════════════════
+      # If resolution is not a factor of 32, calculate the next-highest point.
+      #═════════════════════════════════════════════════════════════════════════
+      width, height = @@screenSize
+      width  += (32 - (width  % 32)) unless (width  % 32).zero?
+      height += (32 - (height % 32)) unless (height % 32).zero?
+
+=begin ═══════════════════════════════════════════════════════════════════════╤╗
+│ ► SNIPPET IMPORT ◄                                                          │║
+│ Snippet Name: Hex Window                                                    │║
+│ Snippet Dependency: None                                                    │║
+│ Author: The Unknown Scripter (That's what we call him anyways..)            │║
+│ Modifications: Gab!                                                         │║
+│ Source: http://pastebin.com/sM2MNJZj                                        │║
+│ Created: 10/24/13                                                           │║
+│ Updated: 04/02/16                                                           │║
+│ Version: Unknown                                                            │║
+│                                                                             │║
+│ Notes: Removes the hard-coded resolution restrictions.                      │║
+│        Adapted for use in and mapped to RGSS300.dll by Gab!                 │║
+=end #════════════════════════════════════════════════════════════════════════╧╝
+
+      # ► Method Injection: Numeric -> String
+      wh = ->(w, h, off = 0){[w + off, h + off].pack('l2').scan(/..../)}
+
+      # ► Method Injection: Modify memory values relative to dll.
+      mod = ->(adr, val){ adr += @@OFF if @@DLLVersion.zero?
+         DL::CPtr.new(@@DLLHandle + adr)[0, val.size] = val}
+
+      # Initialize variables
+      wt,  ht  = width.divmod(32), height.divmod(32)
+      w,   h   = wh.(width, height)
+      ww,  hh  = wh.(width, height, 32)
+      www, hhh = wh.(wt.first, ht.first, 1)
+      zero     = [0].pack('l')
+
+      # ► Begin Memory Injection
+
+      # ○ Graphics
+      @@OFF = 0
+      mod.(0x195F, "\x90"*5) # ???
+      mod.(0x19A4,   h     ) # ???
+      mod.(0x19A9,   w     ) # ???
+      mod.(0x1A56,   h     ) # ???
+      mod.(0x1A5B,   w     ) # ???
+      mod.(0x20F6,   w     ) # Max width  (?)
+      mod.(0x20FF,   w     ) # Max width  (?)
+      mod.(0x2106,   h     ) # Max height (?)
+      mod.(0x210F,   h     ) # Max height (?)
+
+      # ○ Plane
+      @@OFF   = -0xC0
+      mod.(0x1C5E3,  Graphics::PlaneSpeedUp ? zero : h) # Max height
+      mod.(0x1C5E8,  Graphics::PlaneSpeedUp ? zero : w) # Max width
+
+      # ○ Tilemap
+      @@OFF = 0x1E0
+      mod.(0x211FF,  hh    ) # Tilemap render height
+      mod.(0x21204,  ww    ) # Tilemap render width
+      mod.(0x21D7D,  hhh[0]) # Tilemap max tiles on screen height
+      mod.(0x21E01,  www[0]) # Tilemap max tiles on screen width
+
+      # ○ Unknown Pointers
+      @@OFF = 0x20
+      mod.(0x1F477,  h     ) # ???
+      mod.(0x1F47C,  w     ) # ???
+
+      # ○ More Unknown Pointers
+      @@OFF = 0x140
+      mod.(0x10DEA8, h     ) # ???
+      mod.(0x10DEAD, w     ) # ???     
+      mod.(0x10DEDF, h     ) # ???
+      mod.(0x10DEE3, w     ) # ???
+      mod.(0x10DF14, h     ) # ???
+      mod.(0x10DF18, w     ) # ???
+      mod.(0x10DF48, h     ) # ???
+      mod.(0x10DF4C, w     ) # ???
+      mod.(0x10E6A7, w     ) # ???
+      mod.(0x10E6C3, h     ) # ???
+      mod.(0x10EEA9, w     ) # ???
+      mod.(0x10EEB9, h     ) # ???
+
+#╒════════════════════════════════════════════════════════════════════════════╤╗
+#│End of Hex Window by Unknown Scripter                                       │║
+#╘════════════════════════════════════════════════════════════════════════════╧╝
+      
+      #═════════════════════════════════════════════════════════════════════════
+      # Screen Transition Sprite
+      #═════════════════════════════════════════════════════════════════════════
+      @@TransitionSprite = Sprite.new
+      @@TransitionSprite.bitmap = Bitmap.new(Graphics.width, Graphics.height)
+      @@TransitionSprite.bitmap.fill_rect(@@TransitionSprite.bitmap.rect,
+        Color.new(0, 0, 0))
+      @@TransitionSprite.opacity = 0
+      @@TransitionSprite.z = 0x7FFFFFFF
+
+      #═════════════════════════════════════════════════════════════════════════
+      # Graphics.freeze Bitmap
+      #═════════════════════════════════════════════════════════════════════════
+      @@FrozenBitmap = Bitmap.new(Graphics.width, Graphics.height)
+      @@FrozenBitmap.fill_rect(@@FrozenBitmap.rect, Color.new(0, 0, 0))
+
+      #═════════════════════════════════════════════════════════════════════════
+      # Graphics.transition
+      # - You can do transitions with images.
+      #═════════════════════════════════════════════════════════════════════════
+      alias oldFullscreenResTransition transition
+      def transition(time, image='', vague=40)
+        @@TransitionSprite.bitmap.dispose
+        @@TransitionSprite.dispose
+        @@TransitionSprite = Sprite.new
+        @@TransitionSprite.bitmap = @@FrozenBitmap
+        @@TransitionSprite.opacity = 255
+        @@TransitionSprite.z = 0x7FFFFFFF
+
+        oldFullscreenResTransition(0)
+
+        time = 1 if time < 1 # BW
+        dec = (255.0 / time)
+        time.times {
+          @@TransitionSprite.opacity -= dec
+          Graphics.update
+        }
+      end
+
+      #═════════════════════════════════════════════════════════════════════════
+      # Graphics.fadein
+      #═════════════════════════════════════════════════════════════════════════
+      def fadein(time)
+        @@FrozenBitmap = Bitmap.new(Graphics.width, Graphics.height)
+        @@FrozenBitmap.fill_rect(@@FrozenBitmap.rect, Color.new(0, 0, 0))
+        
+        transition(time)
+      end
+
+      #═════════════════════════════════════════════════════════════════════════
+      # Graphics.fadeout
+      #═════════════════════════════════════════════════════════════════════════
+      def fadeout(time)
+        inc = (255.0 / time)
+        time.times {
+          @@TransitionSprite.opacity += inc
+          Graphics.update
+        }
+      end
+
+      #═════════════════════════════════════════════════════════════════════════
+      # Graphics.freeze
+      #═════════════════════════════════════════════════════════════════════════
+      alias oldFullscreenResFreeze freeze
+      def freeze(*a, &b)
+        oldFullscreenResFreeze(*a, &b)
+        @@FrozenBitmap = Graphics.snap_to_bitmap
+      end
+
+      #═════════════════════════════════════════════════════════════════════════
+      # Graphics.resize_screen
+      #═════════════════════════════════════════════════════════════════════════
+      alias gabFullscreenOldResizeScreen resize_screen
+      def resize_screen(*a, &b)
+        gabFullscreenOldResizeScreen(*a, &b)    # Resize the screen.
+        @@TransitionSprite.bitmap.dispose       # Resize the transition sprite.
+        @@TransitionSprite.bitmap = Bitmap.new(*Graphics.size)
+        @@TransitionSprite.bitmap.fill_rect(
+          @@TransitionSprite.bitmap.rect, Color.new(0, 0, 0))
+        if Graphics::PlaneSpeedUp               # Update all Plane instances.
+          ObjectSpace.each_object(Plane){|plane|
+            plane.send(:recreateBitmap)
+          }
+        end
+      end
+      
+      #═════════════════════════════════════════════════════════════════════════
+      # Graphics.fullscreen
+      #═════════════════════════════════════════════════════════════════════════
+      def fullscreen
+        return if @@inFullscreen                # Returns if already fullscreen
+        rect = DL::CPtr.malloc(16)              # Resize before going fullscreen
+        rect[0, 16] = 0.chr * 16
+        GetWindowRect.call([@@hWnd, rect])
+        @@windowSize = rect[0, 16].unpack("l*")
+        @@windowSize[2] -= @@windowSize[0]
+        @@windowSize[3] -= @@windowSize[1]
+        @@windowResolution = Graphics.size
+        Graphics.resize_screen(*@@screenSize)
+
+        SetWindowLong.call([@@hWnd, -16, 0x14000000])   # Remove window borders
+        SetWindowPos.call([@@hWnd, -1, 0, 0, *@@screenSize, 0]) # Refocus findow
+        @@inFullscreen = true                           # Flag as Fullscreen
+        Graphics.wait(5)      # Wait a few frames to allow processes to finish
+      end
+      
+      #═════════════════════════════════════════════════════════════════════════
+      # Graphics.windowed
+      #═════════════════════════════════════════════════════════════════════════
+      def windowed
+        return unless @@inFullscreen              # Returns if already windowed
+        Graphics.resize_screen(*@@windowResolution)       # Change screen size
+        SetWindowLong.call([@@hWnd, -16, 0x14CA0000])     # Reset window borders
+        SetWindowPos.call([@@hWnd, 0, *@@windowSize, 0])  # Move/Size the window
+        @@inFullscreen = false                            # Flag as Windowed
+        Graphics.wait(5)      # Wait a few frames to allow processes to finish
+      end
+      
+      #═════════════════════════════════════════════════════════════════════════
+      # Graphics.size
+      #═════════════════════════════════════════════════════════════════════════
+      def size
+        [self.width, self.height]
+      end
+      
+      #═════════════════════════════════════════════════════════════════════════
+      # Graphics.fullscreen?
+      #═════════════════════════════════════════════════════════════════════════
+      def fullscreen?
+        return @@inFullscreen
+      end
+      
+      #═════════════════════════════════════════════════════════════════════════
+      # Graphics.windowed?
+      #═════════════════════════════════════════════════════════════════════════
+      def windowed?
+        return !@@inFullscreen
+      end
+      
+      #═════════════════════════════════════════════════════════════════════════
+      # Graphics.toggleFullscreen
+      #═════════════════════════════════════════════════════════════════════════
+      def toggleFullscreen
+        @@inFullscreen ? self.windowed : self.fullscreen
+      end
+    end
+  end
+end
+
+=begin ═══════════════════════════════════════════════════════════════════════╤╗
+│ Plane - Tiles a bitmap across either the window, or a given viewport.       │║
+│ -- Rewrites the Plane class to support higher resolutions and perform       │║
+│    various performance optimizations. The rewrite used will be based upon   │║
+│    Graphics::Plane_Method                                                   │║
+│                                                                             │║
+│ -- BW: I added in two other methods because each is slightly different and  │║
+│    seem to have different strengths and weaknesses. If you are noticing a   │║
+│    high degree of lag on the map, the first option to try would be changing │║
+│    Graphics::Plane_Method to a different author.                            │║
+│                                                                             │║
+│    The first Plane is Gab!'s, which was origionally distributed with this   │║
+│    script.                                                                  │║
+│                                                                             │║
+│    The second is FenixFyre's Rewrite, a well known and well-spread version. │║
+│                                                                             │║
+│    The third is my own experiment.. It may or may not work for everything, I│║
+│    haven't had the chance to test it extensively. It's the result of several│║
+│    days of reading and learning what things do, and my best interpritations │║
+│    of other Plane classes, trying to find an optimal solution.              │║
+│                                                                             │║
+│    Accessors: "Gab", "Fyre", "BWX"                                          │║
+│                                                                             │║
+│ -- Be aware, I consider Plane Rewrites as Public Domain. They are all       │║
+│    designed to solve a very specific set of problems that every user faces. │║
+│    The code offered here was released as Public Domain when it was finished,│║
+│    and such, my own rewrite, for that purpose, is also Public Domain. I     │║
+│    still give appropriate credit for Gab and Fenix's work however. Do not   │║
+│    forget to give credits where credits are due.                            │║
+=end #════════════════════════════════════════════════════════════════════════╧╝
+
+if Graphics::PlaneSpeedUp
+  RGSS3Plane = Plane                  # Create backup of the vanilla Plane Class
+  Object.send(:remove_const, :Plane)  # Remove the reference of the Plane Class
+  $imported["Σ_Res"]=[active,0.93,Graphics::Plane_Method] # Set Import Flag - BW
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # Gab!'s Plane Rewrite
+  #═════════════════════════════════════════════════════════════════════════════
+  if Graphics::Plane_Method == "Gab"
+    class Plane
+      attr_reader :Viewport, :bitmap, :x, :oym, :Opacitym, :blend_typem,
+                  :colorm, :tone, :visible, :zoom_x, :zoom_y, :z
+
+      #═════════════════════════════════════════════════════════════════════════
+      # Initialize
+      #═════════════════════════════════════════════════════════════════════════
+      def initialize(viewport = nil)
+      # To properly change screen resolutions it is neccissary to resize the
+      # master viewport. Othwerwise, your screen'll get bigger, but everything
+      # will display within a space the same size as the origional viewport.
+        @defaultViewport = !viewport.is_a?(Viewport)
+        @viewport = @defaultViewport ?Viewport.new(0,0,*Graphics.size): viewport
+
+        @sprite        = Sprite.new(@viewport)
+        @bitmap        = nil
+        @ox            = @sprite.ox         # 0
+        @oy            = @sprite.oy         # 0
+        @opacity       = @sprite.opacity    # 255
+        @blend_type    = @sprite.blend_type # 0
+        @color         = @sprite.color      # Color.new(0, 0, 0, 0)
+        @tone          = @sprite.tone       # Tone.new(0, 0, 0, 0)
+        @visible       = @sprite.visible    # true
+        @z             = @sprite.z          # 0
+        @zoom_x        = @sprite.zoom_x     # 1.0
+        @zoom_y        = @sprite.zoom_y     # 1.0
+      end
+
+      #═════════════════════════════════════════════════════════════════════════
+      # Plane.bitmap
+      #═════════════════════════════════════════════════════════════════════════
+      def bitmap=(bitmap)
+        return unless bitmap.is_a?(Bitmap)
+        @bitmap = bitmap
+        self.recreateBitmap(true)
+      end
+
+      #═════════════════════════════════════════════════════════════════════════
+      # Plane.ox=()
+      #═════════════════════════════════════════════════════════════════════════
+      def ox=(value)
+        @ox = value
+        return unless @bitmap
+        @sprite.ox = (value % @bitmap.width)
+      end
+
+      #═════════════════════════════════════════════════════════════════════════
+      # Plane.oy=()
+      #═════════════════════════════════════════════════════════════════════════
+      def oy=(value)
+        @oy = value
+        return unless @bitmap
+        @sprite.oy = (value % @bitmap.height)
+      end
+
+      #═════════════════════════════════════════════════════════════════════════
+      # Plane.opacity=()
+      #═════════════════════════════════════════════════════════════════════════
+      def opacity=(value)
+        @sprite.opacity = value
+        @opacity = @sprite.opacity
+      end
+
+      #═════════════════════════════════════════════════════════════════════════
+      # Plane.blent_type=()
+      #═════════════════════════════════════════════════════════════════════════
+      def blend_type=(value)
+        @sprite.blend_type = value
+        @blend_type = @sprite.blend_type
+      end
+
+      #═════════════════════════════════════════════════════════════════════════
+      # Plane.color=()
+      #═════════════════════════════════════════════════════════════════════════
+      def color=(value)
+        @sprite.color = value
+        @color = @sprite.color
+      end
+
+      #═════════════════════════════════════════════════════════════════════════
+      # Plane.tone=()
+      #═════════════════════════════════════════════════════════════════════════
+      def tone=(value)
+        @sprite.tone = value
+        @tone = @sprite.tone
+      end
+
+      #═════════════════════════════════════════════════════════════════════════
+      # Plane.viewport=()
+      #═════════════════════════════════════════════════════════════════════════
+      def viewport=(value)
+        @defaultViewport &= (value == @sprite.viewport)
+        @sprite.viewport = value
+        @viewport = @sprite.viewport
+      end
+
+      #═════════════════════════════════════════════════════════════════════════
+      # Plane.visible=()
+      #═════════════════════════════════════════════════════════════════════════
+      def visible=(value)
+        @sprite.visible = value
+        @visible = sprite.visible
+      end
+
+      #═════════════════════════════════════════════════════════════════════════
+      # Plane.z=()
+      #═════════════════════════════════════════════════════════════════════════
+      def z=(value)
+        @sprite.z = value
+        @z = @sprite.z
+      end
+
+      #═════════════════════════════════════════════════════════════════════════
+      # Plane.zoom_x=()
+      #═════════════════════════════════════════════════════════════════════════
+      def zoom_x=(value)
+        @sprite.zoom_x = value
+        @zoom_x = @sprite.zoom_x
+        self.recreateBitmap
+      end
+
+      #═════════════════════════════════════════════════════════════════════════
+      # Plane.zoom_y=()
+      #═════════════════════════════════════════════════════════════════════════
+      def zoom_y=(value)
+        @sprite.zoom_y = value
+        @zoom_y = @sprite.zoom_y
+        self.recreateBitmap
+      end
+
+      #═════════════════════════════════════════════════════════════════════════
+      # Plane.disposed?
+      #═════════════════════════════════════════════════════════════════════════
+      def disposed?
+        return @sprite.disposed?
+      end
+
+      #═════════════════════════════════════════════════════════════════════════
+      # Plane.dispose
+      #═════════════════════════════════════════════════════════════════════════
+      def dispose
+        @sprite.dispose
+      end
+
+      protected # These methods cannot be referenced from inheritance.
+      #═════════════════════════════════════════════════════════════════════════
+      # Plane.recreateBitmap
+      #═════════════════════════════════════════════════════════════════════════
+      def recreateBitmap(forceRefresh = false)
+        cw, ch      = Graphics.width*(2.0/@zoom_x),Graphics.height*(2.0/@zoom_y)
+        needRefresh = true
+
+        if @defaultViewport
+          @viewport.rect.width, @viewport.rect.height = *Graphics.size
+        end
+
+        if @sprite.bitmap.nil? || @sprite.bitmap.disposed?
+          newBitmap = Bitmap.new(cw, ch)
+        else
+          if  (cw == @sprite.bitmap.width) &&
+              (ch == @sprite.bitmap.height)&&
+              (!forceRefresh)
+            return
+          end
+
+          newBitmap = Bitmap.new(cw, ch)
+          if  (cw < @sprite.bitmap.width) ||
+              (ch < @sprite.bitmap.height)
+            newBitmap.blt(0, 0, @sprite.bitmap, @sprite.bitmap.rect)
+            @sprite.bitmap.dispose
+            needRefresh = false
+          end
+        end
+
+        @sprite.bitmap = newBitmap
+        self.refreshBitmap if (needRefresh || forceRefresh)
+      end
+
+      #═════════════════════════════════════════════════════════════════════════
+      # Plane.refreshBitmap
+      #═════════════════════════════════════════════════════════════════════════
+      def refreshBitmap
+        b = @sprite.bitmap; b.clear
+
+        return if @bitmap.nil?
+        tx = (b.width  / @bitmap.width.to_f )
+        ty = (b.height / @bitmap.height.to_f)
+        
+        b.blt(0, 0, @bitmap, @bitmap.rect)
+        return if tx + ty == 2
+        
+        # Fill 1 Line
+        basePow = @bitmap.width
+        baseRct = Rect.new(0, 0, @bitmap.width, @bitmap.height)
+        
+        Math.log2(tx).floor.times{
+          b.blt(basePow, 0, b, baseRct)
+          baseRct.width += basePow
+          basePow *= 2
+        }
+        
+        # Last Bitmap Line
+        baseRct.width = (b.width - baseRct.width)
+        b.blt(basePow, 0, b, baseRct)
+        
+        # Fill any remaining lines
+        basePow = @bitmap.height
+        baseRct = Rect.new(0, 0, b.width, @bitmap.height)
+        
+        Math.log2(ty).floor.times{
+          b.blt(0, basePow, b, baseRct)
+          baseRct.height += basePow
+          basePow *= 2
+        }
+        
+        # Last line
+        baseRct.height = b.height - baseRct.height
+        b.blt(basePow, 0, b, baseRct)
+      end
+    end
+
+    #═══════════════════════════════════════════════════════════════════════════
+    # Game Map
+    #═══════════════════════════════════════════════════════════════════════════
+    class Game_Map
+      #═════════════════════════════════════════════════════════════════════════
+      # Game_Map.screen_tile_x - Number of horizontal tiles on the screen
+      #═════════════════════════════════════════════════════════════════════════
+      def screen_tile_x
+        (Graphics.width / 32.0).ceil
+      end
+      
+      #═════════════════════════════════════════════════════════════════════════
+      # Game_Map.screen_tile_y - Number of vertical tiles on the screen
+      #═════════════════════════════════════════════════════════════════════════
+      def screen_tile_y
+        (Graphics.height / 32.0).ceil
+      end
+    end
+  end
+
+  #╒══════════════════════════════════════════════════════════════════════════╤╗
+  #│FenixFyreX's Plane Rewrite [Preserving Help Lines, Very Well Documented]  │║
+  #╘══════════════════════════════════════════════════════════════════════════╧╝
+  if Graphics::Plane_Method == "Fyre"
+    class Plane
+      #╒══════════════════════════════════════════════════════════════════════╤╗
+      #│Plane.initialize - Setup an allocated instance of Plane.              │║
+      #╘══════════════════════════════════════════════════════════════════════╧╝
+      def initialize(v = nil)
+        @sprite = Sprite.new(v)
+        @bitmap = nil
+      end
+
+      #╒══════════════════════════════════════════════════════════════════════╤╗
+      #│Plane.dispose - Free an instance of Plane.                            │║
+      #╘══════════════════════════════════════════════════════════════════════╧╝
+      def dispose
+        @sprite.bitmap.dispose unless bitmap_disposed?
+        @sprite.dispose unless disposed?
+        return nil
+      end
+
+      #╒══════════════════════════════════════════════════════════════════════╤╗
+      #│Plane.bitmap_disposed?                                                │║
+      #│- Check whether this instance of Plane's bitmap has been freed.       │║
+      #╘══════════════════════════════════════════════════════════════════════╧╝
+      def bitmap_disposed?
+        disposed? || @sprite.bitmap.nil? || @sprite.bitmap.disposed?
+      end
+      
+      #╒══════════════════════════════════════════════════════════════════════╤╗
+      #│Plane.disposed? - Check whether this instance of Plane has been freed.│║
+      #╘══════════════════════════════════════════════════════════════════════╧╝
+      def disposed?
+        @sprite.nil? || @sprite.disposed?
+      end
+      
+      #╒══════════════════════════════════════════════════════════════════════╤╗
+      #│Plane.ox=()                                                           │║
+      #│- Set the offset x of this instance of Plane.                         │║
+      #│- val : Integer                                                       │║
+      #╘══════════════════════════════════════════════════════════════════════╧╝
+      def ox=(val)
+        error_disposed if disposed?
+        return if bitmap_disposed?
+        @sprite.ox = (val % (@bitmap.nil? ? 1 : @bitmap.width))
+      end
+      
+      #╒══════════════════════════════════════════════════════════════════════╤╗
+      #│Plane.oy=()                                                           │║
+      #│- Set the offset y of this instance of Plane.                         │║
+      #│- val : Integer                                                       │║
+      #╘══════════════════════════════════════════════════════════════════════╧╝
+      def oy=(val)
+        error_disposed if disposed?
+        return if bitmap_disposed?
+        @sprite.oy = (val % (@bitmap.nil? ? 1 : @bitmap.height))
+      end
+      
+      #╒══════════════════════════════════════════════════════════════════════╤╗
+      #│Plane.bitmap - Get the tile bitmap of this instance of Plane.         │║
+      #╘══════════════════════════════════════════════════════════════════════╧╝
+      def bitmap
+        @bitmap
+      end
+      
+      #╒══════════════════════════════════════════════════════════════════════╤╗
+      #│Plane.viewport=()                                                     │║
+      #│- Set the viewport, and refresh if the vrect has changed.             │║
+      #╘══════════════════════════════════════════════════════════════════════╧╝
+      def viewport=(v)
+        error_disposed if disposed?
+        r = v.nil? ? Rect.new(0, 0, Graphics.width, Graphics.height) : v.rect
+        b = r != vrect
+        ret = @sprite.viewport = v
+        self.bitmap = @bitmap if b
+        return ret
+      end
+      
+      #╒══════════════════════════════════════════════════════════════════════╤╗
+      #│Plane.bitmap=()                                                       │║
+      #│- Set the tile bitmap of this instance of Plane.                      │║
+      #│- bmp : Bitmap                                                        │║
+      #╘══════════════════════════════════════════════════════════════════════╧╝
+      def bitmap=(bmp)
+        error_disposed if disposed?
+        if bmp.nil?
+          @sprite.bitmap = nil
+          return @bitmap = nil
+        end
+        w, h = vrect.width, vrect.height
+        nw = bmp.width <= 100 ? 2 : 3
+        nh = bmp.height <= 100 ? 2 : 3
+        dx = [(w / bmp.width).ceil, 1].max * nw
+        dy = [(h / bmp.height).ceil, 1].max * nh
+        bw = dx * bmp.width
+        bh = dy * bmp.height
+        @bitmap = bmp
+        key = [vrect.to_a, bmp.name]
+        if Cache.has_plane?(key)
+          @sprite.bitmap = Cache.plane(key)
+        else
+          @sprite.bitmap = Bitmap.new(bw, bh)
+         
+          dx.times do |x|
+            dy.times do |y|
+              @sprite.bitmap.blt(x*bmp.width,y*bmp.height,@bitmap,@bitmap.rect)
+            end
+          end
+          Cache.add_plane(key, @sprite.bitmap)
+        end
+      end
+      
+      #╒══════════════════════════════════════════════════════════════════════╤╗
+      #│Plane.method_missing                                                  │║
+      #│- Here we let any methods not found in this class be redirected to our│║
+      #│  underlying sprite.                                                  │║
+      #╘══════════════════════════════════════════════════════════════════════╧╝
+      def method_missing(sym, *argv, &argb)
+        if @sprite.respond_to?(sym)
+          error_disposed if disposed?
+          return @sprite.send(sym, *argv, &argb)
+        end
+        super(sym, *argv, &argb)
+      end
+
+      private
+      #╒══════════════════════════════════════════════════════════════════════╤╗
+      #│Plane.error_disposed                                                  │║
+      #│- If this plane (and it's underlying sprite) has been freed, then     │║
+      #│  throw an RGSSError describing a disposed Plane.                     │║
+      #╘══════════════════════════════════════════════════════════════════════╧╝
+      def error_disposed
+        raise RGSSError, 'disposed Plane', caller
+      end
+
+      #╒══════════════════════════════════════════════════════════════════════╤╗
+      #│Plane.vrect                                                           │║
+      #│- Get the view rect of this instance of Plane, which depends on if the│║
+      #│  viewport has been set or not.                                       │║
+      #╘══════════════════════════════════════════════════════════════════════╧╝
+      def vrect
+        @sprite.viewport.nil? ? Rect.new(0,0,Graphics.width,Graphics.height) : 
+        @sprite.viewport.rect
+      end
+    end
+  end
+
+  #╒══════════════════════════════════════════════════════════════════════════╤╗
+  #│Black Wyvern's Plane Rewrite                                              │║
+  #│- Snagged some of yer methods Fyre, hope that's ok. XD                    │║
+  #╘══════════════════════════════════════════════════════════════════════════╧╝
+  if Graphics::Plane_Method == "BWX"
+    #╒════════════════════════════════════════════════════════════════════════╤╗
+    #│Plane - In this instance, we make Plane an inheritor of Sprite          │║
+    #│I got this idea from seeing some other plane writes that weren't quite  │║
+    #│as successful. But seeing as most of the Plane functions deal with, or  │║
+    #│are directly related to Sprites.. I actually thought it was quite the   │║
+    #│idea and am currently testing it as such. If it doesn't work, let me    │║
+    #│know and switch to a different author Plane.                            │║
+    #╘════════════════════════════════════════════════════════════════════════╧╝
+    class Plane < Sprite
+      #╒══════════════════════════════════════════════════════════════════════╤╗
+      #│Plane.bitmap=()                                                       │║
+      #╘══════════════════════════════════════════════════════════════════════╧╝
+      def bitmap=(new)
+        error_disposed if disposed?
+        return if new == @P_Bitmap && viewport == @P_Viewport
+        if @P_Bitmap
+          @P_Bitmap = nil
+          self.bitmap.dispose
+        end
+        return super(new) unless new
+
+        vw = viewport ? viewport.rect.width  : Graphics.width
+        vh = viewport ? viewport.rect.height : Graphics.height
+        @P_Width = new.width
+        @P_Height = new.height
+        super(Bitmap.new(vw + @P_Width, vh + @P_Height))
+        phorz = (vw / @P_Width)  + 1 + (vw % @P_Width).to_b.to_i  # Das some voo
+        pvert = (vh / @P_Height) + 1 + (vh % @P_Height).to_b.to_i # doo code dar
+        phorz.times do |bx|
+          pvert.times do |by|
+           bitmap.blt(
+             bx * @P_Width,
+             by * @P_Height, new,
+             new.rect
+            )
+          end
+        end
+        @P_Viewport = viewport
+        @P_Bitmap = new
+      end
+
+      #╒══════════════════════════════════════════════════════════════════════╤╗
+      #│Plane.ox=()                                                           │║
+      #╘══════════════════════════════════════════════════════════════════════╧╝
+      def ox=(value)
+        error_disposed if disposed?
+        super(@P_Bitmap ? value % @P_Width : value)
+      end
+
+      #╒══════════════════════════════════════════════════════════════════════╤╗
+      #│Plane.oy=()                                                           │║
+      #╘══════════════════════════════════════════════════════════════════════╧╝
+      def oy=(value)
+        error_disposed if disposed?
+        super(@P_Bitmap ? value % @P_Height : value)
+      end
+
+      #╒══════════════════════════════════════════════════════════════════════╤╗
+      #│Plane.viewport=()                                                     │║
+      #╘══════════════════════════════════════════════════════════════════════╧╝
+      def viewport=(new_viewport)
+        error_disposed if disposed?
+        if new_viewport != viewport
+          super(new_viewport)
+          self.bitmap = @P_Bitmap if @P_Bitmap
+        end
+      end
+
+      #╒══════════════════════════════════════════════════════════════════════╤╗
+      #│Plane.dispose                                                         │║
+      #╘══════════════════════════════════════════════════════════════════════╧╝
+      def dispose
+        if @P_Bitmap
+          @P_Bitmap = nil
+          self.bitmap.dispose
+        end
+        super
+      end
+      
+      #╒══════════════════════════════════════════════════════════════════════╤╗
+      #│Plane.disposed?                                                       │║
+      #╘══════════════════════════════════════════════════════════════════════╧╝
+      def disposed?
+        return super
+      end
+
+      private
+      #╒══════════════════════════════════════════════════════════════════════╤╗
+      #│Plane.error_disposed                                                  │║
+      #╘══════════════════════════════════════════════════════════════════════╧╝
+      def error_disposed
+        Debug("Plane","Called a disposed Plane Object.","",true,true) rescue
+        raise RGSSError, 'disposed Plane', caller
+      end
+    end
+  end
+end
+
+=begin ═══════════════════════════════════════════════════════════════════════╤╗
+│Plane Optimizations                                                          │║
+│-- These methods were retained mostly from FenixFyreX's Plane Rewrite. The   │║
+│   support functions, most importantly of which is the Plane Cache, he       │║
+│   included into his code are still useful and should net at least minor     │║
+│   performance improvements irregardless of which Plane is being used.       │║
+=end #════════════════════════════════════════════════════════════════════════╧╝
+
+#╒════════════════════════════════════════════════════════════════════════════╤╗
+#│Spritesheet Map                                                             │║
+#╘════════════════════════════════════════════════════════════════════════════╧╝
+class Spriteset_Map
+  #╒══════════════════════════════════════════════════════════════════════════╤╗
+  #│Spriteset_Map.update_parallax                                             │║
+  #╘══════════════════════════════════════════════════════════════════════════╧╝
+  def update_parallax
+    if @parallax_name != $game_map.parallax_name
+      @parallax_name = $game_map.parallax_name
+      @parallax.bitmap.dispose if @parallax.bitmap &&
+      !Cache.plane_cache.value?(@parallax.bitmap)
+      @parallax.bitmap = Cache.parallax(@parallax_name)
+      Graphics.frame_reset
+    end
+    @parallax.ox = $game_map.parallax_ox(@parallax.bitmap)
+    @parallax.oy = $game_map.parallax_oy(@parallax.bitmap)
+  end
+end
+
+#╒════════════════════════════════════════════════════════════════════════════╤╗
+#│Class Rect                                                                  │║
+#╘════════════════════════════════════════════════════════════════════════════╧╝
+class Rect
+  #╒══════════════════════════════════════════════════════════════════════════╤╗
+  #│Rect.to_a                                                                 │║
+  #╘══════════════════════════════════════════════════════════════════════════╧╝
+  def to_a
+    [self.x, self.y, self.width, self.height]
+  end
+end
+    
+#╒════════════════════════════════════════════════════════════════════════════╤╗
+#│Bitmap - Saves a bitmap's name, for future reference.                       │║
+#╘════════════════════════════════════════════════════════════════════════════╧╝
+class Bitmap
+  #╒══════════════════════════════════════════════════════════════════════════╤╗
+  #│Reinitialize - Instantiate a bitmap's name, if given one.                 │║
+  #╘══════════════════════════════════════════════════════════════════════════╧╝
+	alias bugfix_plane_init initialize
+	def initialize(*argv, &argb)
+    @name = ''
+    if name = argv.find {|arg| arg.is_a?(String) }
+      @name = name
+    end
+    bugfix_plane_init(*argv, &argb)
+  end
+  attr_reader :name
+end
+
+#╒════════════════════════════════════════════════════════════════════════════╤╗
+#│Cache                                                                       │║
+#│- Add in Plane caching, to speed up processing at the slight cost of memory.│║
+#╘════════════════════════════════════════════════════════════════════════════╧╝
+module Cache
+  #╒══════════════════════════════════════════════════════════════════════════╤╗
+  #│Cache.plane_cache                                                        │║
+  #│- Convenience method, to not have to type it out in the below methods.    │║
+  #╘══════════════════════════════════════════════════════════════════════════╧╝
+  def self.plane_cache
+    @plane_cache ||= {}
+  end
+
+  #╒══════════════════════════════════════════════════════════════════════════╤╗
+  #│Cache.plane                                                               │║
+  #│- Get a cached plane bitmap.                                              │║
+  #│- key : Object (most likely an Array e.g. [Rect, String])                 │║
+  #╘══════════════════════════════════════════════════════════════════════════╧╝
+	def self.plane(key)
+    return plane_cache[key]
+  end
+
+  #╒══════════════════════════════════════════════════════════════════════════╤╗
+  #│Cache.add_plane                                                           │║
+  #│- Add a tiled plane bitmap to the cache.                                  │║
+  #│- key : Object (see above)                                                │║
+  #│- bmp : Bitmap                                                            │║
+  #╘══════════════════════════════════════════════════════════════════════════╧╝
+  def self.add_plane(key, bmp)
+    plane_cache[key] = bmp
+  end
+  
+  #╒══════════════════════════════════════════════════════════════════════════╤╗
+  #│Cache.has_plane?                                                          │║
+  #│- Check for a cached plane bitmap.                                        │║
+  #│- key : Object (see above)                                                │║
+  #╘══════════════════════════════════════════════════════════════════════════╧╝
+  def self.has_plane?(key)
+    plane_cache[key].is_a?(Bitmap) && !plane_cache[key].disposed?
+  end
+  
+  class << self; alias bugfix_pc_clear clear; end
+  #╒══════════════════════════════════════════════════════════════════════════╤╗
+  #│Cache.clear - See original documentation.                                 │║
+  #╘══════════════════════════════════════════════════════════════════════════╧╝
+  def self.clear
+    plane_cache.each_value {|v| v.dispose unless v.nil? || v.disposed? }
+    plane_cache.clear
+    bugfix_pc_clear
+  end
+  class << self; alias clear_b4_fyx_plane_cache clear; end
+end
+
+=begin ═══════════════════════════════════════════════════════════════════════╤╗
+│BWX Optional Scripts / Version Checking                                      │║
+│-- Checking to see if you have the RPGM-X Core installed and active.         │║
+│-- Imports functions from the Core if they are needed.                       │║
+╞═════════════════════════════════════════════════════════════════════════════╪╣
+│BWX::Core::Optionals                                                         │║
+=end #════════════════════════════════════════════════════════════════════════╧╝
+module BWX; module Core; module Optionals
+  def self.Core?
+    return false if $imported["BWA_RPGM-X"].nil?
+    return false unless $imported["BWA_RPGM-X"][0]
+    return true if $imported["BWA_RPGM-X"][1] >= 1.1
+  end
+end; end; end
+
+unless BWX::Core::Optionals.Core?
+  class Numeric; def to_b; self >= 1; end; end
+  class FalseClass; def to_i; 0; end; end 
+  class TrueClass; def to_i; 1; end; end 
+end
+
+=begin ═══════════════════════════════════════════════════════════════════════╤╗
+│ ► SNIPPET IMPORT ◄                                                          │║
+│ Snippet Name: Viewports/Map Fix for Modified RGSS300.dll File               │║
+│ Snippet Dependency: Σ Fullscreen / Resolution Breaker DLL Version Fetching  │║
+│ Author: Yanfly / Gab!                                                       │║
+│ Modifications: Black Wyvern                                                 │║
+│ Source: Yanfly Engine Ace - Ace Core Engine                                 │║
+│ Created: 12/01/11                                                           │║
+│ Updated: 02/19/12                                                           │║
+│ Version: 1.09                                                               │║
+=end #════════════════════════════════════════════════════════════════════════╧╝
+
+module DLLVer
+  #╒══════════════════════════════════════════════════════════════════════════╤╗
+  #│DLLVer.fetchDLLVer                                                        │║
+  #╘══════════════════════════════════════════════════════════════════════════╧╝
+  def self.fetchDLLVer
+    _DLLName = DL::CPtr.malloc(140)
+    s = DL::CFunc.new(DL.dlopen('kernel32')['GetPrivateProfileString'],
+      DL::TYPE_LONG).call([
+        DL::CPtr["Game"].to_i,
+        DL::CPtr["Library"].to_i,
+        0, _DLLName.to_i,
+        140,
+        DL::CPtr["./Game.ini"].to_i
+      ])
+    File.basename(_DLLName.to_s(s)).match(/^RGSS3(\d{2})\.dll$/)
+    return $1.to_i == 0
+  end
+end
+
+=begin ═══════════════════════════════════════════════════════════════════════╤╗
+│ Notes:                                                                      │║
+│ -- As the title would suggest, I am assuming these fixes are to only be     │║
+│    applied to RGSS300.dll users. So, determine such. These methods will be  │║
+│    initialized if you are using Yanfly Engine Ace. And that's OK.           │║
+=end #════════════════════════════════════════════════════════════════════════╧╝
+
+if DLLVer.fetchDLLVer
+  #╒════════════════════════════════════════════════════════════════════════════╤╗
+  #│Game Map                                                                    │║
+  #╘════════════════════════════════════════════════════════════════════════════╧╝
+  class Game_Map
+    #╒════════════════════════════════════════════════════════════════════════╤╗
+    #│Game_Map.scroll_down                                                    │║
+    #╘════════════════════════════════════════════════════════════════════════╧╝
+    def scroll_down(distance)
+      if loop_vertical?
+        @display_y += distance
+        @display_y %= @map.height * 256
+        @parallax_y += distance if @parallax_loop_y
+      else
+        last_y = @display_y
+        dh = Graphics.height > height * 32 ? height : screen_tile_y
+        @display_y = [@display_y + distance, height - dh].min
+        @parallax_y += @display_y - last_y
+      end
+    end
+
+    #╒════════════════════════════════════════════════════════════════════════╤╗
+    #│Game_Map.scroll_right                                                   │║
+    #╘════════════════════════════════════════════════════════════════════════╧╝
+    def scroll_right(distance)
+      if loop_horizontal?
+        @display_x += distance
+        @display_x %= @map.width * 256
+        @parallax_x += distance if @parallax_loop_x
+      else
+        last_x = @display_x
+        dw = Graphics.width > width * 32 ? width : screen_tile_x
+        @display_x = [@display_x + distance, width - dw].min
+        @parallax_x += @display_x - last_x
+      end
+    end
+  end # Close Game Map
+
+  #╒══════════════════════════════════════════════════════════════════════════╤╗
+  #│Spriteset Map                                                             │║
+  #╘══════════════════════════════════════════════════════════════════════════╧╝
+  class Spriteset_Map
+    #╒════════════════════════════════════════════════════════════════════════╤╗
+    #│Spriteset_Map.create_viewports                                          │║
+    #╘════════════════════════════════════════════════════════════════════════╧╝
+    def create_viewports
+      if Graphics.width > $game_map.width * 32 && !$game_map.loop_horizontal?
+        dx = (Graphics.width - $game_map.width * 32) / 2
+      else
+        dx = 0
+      end
+      dw = [Graphics.width, $game_map.width * 32].min
+      dw = Graphics.width if $game_map.loop_horizontal?
+      if Graphics.height > $game_map.height * 32 && !$game_map.loop_vertical?
+        dy = (Graphics.height - $game_map.height * 32) / 2
+      else
+        dy = 0
+      end
+      dh = [Graphics.height, $game_map.height * 32].min
+      dh = Graphics.height if $game_map.loop_vertical?
+      @viewport1 = Viewport.new(dx, dy, dw, dh)
+      @viewport2 = Viewport.new(dx, dy, dw, dh)
+      @viewport3 = Viewport.new(dx, dy, dw, dh)
+      @viewport2.z = 50
+      @viewport3.z = 100
+    end
+
+    #╒════════════════════════════════════════════════════════════════════════╤╗
+    #│Spriteset_Map.update_viewport_sizes                                     │║
+    #╘════════════════════════════════════════════════════════════════════════╧╝
+    def update_viewport_sizes
+      if Graphics.width > $game_map.width * 32 && !$game_map.loop_horizontal?
+        dx = (Graphics.width - $game_map.width * 32) / 2
+      else
+        dx = 0
+      end
+      dw = [Graphics.width, $game_map.width * 32].min
+      dw = Graphics.width if $game_map.loop_horizontal?
+      if Graphics.height > $game_map.height * 32 && !$game_map.loop_vertical?
+        dy = (Graphics.height - $game_map.height * 32) / 2
+      else
+        dy = 0
+      end
+      dh = [Graphics.height, $game_map.height * 32].min
+      dh = Graphics.height if $game_map.loop_vertical?
+      rect = Rect.new(dx, dy, dw, dh)
+      for viewport in [@viewport1, @viewport2, @viewport3]
+        viewport.rect = rect
+      end
+    end
+  end
+
+  #╒══════════════════════════════════════════════════════════════════════════╤╗
+  #│Scene Map                                                                 │║
+  #╘══════════════════════════════════════════════════════════════════════════╧╝
+  class Scene_Map < Scene_Base
+    #╒════════════════════════════════════════════════════════════════════════╤╗
+    #│Alias: Scene_Map.post_transfer :: scene_map_post_transfer_ace           │║
+    #╘════════════════════════════════════════════════════════════════════════╧╝
+    alias scene_map_post_transfer_ace post_transfer
+    def post_transfer
+      @spriteset.update_viewport_sizes
+      scene_map_post_transfer_ace
+    end
+  end
+
+  #╒══════════════════════════════════════════════════════════════════════════╤╗
+  #│Game Event                                                                │║
+  #╘══════════════════════════════════════════════════════════════════════════╧╝
+  class Game_Event < Game_Character
+    #╒════════════════════════════════════════════════════════════════════════╤╗
+    #│Game_Event.near_the_screen?                                             │║
+    #╘════════════════════════════════════════════════════════════════════════╧╝
+    def near_the_screen?(dx = nil, dy = nil)
+      dx = [Graphics.width, $game_map.width * 256].min/32 - 5 if dx.nil?
+      dy = [Graphics.height, $game_map.height * 256].min/32 - 5 if dy.nil?
+      ax = $game_map.adjust_x(@real_x) - Graphics.width / 2 / 32
+      ay = $game_map.adjust_y(@real_y) - Graphics.height / 2 / 32
+      ax >= -dx && ax <= dx && ay >= -dy && ay <= dy
+    end
+  end
+end
+=begin ═══════════════════════════════════════════════════════════════════════╤╗
+│ End Of File                                                                 │║
+│                                                                             │║
+│ BWX Method Style Key:                                                       │║
+│ #═══════════════════════════                                                │║
+│ # Code by script Author                                                     │║
+│ #═══════════════════════════                                                │║
+│ #╒════════════════════════╤╗                                                │║
+│ #│Code by credited Author │║                                                │║
+│ #╘════════════════════════╧╝                                                │║
+=end #════════════════════════════════════════════════════════════════════════╧╝
+end # End Activation Handler
