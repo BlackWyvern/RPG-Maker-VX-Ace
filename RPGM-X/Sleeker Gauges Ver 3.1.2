@@ -8,8 +8,8 @@
 │ Author:  Black Wyvern                                                        │
 │ Forum:   RPGMC /topic/37524-rpgm-x-sleeker-gauges-153/                       │
 │ Created: 02/01/16                                                            │
-│ Updated: 04/10/16                                                            │
-│ Version: 3.0.1 | 3.0.0 | 3.0.0 | NYI | NYI                                   │
+│ Updated: 05/04/16                                                            │
+│ Version: 3.1.2 | 3.0.0 | 3.0.0 | 2.0.0 | 1.0.0                               │
 │ License: http://creativecommons.org/licenses/by-sa/3.0/                      │
 ├──────────────────────────────────────────────────────────────────────────────┤
 ╚──────╗               *** Only for RPG Maker VX Ace. ***               ╔──────╝
@@ -233,25 +233,43 @@ module BWX; module Core; module Optionals
   # Determine if the RPGM-X Core is installed and active.
   #═════════════════════════════════════════════════════════════════════════════
   def self.Core?
-    return false if $imported["BWA_RPGM-X"].nil?
-    return false unless $imported["BWA_RPGM-X"][0]
-    return true if $imported["BWA_RPGM-X"][1] >= 1.1
+    unless $imported["BWA_RPGM-X"].nil?
+      return false unless $imported["BWA_RPGM-X"][0]
+      return true if $imported["BWA_RPGM-X"][1] >= 1.1
+    end
+    unless $imported["Eclipse-Core"].nil?
+      return false unless $imported["Eclipse-Core"][0]
+      return true if $imported["Eclipse-Core"][1] >= 1.0
+    end
+    return false
   end
   #═════════════════════════════════════════════════════════════════════════════
   # Determine if the RPGM-X Colorspace is installed and active.
   #═════════════════════════════════════════════════════════════════════════════
   def self.Colorspace?
-    return false if $imported["RPGM-X_Colorspace"].nil?
-    return false unless $imported["RPGM-X_Colorspace"][0]
-    return true if $imported["RPGM-X_Colorspace"][1] >= 1.1
+    unless $imported["RPGM-X_Colorspace"].nil?
+      return false unless $imported["RPGM-X_Colorspace"][0]
+      return true if $imported["RPGM-X_Colorspace"][1] >= 1.1
+    end
+    unless $imported["Eclipse-Colorspace"].nil?
+      return false unless $imported["Eclipse-Colorspace"][0]
+      return true if $imported["Eclipse-Colorspace"][1] >= 1.0
+    end
+    return false
   end
   #═════════════════════════════════════════════════════════════════════════════
   # Determine if the RPGM-X Performance Manager is installed and active.
   #═════════════════════════════════════════════════════════════════════════════
   def self.Perfman?
-    return false if $imported["RPGM-X_PerfMan"].nil?
-    return false unless $imported["RPGM-X_PerfMan"][0]
-    return true if $imported["RPGM-X_PerfMan"][1] >= 1.0
+    unless $imported["RPGM-X_PerfMan"].nil?
+      return false unless $imported["RPGM-X_PerfMan"][0]
+      return true if $imported["RPGM-X_PerfMan"][1] >= 1.0
+    end
+    unless $imported["Eclipse-Core"].nil?
+      return false unless $imported["Eclipse-Core"][0]
+      return true if $imported["Eclipse-Core"][1] >= 1.0
+    end
+    return false
   end
   #═════════════════════════════════════════════════════════════════════════════
   # Determine if a supported ATB system is installed.
@@ -292,8 +310,8 @@ module BWX; module SGV3; module Vars
   # SLEEK GAUGE ADDON FLAGS ════════════════════════════════════════════════════
   MODULES_SG_ATBS = true  # Enable RPGM-X Sleeker ATB System Bars
   MODULES_SG_MHPB = true  # Enable RPGM-X Sleeker Monster HP Bars
-  MODULES_SG_PRAM = false  # Enable RPGM-X Sleeker Parameter Bars
-  MODULES_SG_DRGN = false  # Enable RPGM-X Sleeker Dragon Bars
+  MODULES_SG_PRAM = true  # Enable RPGM-X Sleeker Parameter Bars
+  MODULES_SG_DRGN = true  # Enable RPGM-X Sleeker Dragon Bars
 end; end; end # ════════════════════════════════════════════════════════════════
 
 #     ╔════════════════════════╗ Liek omg, actual script-like stuff starts here!
@@ -386,7 +404,9 @@ module BWX; module SGV3; module Vars
 
   Realtime__Flags =       # List the IDs of the gauges you wish to render.
     ["FATB","CATB",       # ► Enables Realtime rendering of listed gauge types
-    "HP","MP","TP"]       #   in Window_BattleStatus
+    "HP","MP","TP",       #   in Window_BattleStatus
+    "SP","WP","VC",
+    "LF","DV"]
 
   # GAUGE STYLE SETTINGS ═══════════════════════════════════════════════════════
   # Available Styles = | : ( : ) : < : > : / : \\
@@ -414,7 +434,16 @@ module BWX; module SGV3; module Vars
     "FATB"  => '||',              # Style of the Free ATB Gauge
     "CATB"  => '||',              # Style of the Casting ATB Gauge
 
-    "MHPB"  => '//',              # Style of the Enemy HP Bars
+    "MHPB"  => '||',              # Style of the Enemy HP Bars
+
+    "Param" => '||',              # Style of the Main Parameter Gauges
+    "Sub"   => '||',              # Style of the Sub Parameter Gauges
+
+    "SP"    => '||',              # Style of the Dragon SP Gauge
+    "WP"    => '||',              # Style of the Dragon WP Gauge
+    "VC"    => '||',              # Style of the Dragon VC Gauge
+    "LF"    => '||',              # Style of the Dragon LF Gauge
+    "DV"    => '||',              # Style of the Dragon DV Gauge
   }
 end; end; end # Close BWX::SGV3::Vars::
 
@@ -681,190 +710,6 @@ class Gauges
     [rate,color_left,color_right,display]
   end # Close Lvl
 
-  if BWX::SGV3::Vars::MODULES_SG_PRAM
-  #═════════════════════════════════════════════════════════════════════════════
-  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.Param(focus,param_id,single=nil)
-  #═════════════════════════════════════════════════════════════════════════════
-  def Param(focus,param_id,single=nil)
-
-    # ＲＡＴＥ ==
-    # Formula / Method to fetch the current % of value.
-
-    # COMPLICATED RATE CALCULATION THINGIE ═══════════════════════════════════
-    maximum = 1
-    minimum = focus.param_max(2)
-    for i in 2..7
-      maximum = [focus.param(i), maximum].max
-      minimum = [focus.param(i), minimum].min
-    end
-    if BWX::SGV3::Vars::MODULES_SG_DRGN
-      maximum = [focus.dparam(0), maximum].max
-      minimum = [focus.dparam(0), minimum].min
-      maximum = [focus.dparam(1), maximum].max
-      minimum = [focus.dparam(1), minimum].min
-    end
-
-    # SOME ACTUAL NUMBERS FOR THE RATE ═══════════════════════════════════════
-    if maximum == minimum
-      rate = 1.0
-    else
-      case param_id
-        when 2..7
-          rate=(focus.param(param_id).to_f-minimum)/(maximum-minimum).to_f
-        when 8..9
-          rate=(focus.dparam(param_id-8).to_f-minimum)/(maximum-minimum).to_f
-      end
-      rate += 0.15.clamp 0,1
-    end
-    return rate if single == "R" # ＲＥＴＵＲＮ ->
-
-    # ＧＥＮＥＲＡＴＥ　ＣＯＬＯＲＳ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
-    if single == "C" || single.nil?
-      # ＰＡＲＡＭ　ＣＯＬＯＲＳ
-      # Define the colors for the parameters.
-      case param_id
-
-      # ＡＴＴＡＣＫ
-      when 2
-        if @Colorspace
-          color_left  = SGauge_GC(16)
-          color_right = SGauge_GC(17)
-        else
-          color_left  = text_color(2)
-          color_right = text_color(2)
-        end
-
-      # ＤＥＦＥＮＳＥ
-      when 3 
-        if @Colorspace
-          color_left  = SGauge_GC(18)
-          color_right = SGauge_GC(19)
-        else
-          color_left  = text_color(10)
-          color_right = text_color(10)
-        end
-
-      # ＭＡＧＩＣ　ＡＴＴＡＣＫ
-      when 4
-        if @Colorspace
-          color_left  = SGauge_GC(20)
-          color_right = SGauge_GC(21)
-        else
-          color_left  = text_color(5)
-          color_right = text_color(5)
-        end
-
-      # ＭＡＧＩＣ　ＤＥＦＥＮＳＥ
-      when 5
-        if @Colorspace
-          color_left  = SGauge_GC(22)
-          color_right = SGauge_GC(23)
-        else
-          color_left  = text_color(13)
-          color_right = text_color(13)
-        end
-
-      # ＡＧＩＬＩＴＹ
-      when 6
-        if @Colorspace
-          color_left  = SGauge_GC(24)
-          color_right = SGauge_GC(25)
-        else
-          color_left  = text_color(3)
-          color_right = text_color(3)
-        end
-
-      # ＬＵＣＫ
-      when 7
-        if @Colorspace
-          color_left  = SGauge_GC(26)
-          color_right = SGauge_GC(27)
-        else
-          color_left  = text_color(6)
-          color_right = text_color(6)
-        end
-      end
-
-      if BWX::Core::Optionals.Dragon? && BWX::SGV3::Vars::MODULES_SG_DRGN
-        case param_id
-        # ＤＥＸＴＥＲＩＴＹ
-        when 8
-          if @Colorspace
-            color_left  = SGauge_GC(28)
-            color_right = SGauge_GC(29)
-          else
-            color_left  = text_color(14)
-            color_right = text_color(22)
-          end
-
-        # ＦＯＣＵＳ
-        when 9
-          if @Colorspace
-            color_left  = SGauge_GC(30)
-            color_right = SGauge_GC(31)
-          else
-            color_left  = text_color(15)
-            color_right = text_color(23)
-          end
-        end
-      end
-      return [color_left,color_right] if single == "C" # ＲＥＴＵＲＮ ->
-    end
-
-    # ＧＥＮＥＲＡＴＥ　ＤＩＳＰＬＡＹ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
-    if single == "D" || single.nil?
-      # ＤＩＳＰＬＡＹ ==
-      # Define the display for gauge text.
-      display = [Vocab::param(param_id),focus.param(param_id),0]
-      return display if single == "D" # ＲＥＴＵＲＮ ->
-    end
-
-    # ＲＥＴＵＲＮ ->
-    # The completed Gauge Container
-    [rate,color_left,color_right,display]
-  end; end # Close Main Parameter
-
-  if BWX::SGV3::Vars::MODULES_SG_PRAM
-  #═════════════════════════════════════════════════════════════════════════════
-  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.Sub(param_type,param_id,single=nil)
-  #═════════════════════════════════════════════════════════════════════════════
-  def Sub(focus,param_type,param_id,single=nil)
-    # ＦＵＮＣＴＩＯＮ <-
-    # Do something complicated to get something simple. Don't poke at it.
-    info = SG_Sub_Info(focus,param_type,param_id)
-
-    # ＲＡＴＥ ==
-    # Formula / Method to fetch the current % of value.
-    rate = info[0]
-    return rate if single == "R" # ＲＥＴＵＲＮ ->
-
-    # ＧＥＮＥＲＡＴＥ　ＣＯＬＯＲＳ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
-    if single == "C" || single.nil?
-      # ＳＵＢＰＡＲＡＭ　ＣＯＬＯＲＳ
-      # Define the colors for the parameters.
-      if @Colorspace
-        color_left  = Auto_Color([64,66],rate)
-        color_right = Auto_Color([65,67],rate)
-      else
-        color_left  = Color.new(0+(80*(1-rate)),(144*rate),(144*rate),192)
-        color_right = Color.new(0+(255*(1-rate)),(255*rate),(255*rate),192)
-      end
-      return [color_left,color_right] if single == "C" # ＲＥＴＵＲＮ ->
-    end
-
-    # ＧＥＮＥＲＡＴＥ　ＤＩＳＰＬＡＹ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
-    if single == "D" || single.nil?
-      # ＤＩＳＰＬＡＹ ==
-      # Define the display for gauge text.
-      display = info[1]
-      return display if single == "D" # ＲＥＴＵＲＮ ->
-    end
-
-    # ＲＥＴＵＲＮ ->
-    # The completed Gauge Container
-    [rate,color_left,color_right,display]
-  end; end # Close Subparameter
-
   if BWX::SGV3::Vars::MODULES_SG_ATBS
   #═════════════════════════════════════════════════════════════════════════════
   # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.FATB(focus,single=nil)
@@ -1007,6 +852,390 @@ class Gauges
     # The completed Gauge Container
     [rate,color_left,color_right,display]
   end; end # Close MHPB
+
+  if BWX::SGV3::Vars::MODULES_SG_PRAM
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.Param(focus,param_id,single=nil)
+  #═════════════════════════════════════════════════════════════════════════════
+  def Param(focus,param_id,single=nil)
+
+    # ＲＡＴＥ ==
+    # Formula / Method to fetch the current % of value.
+
+    # COMPLICATED RATE CALCULATION THINGIE ═══════════════════════════════════
+    maximum = 1
+    minimum = focus.param_max(2)
+    for i in 2..7
+      maximum = [focus.param(i), maximum].max
+      minimum = [focus.param(i), minimum].min
+    end
+    if BWX::SGV3::Vars::MODULES_SG_DRGN
+      maximum = [focus.dparam(0), maximum].max
+      minimum = [focus.dparam(0), minimum].min
+      maximum = [focus.dparam(1), maximum].max
+      minimum = [focus.dparam(1), minimum].min
+    end
+
+    # SOME ACTUAL NUMBERS FOR THE RATE ═══════════════════════════════════════
+    if maximum == minimum
+      rate = 1.0
+    else
+      case param_id
+        when 2..7
+          rate=(focus.param(param_id).to_f-minimum)/(maximum-minimum).to_f
+        when 8..9
+          rate=(focus.dparam(param_id-8).to_f-minimum)/(maximum-minimum).to_f
+      end
+      rate += 0.15.clamp 0,1
+    end
+    return rate if single == "R" # ＲＥＴＵＲＮ ->
+
+    # ＧＥＮＥＲＡＴＥ　ＣＯＬＯＲＳ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "C" || single.nil?
+      # ＰＡＲＡＭ　ＣＯＬＯＲＳ
+      # Define the colors for the parameters.
+      case param_id
+
+      # ＡＴＴＡＣＫ
+      when 2
+        if @Colorspace
+          color_left  = SGauge_GC(16)
+          color_right = SGauge_GC(17)
+        else
+          color_left  = text_color(2)
+          color_right = text_color(2)
+        end
+
+      # ＤＥＦＥＮＳＥ
+      when 3 
+        if @Colorspace
+          color_left  = SGauge_GC(18)
+          color_right = SGauge_GC(19)
+        else
+          color_left  = text_color(10)
+          color_right = text_color(10)
+        end
+
+      # ＭＡＧＩＣ　ＡＴＴＡＣＫ
+      when 4
+        if @Colorspace
+          color_left  = SGauge_GC(20)
+          color_right = SGauge_GC(21)
+        else
+          color_left  = text_color(5)
+          color_right = text_color(5)
+        end
+
+      # ＭＡＧＩＣ　ＤＥＦＥＮＳＥ
+      when 5
+        if @Colorspace
+          color_left  = SGauge_GC(22)
+          color_right = SGauge_GC(23)
+        else
+          color_left  = text_color(13)
+          color_right = text_color(13)
+        end
+
+      # ＡＧＩＬＩＴＹ
+      when 6
+        if @Colorspace
+          color_left  = SGauge_GC(24)
+          color_right = SGauge_GC(25)
+        else
+          color_left  = text_color(3)
+          color_right = text_color(3)
+        end
+
+      # ＬＵＣＫ
+      when 7
+        if @Colorspace
+          color_left  = SGauge_GC(26)
+          color_right = SGauge_GC(27)
+        else
+          color_left  = text_color(6)
+          color_right = text_color(6)
+        end
+      end
+
+      if BWX::Core::Optionals.Dragon? && BWX::SGV3::Vars::MODULES_SG_DRGN
+        case param_id
+        # ＤＥＸＴＥＲＩＴＹ
+        when 8
+          if @Colorspace
+            color_left  = SGauge_GC(28)
+            color_right = SGauge_GC(29)
+          else
+            color_left  = text_color(14)
+            color_right = text_color(22)
+          end
+
+        # ＦＯＣＵＳ
+        when 9
+          if @Colorspace
+            color_left  = SGauge_GC(30)
+            color_right = SGauge_GC(31)
+          else
+            color_left  = text_color(15)
+            color_right = text_color(23)
+          end
+        end
+      end
+      return [color_left,color_right] if single == "C" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＧＥＮＥＲＡＴＥ　ＤＩＳＰＬＡＹ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "D" || single.nil?
+      # ＤＩＳＰＬＡＹ ==
+      # Define the display for gauge text.
+      case param_id
+      when 2 .. 7
+        display = [Vocab::param(param_id),focus.param(param_id),0]
+      when 8 .. 9
+        display = [Vocab::dparam(param_id-8),focus.dparam(param_id-8),0]
+      end
+      return display if single == "D" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＲＥＴＵＲＮ ->
+    # The completed Gauge Container
+    [rate,color_left,color_right,display]
+  end # Close Main Parameter
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.Sub(param_type,param_id,single=nil)
+  #═════════════════════════════════════════════════════════════════════════════
+  def Sub(focus,param_type,param_id,single=nil)
+    # ＦＵＮＣＴＩＯＮ <-
+    # Do something complicated to get something simple. Don't poke at it.
+    info = SG_Sub_Info(focus,param_type,param_id)
+
+    # ＲＡＴＥ ==
+    # Formula / Method to fetch the current % of value.
+    rate = info[0]
+    return rate if single == "R" # ＲＥＴＵＲＮ ->
+
+    # ＧＥＮＥＲＡＴＥ　ＣＯＬＯＲＳ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "C" || single.nil?
+      # ＳＵＢＰＡＲＡＭ　ＣＯＬＯＲＳ
+      # Define the colors for the parameters.
+      if @Colorspace
+        color_left  = Auto_Color([64,66],rate)
+        color_right = Auto_Color([65,67],rate)
+      else
+        color_left  = Color.new(0+(80*(1-rate)),(144*rate),(144*rate),192)
+        color_right = Color.new(0+(255*(1-rate)),(255*rate),(255*rate),192)
+      end
+      return [color_left,color_right] if single == "C" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＧＥＮＥＲＡＴＥ　ＤＩＳＰＬＡＹ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "D" || single.nil?
+      # ＤＩＳＰＬＡＹ ==
+      # Define the display for gauge text.
+      display = info[1]
+      return display if single == "D" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＲＥＴＵＲＮ ->
+    # The completed Gauge Container
+    [rate,color_left,color_right,display]
+  end; end # Close Subparameter
+
+  if BWX::SGV3::Vars::MODULES_SG_DRGN && BWX::Core::Optionals.Dragon?
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.SP(focus,single=nil)
+  #═════════════════════════════════════════════════════════════════════════════
+  def SP(focus,single=nil)
+
+    # ＲＡＴＥ ==
+    # Formula / Method to fetch the current % of value.
+    rate = focus.sp_rate
+    return rate if single == "R" # ＲＥＴＵＲＮ ->
+
+    # ＧＥＮＥＲＡＴＥ　ＣＯＬＯＲＳ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "C" || single.nil?
+      # ＣＯＬＯＲ　ＬＥＦＴ ==
+      # Define the colors for the left gradient half.
+      color_left =
+        @Colorspace ? Auto_Color([60,62],rate) :
+                      Color.new(0+(80*(1-rate)),(75*rate),(150*rate),192)
+
+      # ＣＯＬＯＲ　ＲＩＧＨＴ ==
+      # Define the colors for the right gradient half.
+      color_right =
+        @Colorspace ? Auto_Color([61,63],rate) :
+                     Color.new(115+(105*rate),115+(105*rate),115+(105*rate),192)
+      return [color_left,color_right] if single == "C" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＧＥＮＥＲＡＴＥ　ＤＩＳＰＬＡＹ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "D" || single.nil?
+      # ＤＩＳＰＬＡＹ ==
+      # Define the display for gauge text.
+      display = [Vocab::sp_a, focus.sp, focus.msp]
+      return display if single == "D" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＲＥＴＵＲＮ ->
+    # The completed Gauge Container
+    [rate,color_left,color_right,display]
+  end # Close SP
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.WP(focus,single=nil)
+  #═════════════════════════════════════════════════════════════════════════════
+  def WP(focus,single=nil)
+
+    # ＲＡＴＥ ==
+    # Formula / Method to fetch the current % of value.
+    rate = focus.wp_rate
+    return rate if single == "R" # ＲＥＴＵＲＮ ->
+
+    # ＧＥＮＥＲＡＴＥ　ＣＯＬＯＲＳ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "C" || single.nil?
+      # ＣＯＬＯＲ　ＬＥＦＴ ==
+      # Define the colors for the left gradient half.
+      color_left =
+        @Colorspace ? Auto_Color([44,46],rate) :
+                      Color.new(80-(32*rate),(80*rate),(16*rate),192)
+
+      # ＣＯＬＯＲ　ＲＩＧＨＴ ==
+      # Define the colors for the right gradient half.
+      color_right =
+        @Colorspace ? Auto_Color([45,47],rate) :
+                      Color.new(0+(255*(1-rate)),(128*rate),(255*rate),192)
+      return [color_left,color_right] if single == "C" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＧＥＮＥＲＡＴＥ　ＤＩＳＰＬＡＹ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "D" || single.nil?
+      # ＤＩＳＰＬＡＹ ==
+      # Define the display for gauge text.
+      display = [Vocab::wp_a, focus.wp, focus.mwp]
+      return display if single == "D" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＲＥＴＵＲＮ ->
+    # The completed Gauge Container
+    [rate,color_left,color_right,display]
+  end # Close SP
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.VC(focus,single=nil)
+  #═════════════════════════════════════════════════════════════════════════════
+  def VC(focus,single=nil)
+
+    # ＲＡＴＥ ==
+    # Formula / Method to fetch the current % of value.
+    rate = focus.vc_rate
+    return rate if single == "R" # ＲＥＴＵＲＮ ->
+
+    # ＧＥＮＥＲＡＴＥ　ＣＯＬＯＲＳ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "C" || single.nil?
+      # ＣＯＬＯＲ　ＬＥＦＴ ==
+      # Define the colors for the left gradient half.
+      color_left =
+        @Colorspace ? Auto_Color([48,50],rate) :
+                      Color.new((64*rate),(0*rate),(64*rate),192)
+
+      # ＣＯＬＯＲ　ＲＩＧＨＴ ==
+      # Define the colors for the right gradient half.
+      color_right =
+        @Colorspace ? Auto_Color([49,51],rate) :
+                      Color.new((150*rate),(0*rate),(150*rate),192)
+      return [color_left,color_right] if single == "C" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＧＥＮＥＲＡＴＥ　ＤＩＳＰＬＡＹ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "D" || single.nil?
+      # ＤＩＳＰＬＡＹ ==
+      # Define the display for gauge text.
+      display = [Vocab::vc_a, focus.vc, focus.mvc]
+      return display if single == "D" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＲＥＴＵＲＮ ->
+    # The completed Gauge Container
+    [rate,color_left,color_right,display]
+  end # Close SP
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.LF(focus,single=nil)
+  #═════════════════════════════════════════════════════════════════════════════
+  def LF(focus,single=nil)
+
+    # ＲＡＴＥ ==
+    # Formula / Method to fetch the current % of value.
+    rate = focus.lf_rate
+    return rate if single == "R" # ＲＥＴＵＲＮ ->
+
+    # ＧＥＮＥＲＡＴＥ　ＣＯＬＯＲＳ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "C" || single.nil?
+      # ＣＯＬＯＲ　ＬＥＦＴ ==
+      # Define the colors for the left gradient half.
+      color_left =
+        @Colorspace ? Auto_Color([52,54],rate) :
+                      Color.new((50*rate),50+(-50*rate),50+(-50*rate),192)
+
+      # ＣＯＬＯＲ　ＲＩＧＨＴ ==
+      # Define the colors for the right gradient half.
+      color_right =
+        @Colorspace ? Auto_Color([53,55],rate) :
+                      Color.new((150*rate),(0*rate),(0*rate),192)
+      return [color_left,color_right] if single == "C" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＧＥＮＥＲＡＴＥ　ＤＩＳＰＬＡＹ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "D" || single.nil?
+      # ＤＩＳＰＬＡＹ ==
+      # Define the display for gauge text.
+      display = [Vocab::lf_a, focus.lf, focus.mlf]
+      return display if single == "D" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＲＥＴＵＲＮ ->
+    # The completed Gauge Container
+    [rate,color_left,color_right,display]
+  end # Close SP
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.DV(focus,single=nil)
+  #═════════════════════════════════════════════════════════════════════════════
+  def DV(focus,single=nil)
+
+    # ＲＡＴＥ ==
+    # Formula / Method to fetch the current % of value.
+    rate = focus.dv_rate
+    return rate if single == "R" # ＲＥＴＵＲＮ ->
+
+    # ＧＥＮＥＲＡＴＥ　ＣＯＬＯＲＳ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "C" || single.nil?
+      # ＣＯＬＯＲ　ＬＥＦＴ ==
+      # Define the colors for the left gradient half.
+      color_left =
+        @Colorspace ? Auto_Color([56,58],rate) :
+                      Color.new((150*rate),(150*rate),(150*rate),192)
+
+      # ＣＯＬＯＲ　ＲＩＧＨＴ ==
+      # Define the colors for the right gradient half.
+      color_right =
+        @Colorspace ? Auto_Color([57,59],rate) :
+                      Color.new((255*rate),(255*rate),(196*rate),192)
+      return [color_left,color_right] if single == "C" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＧＥＮＥＲＡＴＥ　ＤＩＳＰＬＡＹ　ＩＦ　ＲＥＱＵＥＳＴＥＤ　ＯＲ　ＩＦ　ＣＯＮＳＴＲＵＣＴＩＮＧ
+    if single == "D" || single.nil?
+      # ＤＩＳＰＬＡＹ ==
+      # Define the display for gauge text.
+      display = [Vocab::dv_a, focus.dv, focus.mdv]
+      return display if single == "D" # ＲＥＴＵＲＮ ->
+    end
+
+    # ＲＥＴＵＲＮ ->
+    # The completed Gauge Container
+    [rate,color_left,color_right,display]
+  end; end # Close Dragon Bars
 end; end; end # Close BWX::SGV3::Gauges
 
 #═══════════════════════════════════════════════════════════════════════════════
@@ -1095,26 +1324,6 @@ class Window_Base < Window
     draw_sleek_gauge(x,y,w,"Eval",nil,h,s,tpos,nt1,nt2,args)
   end
 
-  if BWX::SGV3::Vars::MODULES_SG_PRAM
-  #═════════════════════════════════════════════════════════════════════════════
-  # ＤＥＦＩＮＥ: Window_Base.draw_focus_param
-  # - (focus,x,y,w,p_id,[h,s,tpos,notext,notag])
-  #═════════════════════════════════════════════════════════════════════════════
-  def draw_focus_param(focus,x,y,w,p_id,
-                      tpos=:up,s="",nt1=false,nt2=false,h=@SG3__Height)
-    draw_sleek_gauge(x,y,w,"Param",focus,h,s,tpos,nt1,nt2,[p_id])
-  end
-
-  #═════════════════════════════════════════════════════════════════════════════
-  # ＤＥＦＩＮＥ: Window_Base.draw_focus_subparam
-  # - (focus,x,y,w,p_type,p_id,[h,s,tpos,notext,notag])
-  #═════════════════════════════════════════════════════════════════════════════
-  def draw_focus_subp(focus,x,y,w,p_type,p_id,disptype="N",
-                      tpos=:up,s="",nt1=false,nt2=false,h=@SG3__Height)
-    args = [p_type,p_id,disptype]
-    draw_sleek_gauge(x,y,w,"Sub",focus,h,s,tpos,nt1,nt2,args)
-  end; end
-
   if BWX::SGV3::Vars::MODULES_SG_ATBS
   #═════════════════════════════════════════════════════════════════════════════
   # ＤＥＦＩＮＥ: Window_Base.draw_sg_atb
@@ -1142,7 +1351,7 @@ class Window_Base < Window
   def draw_focus_catb(focus,x,y,
                       w=124,tpos=:up,s="",nt1=true,nt2=true,h=@SG3__Height)
     draw_sleek_gauge(x,y,w,"CATB",focus,h,s,tpos,nt1,nt2)
-  end; end
+  end; end # Close ATBS
 
   if BWX::SGV3::Vars::MODULES_SG_MHPB
   #═════════════════════════════════════════════════════════════════════════════
@@ -1176,7 +1385,90 @@ class Window_Base < Window
     s = BWX::SGV3::Vars::Gauge_Styles["MHPB"]
     draw_sg_atb(battler,x,y,w,tpos,s,nt1,nt2,h)
     ModifySGAddonType(x,y,"MHPB")
-  end; end
+  end; end # Close MHPB
+
+  if BWX::SGV3::Vars::MODULES_SG_PRAM
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.draw_focus_param
+  # - (focus,x,y,w,p_id,[h,s,tpos,notext,notag])
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_focus_param(focus,x,y,w,p_id,
+                      tpos=:up,s="",nt1=false,nt2=false,h=@SG3__Height)
+    draw_sleek_gauge(x,y,w,"Param",focus,h,s,tpos,nt1,nt2,[p_id])
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.draw_focus_subparam
+  # - (focus,x,y,w,p_type,p_id,[h,s,tpos,notext,notag])
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_focus_subp(focus,x,y,w,p_type,p_id,
+                      tpos=:up,s="",nt1=false,nt2=false,h=@SG3__Height)
+    args = subp_disptype(p_type,p_id)
+    draw_sleek_gauge(x,y,w,"Sub",focus,h,s,tpos,nt1,nt2,args)
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.subp_disptype(p_type,p_id)
+  # - Set the arguments for subparameter gauges
+  #═════════════════════════════════════════════════════════════════════════════
+  def subp_disptype(p_type,p_id)
+    disptype = "%"
+    case p_type
+    when 0
+      disptype = "N" if p_id == 1
+    when 3
+      case p_id
+      when 2 .. 6, 21 .. 30; disptype = "N"
+      end
+    end
+    return [p_type,p_id,disptype]
+  end; end # Close Params
+
+  if BWX::SGV3::Vars::MODULES_SG_DRGN && BWX::Core::Optionals.Dragon?
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.draw_focus_sp
+  # - (focus,x,y,[w,h,s,tpos,notext,notag])
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_focus_sp(focus,x,y,
+                      w=124,tpos=:up,s="",nt1=false,nt2=false,h=@SG3__Height)
+    draw_sleek_gauge(x,y,w,"SP",focus,h,s,tpos,nt1,nt2)
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.draw_focus_wp
+  # - (focus,x,y,[w,h,s,tpos,notext,notag])
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_focus_wp(focus,x,y,
+                      w=124,tpos=:up,s="",nt1=false,nt2=false,h=@SG3__Height)
+    draw_sleek_gauge(x,y,w,"WP",focus,h,s,tpos,nt1,nt2)
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.draw_focus_vc
+  # - (focus,x,y,[w,h,s,tpos,notext,notag])
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_focus_vc(focus,x,y,
+                      w=124,tpos=:up,s="",nt1=false,nt2=false,h=@SG3__Height)
+    draw_sleek_gauge(x,y,w,"VC",focus,h,s,tpos,nt1,nt2)
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.draw_focus_lf
+  # - (focus,x,y,[w,h,s,tpos,notext,notag])
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_focus_lf(focus,x,y,
+                      w=124,tpos=:up,s="",nt1=false,nt2=false,h=@SG3__Height)
+    draw_sleek_gauge(x,y,w,"LF",focus,h,s,tpos,nt1,nt2)
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Window_Base.draw_focus_dv
+  # - (focus,x,y,[w,h,s,tpos,notext,notag])
+  #═════════════════════════════════════════════════════════════════════════════
+  def draw_focus_dv(focus,x,y,
+                      w=124,tpos=:up,s="",nt1=false,nt2=false,h=@SG3__Height)
+    draw_sleek_gauge(x,y,w,"DV",focus,h,s,tpos,nt1,nt2)
+  end; end # Close Dragon
 end # Close Window_Base
 
 =begin ═════════════════════════════════════════════════════════════════════════
@@ -1461,24 +1753,100 @@ module BWX; module SGV3; class Gauges
     end
   end
 
+  if BWX::SGV3::Vars::MODULES_SG_PRAM
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.calc_resource_rates(value)
+  #═════════════════════════════════════════════════════════════════════════════
+  def calc_resource_rates(value)
+    value = value.to_f
+    maximum = 1
+    minimum = 0
+    maximum = [@actor.param(1), maximum].max
+    minimum = [@actor.param(1), minimum].min
+    if BWX::SGV3::Vars::MODULES_SG_DRGN && BWX::Core::Optionals.Dragon?
+      for i in 2..6
+        maximum = [@actor.dparam(i), maximum].max
+        minimum = [@actor.dparam(i), minimum].min
+      end
+    end
+    return (value - minimum) / (maximum - minimum).to_f
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.calc_armour_rates(value)
+  #═════════════════════════════════════════════════════════════════════════════
+  def calc_armour_rates(value)
+    value = value.to_f
+    maximum = 1
+    minimum = 0
+    for i in 21..30
+      maximum = [@actor.dparam(i), maximum].max
+      minimum = [@actor.dparam(i), minimum].min
+    end
+    return (value - minimum) / (maximum - minimum).to_f
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.calculate_sub_rate(maximum, current, invert)
+  #═════════════════════════════════════════════════════════════════════════════
+  def calculate_sub_rate(maximum, current, invert)
+    if(!invert)
+      return 1.0 if current >= maximum
+      rate = current.to_f/maximum.to_f
+    else
+      return 0 if current >= maximum
+      rate = 1-(current.to_f/maximum.to_f)
+    end
+    return rate
+  end
+
   #═════════════════════════════════════════════════════════════════════════════
   # ＤＥＦＩＮＥ: BWX::SGV3::Gauges.SG_Sub_Info(type,id)
   #═════════════════════════════════════════════════════════════════════════════
   def SG_Sub_Info(focus,type,id)
-    Display("DO SHIT HERE LINE 1298")
     case type
-    when 1
-      #case id
-      #end
-    when 2
-      #case id
-      #end
-    when 3
-      #case id
-      #end
+    when 0  # Main Params
+      case id
+      when 1
+        value = focus.param(id)
+        rate  = calc_resource_rates(value)
+        vocab = "Max " + Vocab::param(id)
+      end
+    when 1  # X-Params
+      value = @actor.xparam(id)
+      rate  = calculate_sub_rate(focus.xparam_max(id),value,false)
+      vocab = Vocab::xparam(id)
+      value = value.percent
+    when 2  # S-Params
+      value = @actor.sparam(id)
+      case param_id
+      when 0, 4, 6 .. 8
+        rate = calculate_sub_rate(focus.sparam_max(id),value,true)
+      when 1 .. 3, 5, 9
+        rate = calculate_sub_rate(focus.sparam_max(id),value,false)
+      end
+      vocab = Vocab::sparam(id)
+      value = value.percent
+    when 3  # D-Params (Only if using DRGN Addons)
+      value = @actor.dparam(id)
+      case param_id
+      when 0 .. 1; return
+      when 2, 7 .. 10, 12 .. 20
+        rate = calculate_sub_rate(focus.dparam_max(id),value,false)
+      when 11
+        rate = calculate_sub_rate(focus.dparam_max(id),value,true)
+      when 3..6
+        rate = calc_resource_rates(value)
+      when 21..30
+        rate = calc_armour_rates(value)
+      end
+      vocab = Vocab::dparam(id)
+      case param_id
+      when 7..20; value = focus.dparam(id).percent
+      end
     end
-    return [rate,display]
-  end # Close SG_Sub_Info
+    return [rate,[vocab,value,0]]
+  end; end # Close SG_Sub_Info
 
 end; end; end # Close BWX::SGV3::Gauges
 
@@ -1678,7 +2046,7 @@ end # Close Window_Base
 # ＣＬＡＳＳ: Sleeker_Gauge.
 #═══════════════════════════════════════════════════════════════════════════════
 class Sleeker_Gauge
-  attr_reader :x, :y, :w, :s, :type, :focus, :GaugeRect
+  attr_reader :x, :y, :w, :s, :type, :focus, :GaugeRect, :col1, :col2
   #═════════════════════════════════════════════════════════════════════════════
   # ＩＮＩＴＩＡＬＩＺＥ
   #═════════════════════════════════════════════════════════════════════════════
@@ -1973,7 +2341,8 @@ class Sleeker_Gauge
       backcol2.alpha = 96
     end
 
-    if @AlphaCorr && @win.class != Window_Realtime
+    if @AlphaCorr && (BWX::Core::Optionals.YEA_Battle? && 
+                        @win.class != Window_Realtime)
       if @win.opacity == 0
         col1.alpha = 255
         col2.alpha = 255
@@ -2210,6 +2579,14 @@ class Sleeker_Gauge
       wait_for_clear("T",type)
       wait_for_clear("S",s)
     end
+  end
+
+  #═════════════════════════════════════════════════════════════════════════════
+  # ＤＥＦＩＮＥ: Sleeker_Gauge.retype(type)
+  #═════════════════════════════════════════════════════════════════════════════
+  def recolor(col1,col2)
+    @col1 = col1
+    @col2 = col2
   end
 
   #═════════════════════════════════════════════════════════════════════════════
@@ -2507,7 +2884,7 @@ if BWX::Core::Optionals.YEA_Battle?
       hw = (rect.width-12)/2
       # Divided
       dw = (rw-6)/2
-      dy = line_height*3-4
+      dy = line_height*3-8
 
       if draw_tp?(actor) && draw_mp?(actor)
         draw_actor_tp(actor, rx,      dy, dw, :down)
@@ -2994,10 +3371,11 @@ if BWX::SGV3::Vars::MODULES_SG_MHPB
         npy += 24 - Font.default_size if @MHPB_ShowNam
       end
 
-      @hity = (@mbhp_h * 5 + 15) - @mbhp_bn
-      @mpy  = (@mbhp_h * 4 +  8) - @mbhp_bn
-      @hpy  = (@mbhp_h * 3 +  4) - @mbhp_bn
-      @atby = (@mbhp_h * 2 +  0) - @mbhp_bn
+      fixy = 3 # Moves gauges down some for odd text issues. Adjust as needed.
+      @hity = (@mbhp_h * 5 + 15 + fixy) - @mbhp_bn
+      @mpy  = (@mbhp_h * 4 +  8 + fixy) - @mbhp_bn
+      @hpy  = (@mbhp_h * 3 +  4 + fixy) - @mbhp_bn
+      @atby = (@mbhp_h * 2 +  0 + fixy) - @mbhp_bn
 
       npy+= @MHPB_ShowNam ? Font.default_size : 0
       hpy = @MHPB_ShowHit ? 15 + Font.default_size : 0
@@ -3027,14 +3405,8 @@ if BWX::SGV3::Vars::MODULES_SG_MHPB
         return true if @SG3_LoadATB && @MHPB_ShowATB
         return true if targeted?
         return @visible_counter.to_b
-      else
-        Debug("WHAT DID YOU DO!?",
-          "Window_MHPB.window_visible? was called outside of battle.",
-          "Caught on fire and was thrown out of the nearest airlock.",
-          true, true) rescue msg_box("Doot, Doot! Mr. Skeltal says:" + 
-            "\n\"good bones and much calcium comes your way~\"" +
-            "\nSo helpful, I know. Thanks Mr. Skeltal")
       end
+      return false
     end
 
     #═══════════════════════════════════════════════════════════════════════════
@@ -3323,10 +3695,16 @@ if BWX::SGV3::Vars::MODULES_SG_MHPB
 end
 
 =begin ═════════════════════════════════════════════════════════════════════════
-│ RPGM-X Sleek Performance Manager
-│ Since I haven't yet made the full Performance Manager to solve the issues in
-│ Spriteset_Map and a few other places due to high-rez, I have included a lite
-│ version to shore up all the lag I can in the immediate.
+│ RPGM-X Sleeker Dragon System Bars
+│ Simple enough, makes Sleeker Gauges for my Dragon Combat Overhaul
+=end # ═════════════════════════════════════════════════════════════════════════
+
+if BWX::SGV3::Vars::MODULES_SG_DRGN && BWX::Core::Optionals.Dragon?
+end
+
+=begin ═════════════════════════════════════════════════════════════════════════
+│ RPGM-X Sleeker Performance Manager
+│ Handles things the main Performance Manager will, just only for the gauges.
 =end # ═════════════════════════════════════════════════════════════════════════
 unless BWX::Core::Optionals.Perfman?
   #═════════════════════════════════════════════════════════════════════════════
