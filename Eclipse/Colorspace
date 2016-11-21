@@ -20,6 +20,7 @@
 │
 │ Dependencies:   Eclipse Core (High Order Placement)
 │                 Colorspace Image Placed into Graphics/System
+│                 http://i.imgur.com/iMx83Ia.png
 │
 │ Description:    Manages color settings across your platform.
 │                 Modifies the existing text_color and get_color to use Eclipse.
