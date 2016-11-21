@@ -1,0 +1,2596 @@
+=begin ═════════════════════════════════════════════════════════════════════════
+│ ► CODE HEADER ◄
+│ Name:           Eclipse Core (High Order Placement)
+│ Author:         Black Wyvern
+│ Forum:          RPGMC.com /topic/XXXXX-eclipse-engine/
+│                 RPGMC.com == (http://www.rpgmakercentral.com/)
+│
+│ Created:        04/24/16
+│ Updated:        10/20/16
+│ Version:        1.0
+│ License:        http://creativecommons.org/licenses/by-sa/3.0/
+=end #══════════════════════════════════════════════════════════════════════════
+
+# ► ECLIPSE ENGINE ACTIVATION ◄ ════════════════════════════════════════════════
+  $Eclipse_GEnable = true # Master enable switch for Eclipse/BWX/RPGM-X scripts.
+#═══════════════════════════════════════════════════════════════════════════════
+
+=begin ═════════════════════════════════════════════════════════════════════════
+│ ► CODE DOCUMENTATION ◄
+│ 
+│ Dependencies:   Inherit from: MGC Tilemap Ace (If Enabled)
+│
+│ Description:    The core engine for Eclipse scripts.
+│
+│                 Includes methods that add/perform:
+│                   ► New methods for more intuitive data control
+│                   ► Efficient resolution breaking
+│                   ► All-round FPS improvements
+│                   ► Rescaling of scene backgrounds to higher resoultions
+│                   ► New Window opening style
+│                   ► Window word wrapping
+│                   ► Text Cacheing
+│                   ► Publically available bugfixes
+│
+│                 Adds the following data types:
+│                   ► Coordinate.new(x,y)
+│                   ► Size.new(h,w)
+│
+│                 Adds the following methods:
+│                   ► Coordinate
+│                     ► Coordinate.to_a
+│                     ► Coordinate.break
+│                     ► Coordinate.to_s
+│                   ► Size
+│                     ► Size.w/w=
+│                     ► Size.h/h=
+│                     ► Size.biggerThan?
+│                     ► Size.smallerThan?
+│                     ► Size.equalTo?
+│                     ► Size.sizeCompare
+│                     ► Size.to_a
+│                     ► Size.break
+│                     ► Size.to_s
+│                   ► Rect
+│                     ► constructRect(coord,size)
+│                     ► Rect.containsCoord?
+│                     ► Rect.containsRect?
+│                     ► Rect.w/w=
+│                     ► Rect.h/h=
+│                     ► Rect.left
+│                     ► Rect.right
+│                     ► Rect.top
+│                     ► Rect.bottom
+│                     ► Rect.center
+│                     ► Rect.pos/pos=
+│                     ► Rect.translate
+│                     ► Rect.size/size=
+│                     ► Rect.to_a
+│                     ► Rect.break
+│                   ► Numeric
+│                     ► Numeric.group
+│                     ► Numeric.clamp
+│                     ► Numeric.round_to
+│                     ► Numeric.negative?
+│                     ► Numeric.positive?
+│                     ► Numeric.percent
+│                     ► Numeric.unpercent
+│                     ► Numeric.to_b
+│                     ► Numeric.!
+│                     ► Numeric.to_tri
+│                     ► Numeric.min!
+│                     ► Numeric.max!
+│                   ► TrueClass
+│                     ► TrueClass.to_i
+│                   ► FalseClass
+│                     ► FalseClass.to_i
+│                   ► String
+│                     ► String.what_is_this?
+│                     ► String.to_b
+│                     ► String.!
+│                     ► String.^  (Uppercase)
+│                     ► String._  (Lowercase)
+│                     ► String./  (Swapcase)
+│                     ► String.Cc (CamelCase)
+│                     ► String.~  (Scramble)
+│                   ► Float
+│                     ► Float.clone
+│                   ► Bitmap
+│                     ► Bitmap.file
+│                     ► Bitmap.w
+│                     ► Bitmap.h
+│                     ► Bitmap.left
+│                     ► Bitmap.right
+│                     ► Bitmap.top
+│                     ► Bitmap.bottom
+│                     ► Bitmap.center
+│                     ► Bitmap.pos/pos=
+│                     ► Bitmap.translate
+│                     ► Bitmap.size/size=
+│                     ► Bitmap.to_a
+│                     ► Bitmap.break
+│                   ► Viewport
+│                     ► Viewport.w
+│                     ► Viewport.h
+│                     ► Viewport.left
+│                     ► Viewport.right
+│                     ► Viewport.top
+│                     ► Viewport.bottom
+│                     ► Viewport.center
+│                     ► Viewport.pos/pos=
+│                     ► Viewport.translate
+│                     ► Viewport.size/size=
+│                     ► Viewport.to_a
+│                     ► Viewport.break
+│                   ► Graphics
+│                     ► Graphics.size
+│                     ► Graphics.rect
+│                   ► Window
+│                     ► Window.w
+│                     ► Window.h
+│                     ► Window.rect
+│                     ► Window.pos/pos=
+│                     ► Window.size/size=
+│                     ► Window.contents_size
+│                   ► Game_Actor
+│                     ► Game_Actor.xp_rate
+│                     ► Game_Actor.xp_to_next
+│                     ► Game_Actor.xp_in_level
+│
+│                 Impliments resolution breaking with:
+│                   ► Eclipse Plane Rewrite
+│                   ► MGC Tilemap Ace
+│                   ► Σ Fullscreen / Resolution Breaker
+│                   ► FenixFyre Plane Optimizations
+│                   ► Hex Window DLL Override
+│
+│                 Improves general FPS performance by:
+│                   ► Implimenting a once-per-frame update limit 
+│                   ► Impliments a frameskip mechanic for non-critical methods
+│                   ► Fixes FPS losses with MGC and Σ running
+│                   ► FenixFyre Plane Optimizations
+│                   ► Hex Window DLL Override
+│
+│                 Upscales background scene images dynamically
+│                   ► May need to read implimentation to add third party scenes
+│
+│                 Also includes:
+│                   ► Yanfly's Digit Grouping
+│                   ► Horizontal and vertical window opening style
+│                   ► Kilozapit's Word Wrap
+│                   ► Mithran's Text Cacheing
+│
+│                 Included public bugfixes:
+│                   ► Event Jitter Fix / Display Rounding Error Fix 
+│                   ► Tile Passibility Fix
+│                   ► Screen Shake Fix
+│                   ► Vehicle BGM Fix
+│                   ► Invalid Character Fix
+│                   ► Map Name Load Fix
+│                   ► Arrow Display Error Fix
+│                   ► Custom Movement Event Update
+│
+│ Configuration:  Set plugin and resolution options.
+│
+│ Instructions:   Plug and Play
+│
+│ Optional:       All other Eclipse Scripts
+│
+│ Compatability:  Base
+│                 Incompatible with any other resolution breakers.
+│                 Does odd things to animated ox slide gauges. (Working on that)
+│
+│ Order:          High
+│
+│ Position:       ▼ Materials
+│                 ► Eclipse - Core (High)
+│                 ► High Order Eclipse Modules
+│
+│                 (Other People's Code)
+│
+│                 ► Low Order Eclipse Modules
+│                 ▼ Main Process
+=end #══════════════════════════════════════════════════════════════════════════
+
+=begin ═══════════════════════════════════════════════════════════════════════╤╗
+│ ► CODE CREDIT ◄                                                             │║
+│ Script Name: MGC Tilemap Ace                                                │║
+│ Script Dependencies:                                                        │║
+│ - File: MGC_Map_Ace_1_6.dll in project root.                                │║
+│ - File: 3 following graphic files, placed into in Data/Pictures/            │║
+│   Autotiles_data.png                                                        │║
+│   Autotiles_data_small.png                                                  │║
+│   Autotiles_data_xsmall.png                                                 │║
+│ Author: MGC                                                                 │║
+│ Modifications: etude87, Black Wyvern                                        │║
+│ Source:  http://www.rgss-factory.net/                                       │║
+│           2012/04/15/ace-mgc-tilemap-ace-reecriture-de-la-classe-tilemap/   │║
+│ Created: --/--/--                                                           │║
+│ Updated: 04/14/16                                                           │║
+│ Version: 1.4.0                                                              │║
+│                                                                             │║
+│ ► CODE CREDIT ◄                                                             │║
+│ Script Name: Name: Σ Fullscreen / Resolution Breaker                        │║
+│ Script Dependencies: None                                                   │║
+│ Author: Gabriel "Gab!" Teles                                                │║
+│ Modifications: Black Wyvern                                                 │║
+│ Source:  http://pastebin.com/q4Hr6FsW                                       │║
+│ Created: 09/27/14                                                           │║
+│ Updated: 04/02/16                                                           │║
+│ Version: 0.9.3                                                              │║
+│                                                                             │║
+│ ► CODE CREDIT ◄                                                             │║
+│ Snippet Name: Plane Optimizations                                           │║
+│ Snippet Dependency: None                                                    │║
+│ Author: FenixFyreX                                                          │║
+│ Modifications: None                                                         │║
+│ Source: http://pastebin.com/Db9r1jmb                                        │║
+│ Forums: Fourms.RPGMW /index.php?/topic/32293-rgss3-plane/                   │║
+│ Created: --/--/--                                                           │║
+│ Updated: 23/11/14                                                           │║
+│ Version: 1.3.3                                                              │║
+│                                                                             │║
+│ ► CODE CREDIT ◄                                                             │║
+│ Snippet Name: Hex Window                                                    │║
+│ Snippet Dependency: None                                                    │║
+│ Author: The Unknown Scripter (That's what we call him anyways..)            │║
+│ Modifications: Gab!                                                         │║
+│ Source: http://pastebin.com/sM2MNJZj                                        │║
+│ Forums: None                                                                │║
+│ Created: 10/24/13                                                           │║
+│ Updated: 04/02/16                                                           │║
+│ Version: Unknown                                                            │║
+│                                                                             │║
+│ ► CODE CREDIT ◄                                                             │║
+│ Script Name: Yanfly Engine Ace                                              │║
+│ Script Dependencies: None                                                   │║
+│ Author: Yanfly                                                              │║
+│ Modifications: Black Wyvern                                                 │║
+│ Source:  https://yanflychannel.wordpress.com/                               │║
+│               rmvxa/core-scripts/ace-core-engine/                           │║
+│ Created: 12/10/11                                                           │║
+│ Updated: 02/19/12                                                           │║
+│ Version: Unknown                                                            │║
+│                                                                             │║
+│ ► CODE CREDIT ◄                                                             │║
+│ Code Name: Text Cache                                                       │║
+│ Code Dependency: None                                                       │║
+│ Author: Mithran                                                             │║
+│ Modifications: Black Wyvern                                                 │║
+│ Source: http://pastebin.com/fRFFYgRt                                        │║
+│ Forums: Forums.RPGMW /index.php?/topic/1001-text-cache/                     │║
+│ Created: 03/27/12                                                           │║
+│ Updated: 07/04/14                                                           │║
+│ Version: 1.03                                                               │║
+│                                                                             │║
+│ ► CODE CREDIT ◄                                                             │║
+│ Script Name: Word Wrap                                                      │║
+│ Script Dependencies: None                                                   │║
+│ Author: KiloZapit                                                           │║
+│ Modifications: Black Wyvern                                                 │║
+│ Source:  RPGMC.com /topic/6964-word-wrapping-message-boxes/                 │║
+│ Created: 11/11/12                                                           │║
+│ Updated: 08/12/12                                                           │║
+│ Version: The Seventh                                                        │║
+=end #════════════════════════════════════════════════════════════════════════╧╝
+
+=begin ═══════════════════════════════════════════════════════════════════════╤╗
+│ ► SNIPPET/BUGFIX CREDIT ◄                                                   │║
+│ Snippet Name: Event Jitter Fix / Display Rounding Error Fix                 │║
+│ Snippet Dependency: None                                                    │║
+│ Author: Neon Black                                                          │║
+│                                                                             │║
+│ ► SNIPPET/BUGFIX CREDIT ◄                                                   │║
+│ Snippet Name: Tile Passibility Fix                                          │║
+│ Snippet Dependency: None                                                    │║
+│ Author: Neon Black                                                          │║
+│                                                                             │║
+│ ► SNIPPET/BUGFIX CREDIT ◄                                                   │║
+│ Snippet Name: Screen Shake Fix                                              │║
+│ Snippet Dependency: None                                                    │║
+│ Author: Hiino                                                               │║
+│                                                                             │║
+│ ► SNIPPET/BUGFIX CREDIT ◄                                                   │║
+│ Snippet Name: Vehicle BGM Fix                                               │║
+│ Snippet Dependency: None                                                    │║
+│ Author: Hime                                                                │║
+│                                                                             │║
+│ ► SNIPPET/BUGFIX CREDIT ◄                                                   │║
+│ Snippet Name: Invalid Character Fix                                         │║
+│ Snippet Dependency: None                                                    │║
+│ Author: LoneWolf                                                            │║
+│                                                                             │║
+│ ► SNIPPET/BUGFIX CREDIT ◄                                                   │║
+│ Snippet Name: Map Name Load Fix                                             │║
+│ Snippet Dependency: None                                                    │║
+│ Author: Crazyninjaguy                                                       │║
+│                                                                             │║
+│ ► SNIPPET/BUGFIX CREDIT ◄                                                   │║
+│ Snippet Name: Arrow Display Error Fix                                       │║
+│ Snippet Dependency: None                                                    │║
+│ Author: Mezzolan                                                            │║
+│                                                                             │║
+│ ► SNIPPET/BUGFIX CREDIT ◄                                                   │║
+│ Snippet Name: Custom Movement Event Update                                  │║
+│ Snippet Dependency: None                                                    │║
+│ Author: Kread                                                               │║
+=end #════════════════════════════════════════════════════════════════════════╧╝
+
+#     ╔═══════════════════════════════╗
+# ════╝ ► MASTER ACTIVATION HANDLER ◄ ╚═════════════════════════════════════════
+# ■ ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤  DO NOT EDIT  ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ ■
+  active = $Global_Enable = $Eclipse_GEnable
+  ($imported||={})["Eclipse-Core-H"]=[active,1.0]
+  unless active; msgbox("Eclipse Global Enable: False\n\n"+
+    "All Eclipse/BWA/RPGM-X scripts will be disabled."); else
+# ■ ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤  DO NOT EDIT  ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ ■
+#═══════════════════════════════════════════════════════════════════════════════
+
+#═══════════════════════════════════════════════════════════════════════════════
+#                ► START OF SAFE CODE CONFIGURATION OPTIONS ◄
+#═══════════════════════════════════════════════════════════════════════════════
+
+# Class: Eclipse ═══════════════════════════════════════════════════════════════
+class Eclipse
+  module Core_Settings
+    # If you don't rescale the client, or scale it to anything below 640x480
+    # Eclipse will automatically disable Sigma Resolution and MGC Tileset.
+
+    # If you are rescaling past the 640x480 limit, keep to multiples of 32 for
+    #   X and Y. It's not mandatory, but tiles line up if you do this.
+    # Please note, image transitions are handled differently if upscaled.
+
+    ScreenResolution = [1024,768]
+
+    # Multi-Scene Image Resolution Correction: Attempts to correct resolution
+    #   scaling on Battlebacks and Scene Backgrounds
+    #
+    # ListMSIRC_Scenes Scenes to apply rescaling to. (Ignores invalid scenes.)
+    # ListMSIRCSprites If a specific scene uses a sprite that does appear on
+    #   this list, you will need to add it in. Otherwise, any background that
+    #   uses the listed variable names will be resized.
+
+    CorrectBatlBakSz = true     # Apply to Battlebacks
+    CorrectSceneBgSz = true     # Apply to Scene Backgrounds
+
+    ListMSIRC_Scenes =          
+      ["Title","Gameover","MenuBase","Shards"]
+    ListMSIRCSprites =          
+      ["@background_sprite","@sprite","@sprite1","@sprite2"]
+
+  end
+
+  module Window
+    Windowskin  = "Window"
+    LineHeight  = 24
+    Padding     = 12
+    Semi_Alpha  = 160
+    UseWinTone  = false   # Use the default window recoloring system
+
+    AdvncdOpen  = true    # Scales width as well as height for opening windows
+    OpenFrames  = 15      # Number of frames to execute window open and close
+
+    SelSpacing  = 32      # Pixels between horizontal items in Window_Selectable
+    Cmd_Width   = 160     # Width of default Window_Commands
+    IS_Columns  = 3       # Number of columns in Window_Item/Skill. Default 2
+    Word_Wrap   = true    # Uses Kilozapit's WordWrapping to improve appearance.
+  end
+end
+
+# Module: Text Cache ═══════════════════════════════════════════════════════════
+module TextCache
+  Enabled               = true # Turn Text Caching on and off (Should be on)
+  DisableSqueeze        = false
+  MinSqueezeTriggerRate = 1.5
+  BufferTop             = 2
+  BufferSide            = 8
+  SimpleFix             = false
+  MaxDrawWidthSoft      = 640
+  MaxDrawWidthHard      = 2016
+  BufferLength          = 300
+end
+
+# Module: MGC ══════════════════════════════════════════════════════════════════
+module MGC
+  TilemapsForEveryone = true  # Uses MGC Tilemap for every map, if it's enabled.
+  TilemapsForIDs = [001, 002] # Otherwise, use specific these Map IDs
+  ImSoHighRightNow = false    # Easter Egg: Enable for map shenanigans.
+end
+
+#═══════════════════════════════════════════════════════════════════════════════
+#                ► END OF SAFE CODE CONFIGURATION OPTIONS ◄
+#═══════════════════════════════════════════════════════════════════════════════
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ☄☢☣      EXPLOSIVE, RADIOACTIVE, CLASS-4 BIOHAZARD CODE WARNING      ☣☢☄
+# ■ ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ DO NOT CROSS ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ ■
+#═══════════════════════════════════════════════════════════════════════════════
+
+# Class: Numeric ═══════════════════════════════════════════════════════════════
+class Numeric
+  # Digit Grouping ═══════════════════════════════════════════════════════════
+  def group
+    return self.to_s
+    self.to_s.gsub(/(\d)(?=\d{3}(?:\.|$))(\d{3}\.)?/,'$1,$2')
+  end
+
+  # Clamp Value ══════════════════════════════════════════════════════════════
+  def clamp min, max
+    self < min ? min : (self > max ? max : self)
+  end
+
+  # Rounding, with significant figures ═══════════════════════════════════════
+  def round_to(places)
+    power = 10.0**places
+    (self * power).round / power
+  end
+
+  # Sign Logic ═══════════════════════════════════════════════════════════════
+  def negative?; self < 0; end
+  def positive?; self > 0; end
+
+  # (Un)Percent ══════════════════════════════════════════════════════════════
+  def percent; (self * 100).round; end
+  def unpercent; self.to_f / 100; end
+
+  # -> (!)Boolean ════════════════════════════════════════════════════════════
+  def to_b; self >= 1; end
+  def !; !self.to_b; end
+
+  # -> Trinary ═══════════════════════════════════════════════════════════════
+  def to_tri(value=0)
+    self <=> value
+  end
+
+  # Max/Min ══════════════════════════════════════════════════════════════════
+  def min! min;  self < min ? min : self;  end
+  def max! max;  self > max ? max : self;  end
+end # Close Numeric
+
+# Class: Coordinate ════════════════════════════════════════════════════════════
+class Coordinate
+  attr_accessor :x, :y
+  def initialize(x=0,y=0)
+    @x, @y = x, y
+  end
+
+  # CONVERSION HANDLERS ══════════════════════════════════════════════════════
+  def to_a;   [x,y];        end
+  def break;  [x,y];        end
+  def to_s
+    "(" + x.to_s + "," + y.to_s + ")"
+  end
+end
+
+# Class: Size ══════════════════════════════════════════════════════════════════
+class Size
+  attr_accessor :width, :height
+  def initialize(w=0,h=0)
+    @width, @height = w, h
+  end
+
+  # VECTOR DEFINITIONS ═══════════════════════════════════════════════════════
+  def w;      @width;       end
+  def w=(w);  @width = w;   end
+  def h;      @height;      end
+  def h=(h);  @height = h;  end
+
+  # LOGICAL OPERATIONS ═══════════════════════════════════════════════════════
+  def biggerThan?(w,h=0)
+    if w.is_a?(Size)
+      h = w.h
+      w = w.w
+    elsif w.is_a?(Array)
+      h = w[1]
+      w = w[0]
+    end
+    @width > w && (@height > (h == 0 ? w : h))
+  end
+
+  def smallerThan?(w,h=0)
+    if w.is_a?(Size)
+      h = w.h
+      w = w.w
+    elsif w.is_a?(Array)
+      h = w[1]
+      w = w[0]
+    end
+    @width < w && (@height < (h == 0 ? w : h))
+  end
+
+  def equalTo?(w,h=0)
+    if w.is_a?(Size)
+      h = w.h
+      w = w.w
+    elsif w.is_a?(Array)
+      h = w[1]
+      w = w[0]
+    end
+    @width == w && (@height == (h == 0 ? w : h))
+  end
+
+  def sizeCompare(w,h=0)
+    if w.is_a?(Size)
+      h = w.h
+      w = w.w
+    elsif w.is_a?(Array)
+      h = w[1]
+      w = w[0]
+    end
+    resw = self.w <=> w
+    resh = self.h <=> (h == 0 ? w : h)
+    [resw,resh].max
+  end
+
+  # CONVERSION HANDLERS ══════════════════════════════════════════════════════
+  def to_a;   [w,h];          end
+  def break;  [w,h];          end
+  def to_s;   self.to_a.to_s; end
+end
+
+# Base: constructRect(coord,size) ══════════════════════════════════════════════
+def constructRect(coord,size)
+  Rect.new(coord.x,coord.y,size.w,size.h)
+end
+
+# Class: Rect ══════════════════════════════════════════════════════════════════
+class Rect
+  # LOGICAL OPERATIONS ═══════════════════════════════════════════════════════
+  def containsCoord?(coord)
+    coord = Coordinate.new(coord[0],coord[1]) if coord.is_a?(Array)
+    coord.x.between?(self.x,right) && coord.y.betwwen?(self.y,bottom)
+  end
+
+  def containsRect?(rect)
+    containsCoord?(Coordinate.new(rect.x,rect.y)) &&
+    rect.w <= self.w && rect.h <= self.h
+  end
+
+  # VECTOR ACCESSORS ═════════════════════════════════════════════════════════
+  def w;      self.width;       end
+  def w=(w);  self.width = w;   end
+  def h;      self.height;      end
+  def h=(h);  self.height = h;  end
+
+  # GEOMETRIC ACCESSORS ══════════════════════════════════════════════════════
+  def left;   self.x;           end
+  def right;  self.x + self.w;  end
+  def top;    self.y;           end
+  def bottom; self.y + self.h;  end
+
+  def center
+    Coordinate.new(self.x + (self.w/2), self.y + (self.h/2))
+  end
+
+  # POSITION ACCESSORS ═══════════════════════════════════════════════════════
+  def pos
+    Coordinate.new(x,y)
+  end
+
+  def pos=(coord)
+    coord = Coordinate.new(coord[0],coord[1]) if coord.is_a?(Array)
+    @x, @y = coord.x, coord.y
+  end
+
+  def translate(magX=0,magY=0)
+    @x += maxX
+    @y += magY
+  end
+
+  # SIZE ACCESSORS ═══════════════════════════════════════════════════════════
+  def size
+    Size.new(w,h)
+  end
+
+  def size=(size)
+    size = Size.new(size[0],size[1]) if size.is_a?(Array)
+    @width, @height = size.w, size.h
+  end
+
+  # CONVERSION HANDLERS ══════════════════════════════════════════════════════
+  def to_a;   [x,y,w,h];        end
+  def break
+    [Coordinate.new(x,y),Size.new(w,h)]
+  end
+end
+
+#  Class: True/False ═══════════════════════════════════════════════════════════
+class TrueClass; def to_i; 1; end; end 
+class FalseClass; def to_i; 0; end; end 
+
+# Class: String ════════════════════════════════════════════════════════════════
+class String
+  # -> Class/Module/Ect ══════════════════════════════════════════════════════
+  def what_is_this?
+    Kernel.const_get(self)
+  end
+
+  # -> (!)Boolean ════════════════════════════════════════════════════════════
+  def to_b
+    return true if self  =~ (/(1|on|true|t|yes|y)$/i)
+    return false if self =~ (/(0|off|false|f|no|n)$/i)
+  end
+  def !; !self.to_b; end
+
+  # Up/Down/Swap/Camel Case ══════════════════════════════════════════════════
+  def ^;  self.upcase; end
+  def _;  self.downcase; end
+  def /;  self.swapcase; end
+  def Cc;
+    self.split(' ').map {|w| w.^ }.join(' ')
+  end
+
+  # Scramble ═════════════════════════════════════════════════════════════════
+  def ~; tr 'A-Za-z', 'N-ZA-Mn-za-m'; end
+end # Close String
+
+# Class: Float ═════════════════════════════════════════════════════════════════
+class Float
+  # Clone Value ══════════════════════════════════════════════════════════════
+  def clone; self + 0; end
+end
+
+# Class: Bitmap ════════════════════════════════════════════════════════════════
+class Bitmap
+  alias eclipse_bitmap_init initialize
+  def initialize(*args)
+    argslist = [*args]
+    @file    = argslist[0] if argslist[0].is_a?(String)
+    argslist = argslist[0].break if argslist[0].is_a?(Size)
+    fw = argslist[0]
+    h  = argslist[1]
+    eclipse_bitmap_init(fw,h) if h
+    eclipse_bitmap_init(fw) unless h
+  end
+
+  def file
+    @file ? @file : nil
+  end
+
+  alias eclipse_bitmap_dispose dispose
+  def dispose
+    eclipse_bitmap_dispose
+    @file = nil
+  end
+
+  # VECTOR ACCESSORS ═════════════════════════════════════════════════════════
+  def w;      self.rect.width;            end
+  def h;      self.rect.height;           end
+
+  # GEOMETRIC ACCESSORS ══════════════════════════════════════════════════════
+  def left;   self.rect.x;                end
+  def right;  self.rect.x + self.rect.w;  end
+  def top;    self.rect.y;                end
+  def bottom; self.rect.y + self.rect.h;  end
+
+  def center
+    Coordinate.new(self.rect.x + (self.rect.w/2), self.rect.y + (self.rect.h/2))
+  end
+
+  # POSITION ACCESSORS ═══════════════════════════════════════════════════════
+  def pos
+    Coordinate.new(self.rect.x,self.rect.y)
+  end
+
+  def pos=(coord)
+    coord = Coordinate.new(coord[0],coord[1]) if coord.is_a?(Array)
+    blt(coord.x, coord.y, self, self.rect)
+  end
+
+  def translate(magX=0,magY=0)
+    blt(self.rect.x += maxX, self.rect.y += magY, self, self.rect)
+  end
+
+  # SIZE ACCESSORS ═══════════════════════════════════════════════════════════
+  def size
+    Size.new(w,h)
+  end
+
+  def size=(dimention)
+    dimention = Size.new(dimention[0],dimention[1]) if dimention.is_a?(Array)
+    return unless dimention.is_a?(Size)
+    self.stretch_blt(constructRect(self.pos,dimention), self, self.rect)
+  end
+
+  # CONVERSION HANDLERS ══════════════════════════════════════════════════════
+  def to_a;   self.rect.to_a;    end
+  def break
+    [Coordinate.new(x,y),Size.new(w,h)]
+  end
+end
+
+# Class: Viewport ══════════════════════════════════════════════════════════════
+class Viewport
+  # VECTOR ACCESSORS ═════════════════════════════════════════════════════════
+  def w;      self.rect.width;            end
+  def h;      self.rect.height;           end
+
+  # GEOMETRIC ACCESSORS ══════════════════════════════════════════════════════
+  def left;   self.rect.x;                end
+  def right;  self.rect.x + self.rect.w;  end
+  def top;    self.rect.y;                end
+  def bottom; self.rect.y + self.rect.h;  end
+
+  def center
+    Coordinate.new(self.rect.x + (self.rect.w/2), self.rect.y + (self.rect.h/2))
+  end
+
+  # POSITION ACCESSORS ═══════════════════════════════════════════════════════
+  def pos
+    Coordinate.new(self.rect.x,self.rect.y)
+  end
+
+  def pos=(coord)
+    coord = Coordinate.new(coord[0],coord[1]) if coord.is_a?(Array)
+    blt(coord.x, coord.y, self, self.rect)
+  end
+
+  def translate(magX=0,magY=0)
+    blt(self.rect.x += maxX, self.rect.y += magY, self, self.rect)
+  end
+
+  # SIZE ACCESSORS ═══════════════════════════════════════════════════════════
+  def size
+    Size.new(w,h)
+  end
+
+  def size=(size)
+    size = Size.new(size[0],size[1]) if size.is_a?(Array)
+    stretch_blt(constructRect(self.pos,size), self, self.rect)
+  end
+
+  # CONVERSION HANDLERS ══════════════════════════════════════════════════════
+  def to_a;   self.rect.to_a;    end
+  def break
+    [Coordinate.new(x,y),Size.new(w,h)]
+  end
+end
+
+# Module: Graphics ═════════════════════════════════════════════════════════════
+module Graphics
+  def self.size
+    Size.new(self.width,self.height)
+  end
+  def self.rect
+    Rect.new(0,0,width,height)
+  end
+end
+
+# Class: Window_Base < Window ══════════════════════════════════════════════════
+class Window_Base < Window
+  # INITIALIZE ═══════════════════════════════════════════════════════════════
+  def initialize(x, y, w, h)
+    super
+    if Eclipse::Window::Windowskin
+      self.windowskin = Cache.system(Eclipse::Window::Windowskin)
+    else
+      self.windowskin = Cache.system("Window")
+    end
+    update_padding
+    update_tone
+    create_contents
+  end
+
+  # Window Size/Pos Functions ════════════════════════════════════════════════
+  def w;      self.width;         end
+  def h;      self.width;         end
+  def rect;   Rect.new(x,y,w,h);  end
+
+  def pos;  Coordinate.new(x,y);  end
+  def pos=(coord)
+    coord = Coordinate.new(coord[0],coord[1]) if coord.is_a?(Array)
+    self.x, self.y = coord.x, coord.y
+  end
+
+  def size; Size.new(w,h);        end
+  def size=(size)
+    size = Size.new(size[0],size[1]) if size.is_a?(Array)
+    width, height = size.w, size.h
+  end
+
+  def contents_size
+    Size.new(contents_width,contents_height)
+  end
+end
+
+=begin ═══════════════════════════════════════════════════════════════════════╤╗
+│ ► ECLIPSE - Performance Engine ◄                                            │║
+│ Author: Black Wyvern                                                        │║
+=end #════════════════════════════════════════════════════════════════════════╧╝
+
+ECM_ChangedRez = (Eclipse::Core_Settings::ScreenResolution <=> [640,480]).to_b
+
+# Module: SceneManager ═════════════════════════════════════════════════════════
+module SceneManager
+  def self.run
+    $DynamicStack = []
+    $EclipseEngine = Eclipse.new unless $EclipseEngine
+    noBGifStacked if self.respond_to?(:noBGifStacked, true)
+    DataManager.init
+    Audio.setup_midi if use_midi?
+    @scene = first_scene_class.new
+    while @scene
+      @scene.main
+      $DynamicStack.each {|scene| scene.main} unless $DynamicStack.empty?
+    end
+  end
+end
+
+# Class: Eclipse ═══════════════════════════════════════════════════════════════
+class Eclipse
+  attr_accessor :fixBGs, :screenRez, :changeRez
+  
+  # Module: Initialization ═════════════════════════════════════════════════╤╗
+  # This method contains the injection modules that eclipse runs on.        │║
+  #═════════════════════════════════════════════════════════════════════════╧╝
+  module Initialization
+    GMethods = []
+    Methods = ["injectPerformanceThrottles"]
+  end
+
+  # Initialize ═════════════════════════════════════════════════════════════╤╗
+  # Performs the module injections as well as some resolution logic.        │║
+  #═════════════════════════════════════════════════════════════════════════╧╝
+  def initialize
+    @screenRez  = Core_Settings::ScreenResolution
+    @changeRez  = Core_Settings::ScreenResolution <=> [640,480]
+    @fixBGs     = Core_Settings::CorrectSceneBgSz
+
+    unless @changeRez == 0
+      Graphics.resize_screen(@screenRez[0],@screenRez[1])
+    end
+
+    Initialization::Methods << "multiSceneImgResCorrection" if @fixBGs
+
+    Initialization::Methods.each do |method|
+      self.send(method.to_sym)
+    end
+
+    Initialization::GMethods.each do |method|
+      Object.send(method.to_sym)
+    end
+  end
+
+  # Injection: injectPerformanceThrottles ══════════════════════════════════╤╗
+  # Injects code to prevent duplicate calls to Window/GameSystem.update     │║
+  # This is where most of the performance gains are to be had. RPGM isn't   │║
+  # exactly the best about not calling updates multiple times per frame.    │║
+  #═════════════════════════════════════════════════════════════════════════╧╝
+  def injectPerformanceThrottles
+    injectionList = [
+    "Viewport","Sprite","Spriteset_Map","Spriteset_Weather","Spriteset_Battle",
+    "Game_Screen","Game_Picture","Game_Troop","Game_CharacterBase",
+    "Game_Followers"]
+
+    injectionList.each do |klass|
+      Kernel.const_get(klass).class_eval {
+        "alias eclipse_#{klass}_update update
+        def update
+          return if @FrameUpdated == Graphics.frame_count
+          eclipse_#{klass}_update
+          @FrameUpdated = Graphics.frame_count
+        end"
+      }
+    end
+
+    Game_Map.class_eval do
+      alias eclipse_Game_Map_update update
+      def update(*args)
+        return if @FrameUpdated == Graphics.frame_count
+        eclipse_Game_Map_update(*args)
+        @FrameUpdated = Graphics.frame_count
+      end
+    end
+
+    $FSX = Eclipse_Frameskip.new unless $FSX
+  end
+
+  # Injection: multiSceneImgResCorrection ══════════════════════════════════╤╗
+  # Goes through the scenes and sprites assigned in the core settings and   │║
+  # performs resolution rescaling on them so you don't have to find all new │║
+  # graphics for them. It's kind of a lazy-mode fix, but it works well.     │║
+  #═════════════════════════════════════════════════════════════════════════╧╝
+  def multiSceneImgResCorrection
+    Eclipse::Core_Settings::ListMSIRC_Scenes.each do |scene|
+      scene = Kernel.const_get("Scene_"+scene) rescue next
+      next if scene.method_defined?(:create_background).nil?
+
+      scene.class_eval do
+        alias msirc_create_bg create_background
+        def create_background
+          msirc_create_bg
+          definedsprites = []
+          Eclipse::Core_Settings::ListMSIRCSprites.each do |sprite|
+            next unless instance_variable_defined?(sprite)
+            definedsprites << sprite
+          end
+          definedsprites.each do |sprite|
+            instance_variable_get(sprite).visible = false
+            storage = instance_variable_get(sprite).bitmap
+            instance_variable_set(sprite,Sprite.new)
+            instance_variable_get(sprite).bitmap =
+              Bitmap.new(Graphics.size)
+            bitmap = storage
+            instance_variable_get(sprite).bitmap.stretch_blt(
+              Graphics.rect,bitmap,bitmap.rect)
+            instance_variable_get(sprite).visible = true
+          end
+        end
+      end
+    end
+  end
+end # Close Eclipse
+
+=begin ═══════════════════════════════════════════════════════════════════════╤╗
+│ ► ECLIPSE - Plane Rewrite ◄                                                 │║
+│ Section Dependency: None                                                    │║
+│ Author: Black Wyvern                                                        │║
+│ Created: 04/24/15                                                           │║
+│ Updated: 04/25/16                                                           │║
+│ Version: 1.0                                                                │║
+=end #════════════════════════════════════════════════════════════════════════╧╝
+
+RGSS3Plane = Plane                  # Create backup of the vanilla Plane Class
+Object.send(:remove_const, :Plane)  # Remove the reference of the Plane Class
+
+class Plane < Sprite
+
+  def bitmap=(newBitmap)
+    errorPlaneDisposed if disposed?
+    return if newBitmap == @PlaneBitmap && viewport == @PlaneViewport
+
+    if @PlaneBitmap
+      @PlaneBitmap = nil
+      self.bitmap.dispose
+    end
+
+    Display(newBitmap,self,"Unexpected Call," + 
+      " probably nonfatal, but do let me know about it. - BW") unless newBitmap
+    return super(newBitmap) unless newBitmap
+
+    vw = viewport ? viewport.rect.w : Graphics.w
+    vh = viewport ? viewport.rect.h : Graphics.h
+    @PlaneSize  = newBitmap.size
+    super(Bitmap.new(vw + @PlaneSize.w, vh + @PlaneSize.h))
+    phorz = (vw / @PlaneSize.w) + 1 + (vw % @PlaneSize.w).to_tri
+    pvert = (vh / @PlaneSize.h) + 1 + (vh % @PlaneSize.h).to_tri
+    phorz.times do |bx|
+      pvert.times do |by|
+       bitmap.blt(
+         bx * @PlaneSize.w,
+         by * @PlaneSize.h,
+         newBitmap,
+         newBitmap.rect
+        )
+      end
+    end
+
+    @PlaneViewport = viewport
+    @PlaneBitmap = newBitmap
+  end
+
+  def ox=(value)
+    error_disposed if disposed?
+    super(@PlaneBitmap ? value % @PlaneSize.w : value)
+  end
+
+  def oy=(value)
+    error_disposed if disposed?
+    super(@PlaneBitmap ? value % @PlaneSize.h : value)
+  end
+
+  def viewport=(new_viewport)
+    error_disposed if disposed?
+    if new_viewport != viewport
+      super(new_viewport)
+      self.bitmap = @PlaneBitmap if @PlaneBitmap
+    end
+  end
+
+  def dispose
+    error_disposed if disposed?
+    if @PlaneBitmap
+      @PlaneBitmap = nil
+      self.bitmap.dispose
+    end
+    super
+  end
+
+  def disposed?
+    return super
+  end
+
+  private
+  def errorPlaneDisposed
+    Debug("Plane","Called a disposed Plane Object.","",true,true) rescue
+    raise RGSSError, 'disposed Plane', caller
+  end
+end
+
+=begin ═══════════════════════════════════════════════════════════════════════╤╗
+│ ► SCRIPT IMPORT ◄                                                           │║
+│ Script Name: MGC Tilemap Ace                                                │║
+│ Script Dependency: None                                                     │║
+│ Author: MGC                                                                 │║
+│ Modifications: etude87, Black Wyvern                                        │║
+│ Source:  http://www.rgss-factory.net/                                       │║
+│           2012/04/15/ace-mgc-tilemap-ace-reecriture-de-la-classe-tilemap/   │║
+│ Created: Unknown                                                            │║
+│ Updated: 04/15/16                                                           │║
+│ Version: 1.4.0                                                              │║
+=end #════════════════════════════════════════════════════════════════════════╧╝
+                          active = ECM_ChangedRez
+#     ╔════════════════════════╗ 
+# ════╝ New Activation Handler ╚════════════════════════════════════════════════
+  $imported["MGC_Tilemap_Ace"]=[active,1.40] ; if active
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Class: Game_System ═══════════════════════════════════════════════════════════
+class Game_System
+  attr_accessor :new_tilemap_active
+end
+
+# Class: Game_Map ══════════════════════════════════════════════════════════════
+class Game_Map
+  attr_accessor :start_new_tilemap, :end_new_tilemap
+  unless @already_aliased_mgc_tilemap
+    alias setup_mgc_tilemap setup
+    @already_aliased_mgc_tilemap = true
+  end
+
+  def setup(map_id)
+    setup_mgc_tilemap(map_id)
+    if use_new_tilemap?;  self.start_new_tilemap = true
+    else;                 self.end_new_tilemap = true
+    end
+  end
+
+  def use_new_tilemap?
+    return  MGC::TilemapsForEveryone ||
+            MGC::TilemapsForIDs.include?($game_map.map_id)
+  end
+
+  # Method: scroll_down ════════════════════════════════════════════════════════
+  # Bugfix: MGC Tilemap makes an ugly black bar if at the bottom of the map if
+  # resolution is upscaled.. So we need to adjust the map scroll to hide it.
+  #═════════════════════════════════════════════════════════════════════════════
+  def scroll_down(distance)
+    if loop_vertical?
+      @display_y += distance
+      @display_y %= @map.height
+      @parallax_y += distance if @parallax_loop_y
+    else
+      last_y = @display_y
+      @display_y = [@display_y + distance, height - screen_tile_y].min
+      @parallax_y += @display_y - last_y
+    end
+  end
+
+  # Method: valid? ═════════════════════════════════════════════════════════
+  # Disallows moving to the tile we just shrunk the scroll from.
+  #═════════════════════════════════════════════════════════════════════════
+  def valid?(x, y)
+    x >= 0 && x < width && y >= 0 && y < height
+  end
+end
+
+# Class: Spriteset_Map ═══════════════════════════════════════════════════════
+class Spriteset_Map
+  unless @already_aliased_mgc_tilemap
+    alias create_tilemap_mgc_tilemap create_tilemap
+    alias update_mgc_tilemap update # [1.2]
+    @already_aliased_mgc_tilemap = true
+  end
+
+  def create_tilemap
+    create_tilemap_mgc_tilemap
+    unless $game_system.new_tilemap_active
+      MGC.new_tilemap_active = false
+    end
+    if $game_map.use_new_tilemap? || $game_system.new_tilemap_active
+      start_new_tilemap
+    end
+  end
+
+  def start_new_tilemap
+    unless @tilemap_new
+      @tilemap_classic = @tilemap
+      @tilemap_new = MGC::Tilemap.new(@viewport1)
+      @tilemap_new.map_data = $game_map.data
+      @tilemap_new.force_refresh
+      @tilemap = @tilemap_new
+      load_tileset
+    end
+    @tilemap_new.visible = true
+    @tilemap_classic.visible = false
+    @tilemap = @tilemap_new
+    MGC.new_tilemap_active = true
+    $game_player.center($game_player.x, $game_player.y)
+  end
+
+  def end_new_tilemap
+    if @tilemap_new
+      @tilemap_new.visible = false
+      @tilemap_classic.visible = true
+      @tilemap = @tilemap_classic
+      load_tileset
+    end
+    MGC.new_tilemap_active = false
+  end
+
+  def update
+    MGC.update_new_tilemap
+    if $game_map.start_new_tilemap
+      start_new_tilemap
+      $game_map.start_new_tilemap = false
+    elsif $game_map.end_new_tilemap
+      end_new_tilemap
+      $game_map.end_new_tilemap = false
+    end
+    update_mgc_tilemap
+  end
+end
+
+# Class: Scene_Map ═════════════════════════════════════════════════════════════
+class Scene_Map < Scene_Base
+  unless @already_aliased_mgc_tilemap
+    alias update_call_menu_mgc_tilemap update_call_menu
+    @already_aliased_mgc_tilemap = true
+  end
+
+  def update_call_menu
+    unless MGC.new_tilemap_effect?
+      update_call_menu_mgc_tilemap
+    end
+  end
+end
+
+module MGC
+  @new_tilemap_active = false
+
+  def self.start_new_tilemap
+    @end_new_tilemap = false
+    @spriteset.start_new_tilemap
+  end
+
+  def self.end_new_tilemap
+    @end_new_tilemap = true
+  end
+
+  def self.new_tilemap_active=(flag)
+    $game_system.new_tilemap_active = flag
+    @new_tilemap_active = flag
+  end
+
+  def self.new_tilemap_active
+    return @new_tilemap_active
+  end
+
+  def self.update_new_tilemap
+    if @new_tilemap_active && @end_new_tilemap
+      @spriteset.end_new_tilemap
+      @end_new_tilemap = false
+    end
+  end
+
+  def self.new_tilemap_effect?
+    return @new_tilemap_active && @end_new_tilemap
+  end
+
+  class Tilemap
+    attr_reader   :viewport, :visible, :ox, :oy, :opacity, :blend_type, :color,
+                  :tone, :wave_amp, :wave_length, :wave_speed, :wave_phase,
+                  :zoom, :map_data, :flags
+    attr_accessor :flash_data
+    attr_writer   :bitmaps
+
+    # INITIALIZE THE CUSTOM DLL FILE ═══════════════════════════════════════════
+    RENDER = Win32API.new("MGC_Map_Ace_1_6", "renderMap", "l", "l")
+
+    def initialize(viewport)
+      @viewport = viewport
+      self.bitmaps = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+      @map_data = 0
+      @flags = 0
+      self.flash_data = nil
+      @cx = Graphics.width >> 1
+      @cy = Graphics.height >> 1
+      @sprite_render = Sprite.new(viewport)
+
+      @render = Bitmap.new(Graphics.width + 64, Graphics.height + 64)
+      @sprite_render.bitmap = @render
+      @sprite_render.x = -32
+      @sprite_render.y = -32
+      @sprite_render.z = 0
+
+      @sprite_render_layer2 = Sprite.new(viewport)
+      @render_layer2 = Bitmap.new(Graphics.width + 64, Graphics.height + 64)
+      @sprite_render_layer2.bitmap = @render_layer2
+      @sprite_render_layer2.x = -32
+      @sprite_render_layer2.y = -32
+      @sprite_render_layer2.z = 200
+
+      @zoom_incr = 0.0
+      @zoom_duration = 0
+
+      @parameters = [
+        @render,
+        @render_layer2,
+        map_data,
+        bitmaps,
+        Cache.picture('autotiles_data'),
+        Cache.picture('autotiles_data_small'),
+        Cache.picture('autotiles_data_xsmall'),
+        flags,
+        0, 0, 0, 0, 0, 0, 1024, 100,
+        $game_map.loop_horizontal?,
+        $game_map.loop_vertical?
+      ]
+
+      self.visible = true
+      self.zoom = 1.0
+      self.ox = 0
+      self.oy = 0
+      self.opacity = 255
+      self.blend_type = 0
+      self.color = Color.new
+      self.tone = Tone.new
+      self.wave_amp = 0
+      self.wave_length = 180
+      self.wave_speed = 360
+      self.wave_phase = 0.0
+      @refresh_all = true
+    end
+
+    def bitmaps
+      force_refresh
+      return @bitmaps
+    end
+
+    def force_refresh
+      @need_refresh = true
+      @refresh_all = true
+    end
+
+    def map_data=(new_map_data)
+      @map_data = new_map_data
+      @parameters[2] = @map_data
+    end
+
+    def flags=(new_flags)
+      @flags = new_flags
+      @parameters[7] = @flags
+    end
+
+    def zoom=(new_zoom)
+      unless zoom == new_zoom
+        if new_zoom < 0.125 || new_zoom > 8.0 then return end
+        @zoom = new_zoom
+        @parameters[14] = (1024.0 / new_zoom).to_i
+        vox = @ox
+        @ox = nil
+        self.ox = vox
+        voy = @oy
+        @oy = nil
+        self.oy = voy
+        @need_refresh = true
+        @refresh_all = true
+      end
+    end
+
+    def incr_zoom(val = 0.02)
+      @zoom_incr += val
+      new_zoom = 2 ** @zoom_incr
+      self.zoom = new_zoom
+    end
+
+    def to_zoom(new_zoom, duration)
+      unless zoom == new_zoom
+        if new_zoom < 0.125 || new_zoom > 8.0 then return end
+        @zoom_duration = duration
+        target_zoom_incr = Math.log(new_zoom) / Math.log(2)
+        @zoom_step = (target_zoom_incr - @zoom_incr) / duration
+        @target_zoom = new_zoom
+      end
+    end
+
+    def shadow_opacity=(value)
+      @parameters[15] = [[value, 0].max, 255].min
+    end
+
+    def visible=(flag)
+      @visible = flag
+      @sprite_render.visible = flag
+      @sprite_render_layer2.visible = flag
+    end
+
+    def ox=(new_ox)
+      @parameters[12] = 0
+      unless new_ox == @ox
+        if ox && $game_map.loop_horizontal?
+          if (new_ox.to_i - ox >> 5) == $game_map.width - 1 ||
+            (ox - new_ox.to_i >> 5) == $game_map.width - 1
+          then
+            @refresh_all = true
+          end
+        end
+        @ox = new_ox.to_i
+        ox_zoom = (@ox << 10) / @parameters[14]
+        ox_floor = ox_zoom >> 5 << 5
+        unless ox_floor == @parameters[8]
+          @parameters[12] = ox_floor - @parameters[8] >> 5
+          @need_refresh = true
+        end
+        @parameters[8] = ox_floor - (MGC::ImSoHighRightNow ? 32 : 0)
+        @sprite_render.ox = ox_zoom - ox_floor
+        @sprite_render_layer2.ox = @sprite_render.ox
+      end
+    end
+
+    def oy=(new_oy)
+      @parameters[13] = 0
+      unless new_oy == @oy
+        if oy && $game_map.loop_vertical?
+          if (new_oy.to_i - oy >> 5) == $game_map.height - 1 ||
+            (oy - new_oy.to_i >> 5) == $game_map.height - 1
+          then
+            @refresh_all = true
+          end
+        end
+        @oy = new_oy.to_i
+        oy_zoom = (@oy << 10) / @parameters[14]
+        oy_floor = oy_zoom >> 5 << 5
+        unless oy_floor == @parameters[9]
+          @parameters[13] = oy_floor - @parameters[9] >> 5
+          @need_refresh = true
+        end
+
+        @parameters[9] = oy_floor - (MGC::ImSoHighRightNow ? 32 : 0)
+        @sprite_render.oy = oy_zoom - oy_floor
+        @sprite_render_layer2.oy = @sprite_render.oy
+      end
+    end
+
+    def opacity=(new_opacity)
+      @opacity = new_opacity
+      @sprite_render.opacity = new_opacity
+      @sprite_render_layer2.opacity = new_opacity
+    end
+
+    def blend_type=(new_blend_type)
+      @blend_type = new_blend_type
+      @sprite_render.blend_type = new_blend_type
+      @sprite_render_layer2.blend_type = new_blend_type
+    end
+
+    def color=(new_color)
+      @color = new_color
+      @sprite_render.color = new_color
+      @sprite_render_layer2.color = new_color
+    end
+
+    def tone=(new_tone)
+      @tone = new_tone
+      @sprite_render.tone = new_tone
+      @sprite_render_layer2.tone = new_tone
+    end
+
+    def wave_amp=(new_wave_amp)
+      @wave_amp = new_wave_amp
+      @sprite_render.wave_amp = new_wave_amp
+      @sprite_render_layer2.wave_amp = new_wave_amp
+    end
+
+    def wave_length=(new_wave_length)
+      @wave_length = new_wave_length
+      @sprite_render.wave_length = new_wave_length
+      @sprite_render_layer2.wave_length = new_wave_length
+    end
+
+    def wave_speed=(new_wave_speed)
+      @wave_speed = new_wave_speed
+      @sprite_render.wave_speed = new_wave_speed
+      @sprite_render_layer2.wave_speed = new_wave_speed
+    end
+
+    def wave_phase=(new_wave_phase)
+      @wave_phase = new_wave_phase
+      @sprite_render.wave_phase = new_wave_phase
+      @sprite_render_layer2.wave_phase = new_wave_phase
+    end
+
+    def dispose
+      @render.dispose
+      @render_layer2.dispose
+      @sprite_render.dispose
+      @sprite_render_layer2.dispose
+    end
+
+    def disposed?
+      return @render.disposed?
+    end
+
+    def update
+      if @visible
+        if @zoom_duration > 0
+          @zoom_duration -= 1
+          if @zoom_duration == 0
+            self.zoom = @target_zoom
+          else
+            incr_zoom(@zoom_step)
+          end
+        end
+        if Graphics.frame_count & 31 == 0
+          @parameters[10] += 1
+          @parameters[10] %= 3
+          unless @need_refresh
+            @need_refresh_anim = true
+          end
+        end
+        if @need_refresh
+          if @refresh_all
+            @render.clear
+            @render_layer2.clear
+            @parameters[12] = 0
+            @parameters[13] = 0
+            @refresh_all = false
+          end
+          @parameters[11] = 0
+          RENDER.call(@parameters.__id__)
+          @need_refresh = false
+        elsif @need_refresh_anim
+          @parameters[11] = 1
+          @parameters[12] = 0
+          @parameters[13] = 0
+          RENDER.call(@parameters.__id__)
+          @need_refresh_anim = false
+        end
+        @sprite_render.update
+        @sprite_render_layer2.update
+      end
+    end
+
+    def flash(color, duration)
+      @sprite_render.flash(color, duration)
+      @sprite_render_layer2.flash(color, duration)
+    end
+  end; end # Close MGCTilemap
+end # Close MGC Activation Handler
+
+# Class: Eclipse_Frameskip ═══════════════════════════════════════════════════╤╗
+# Another big performance jump can come from proper utilization of a simple   │║
+# frame-skip mechanic. Don't update what doesn't change as often. Adds up.    │║
+#═════════════════════════════════════════════════════════════════════════════╧╝
+class Eclipse_Frameskip
+  def Skip?(frames)
+    return false if frames.abs <= 1
+    return (Graphics.frame_count % frames).to_b
+  end
+end
+
+# Eclipse::Core_Settings::CorrectBatlBakSz ═══════════════════════════════════╤╗
+# As described above with the MSIRC, this lot fixes battleback sizes.         │║
+#═════════════════════════════════════════════════════════════════════════════╧╝
+if Eclipse::Core_Settings::CorrectBatlBakSz
+  # Class: Spriteset_Battle ════════════════════════════════════════════════════
+  class Spriteset_Battle
+    # Rescale Battleback1 ════════════════════════════════════════════════════
+    alias msirc_create_bb1 create_battleback1
+    def create_battleback1
+      msirc_create_bb1
+      @back1_sprite.visible = false
+      storage = @back1_sprite.bitmap
+      @back1_sprite = Sprite.new(@viewport1)
+      @back1_sprite.bitmap = Bitmap.new(Graphics.size)
+      bitmap = storage
+      @back1_sprite.bitmap.stretch_blt(Graphics.rect, bitmap, bitmap.rect)
+      @back1_sprite.z = 0
+      center_sprite(@back1_sprite)
+    end
+
+    # Rescale Battleback2 ════════════════════════════════════════════════════
+    alias msirc_create_bb2 create_battleback2
+    def create_battleback2
+      msirc_create_bb2
+      @back2_sprite.visible = false
+      storage = @back2_sprite.bitmap
+      @back2_sprite = Sprite.new(@viewport1)
+      @back2_sprite.bitmap = Bitmap.new(Graphics.size)
+      bitmap = storage
+      @back2_sprite.bitmap.stretch_blt(Graphics.rect, bitmap, bitmap.rect)
+      @back2_sprite.z = 0
+      center_sprite(@back2_sprite)
+    end
+  end
+end
+
+=begin ═══════════════════════════════════════════════════════════════════════╤╗
+│ ► SNIPPET IMPORT ◄                                                          │║
+│ Snippet Name: Plane Optimizations                                           │║
+│ Snippet Dependency: None                                                    │║
+│ Author: FenixFyreX                                                          │║
+│ Modifications: None                                                         │║
+│ Source: http://pastebin.com/Db9r1jmb                                        │║
+│ Forums: Fourms.RPGMW /index.php?/topic/32293-rgss3-plane/                   │║
+│ Created: Unknown                                                            │║
+│ Updated: 23/11/14                                                           │║
+│ Version: 1.3.3                                                              │║
+=end #════════════════════════════════════════════════════════════════════════╧╝
+
+# Class: Spritesheet Map ═══════════════════════════════════════════════════════
+class Spriteset_Map
+  # Update Parallax ══════════════════════════════════════════════════════════
+  def update_parallax
+    if @parallax_name != $game_map.parallax_name
+      @parallax_name = $game_map.parallax_name
+      @parallax.bitmap.dispose if @parallax.bitmap &&
+      !Cache.plane_cache.value?(@parallax.bitmap)
+      @parallax.bitmap = Cache.parallax(@parallax_name)
+      Graphics.frame_reset
+    end
+    @parallax.ox = $game_map.parallax_ox(@parallax.bitmap)
+    @parallax.oy = $game_map.parallax_oy(@parallax.bitmap)
+  end
+end
+
+# Module: Cache ════════════════════════════════════════════════════════════════
+# - Add in Plane caching, to speed up processing at the slight cost of memory.
+#═══════════════════════════════════════════════════════════════════════════════
+module Cache
+  class << self
+    alias bugfix_pc_clear clear
+    alias clear_b4_fyx_plane_cache clear
+  end
+
+  # Plane Cache ══════════════════════════════════════════════════════════════
+  # - Convenience method, to not have to type it out in the below methods.
+  # ══════════════════════════════════════════════════════════════════════════
+  def self.plane_cache
+    @plane_cache ||= {}
+  end
+
+  # Self.Plane ═══════════════════════════════════════════════════════════════
+  # - Get a cached plane bitmap.
+  # - key : Object (most likely an Array e.g. [Rect, String])
+  # ══════════════════════════════════════════════════════════════════════════
+	def self.plane(key)
+    return plane_cache[key]
+  end
+
+  # Add Plane ════════════════════════════════════════════════════════════════
+  # - Add a tiled plane bitmap to the cache.
+  # - key : Object (see above)
+  # - bmp : Bitmap
+  # ══════════════════════════════════════════════════════════════════════════
+  def self.add_plane(key, bmp)
+    plane_cache[key] = bmp
+  end
+
+  # Has Plane? ═══════════════════════════════════════════════════════════════
+  # - Check for a cached plane bitmap.
+  # - key : Object (see above)
+  # ══════════════════════════════════════════════════════════════════════════
+  def self.has_plane?(key)
+    plane_cache[key].is_a?(Bitmap) && !plane_cache[key].disposed?
+  end
+
+  # Clear Cache ══════════════════════════════════════════════════════════════
+  # Cache.clear - See original documentation.
+  # ══════════════════════════════════════════════════════════════════════════
+  def self.clear
+    plane_cache.each_value {|v| v.dispose unless v.nil? || v.disposed? }
+    plane_cache.clear
+    bugfix_pc_clear
+  end
+end
+
+=begin ═══════════════════════════════════════════════════════════════════════╤╗
+│ ► SCRIPT IMPORT ◄                                                           │║
+│ Script Name: Σ Fullscreen / Resolution Breaker                              │║
+│ Script Dependency: None                                                     │║
+│ Author: Gabriel "Gab" Teles                                                 │║
+│ Modifications: Black Wyvern                                                 │║
+│ Source:  Source:  http://pastebin.com/q4Hr6FsW                              │║
+│ Created: 09/27/14                                                           │║
+│ Updated: 04/02/16                                                           │║
+│ Version: 0.9.3                                                              │║
+=end #════════════════════════════════════════════════════════════════════════╧╝
+                active = ECM_ChangedRez
+#     ╔════════════════════════╗ 
+# ════╝ New Activation Handler ╚════════════════════════════════════════════════
+  $imported["Σ_Resolution"]=[active,0.93] ; if active
+# ══════════════════════════════════════════════════════════════════════════════
+
+class << Graphics
+  User32   = DL.dlopen('user32')
+  Kernel32 = DL.dlopen('kernel32')
+  GetActiveWindow  = DL::CFunc.new(  User32['GetActiveWindow' ], DL::TYPE_LONG)
+  GetSystemMetrics = DL::CFunc.new(  User32['GetSystemMetrics'], DL::TYPE_LONG)
+  GetWindowRect    = DL::CFunc.new(  User32['GetWindowRect'   ], DL::TYPE_LONG)
+  SetWindowLong    = DL::CFunc.new(  User32['SetWindowLong'   ], DL::TYPE_LONG)
+  SetWindowPos     = DL::CFunc.new(  User32['SetWindowPos'    ], DL::TYPE_LONG)
+  GetModuleHandle  = DL::CFunc.new(Kernel32['GetModuleHandle' ], DL::TYPE_LONG)
+
+  _DLLName = DL::CPtr.malloc(140)
+  s = DL::CFunc.new(Kernel32['GetPrivateProfileString'], DL::TYPE_LONG).call([
+    DL::CPtr["Game"].to_i,
+    DL::CPtr["Library"].to_i,
+    0, _DLLName.to_i,
+    140,
+    DL::CPtr["./Game.ini"].to_i
+  ])
+  @@DLLName = File.basename(_DLLName.to_s(s))
+
+  if @@DLLName.match(/^RGSS3(\d{2})\.dll$/)
+    @@DLLVersion = $1.to_i
+
+    if @@DLLVersion.between?(0, 1)
+      @@inFullscreen = false # Flag Fullscreen
+
+      @@DLLHandle   = GetModuleHandle.call([DL::CPtr[@@DLLName].to_i])
+
+      @@hWnd       = GetActiveWindow.call([])
+
+      @@screenSize = [  GetSystemMetrics.call([0]), 
+                        GetSystemMetrics.call([1])]
+
+      width, height = @@screenSize
+      width  += (32 - (width  % 32)) unless (width  % 32).zero?
+      height += (32 - (height % 32)) unless (height % 32).zero?
+
+=begin ═══════════════════════════════════════════════════════════════════════╤╗
+│ ► SNIPPET IMPORT ◄                                                          │║
+│ Snippet Name: Hex Window                                                    │║
+│ Snippet Dependency: None                                                    │║
+│ Author: The Unknown Scripter (That's what we call him anyways..)            │║
+│ Modifications: Gab!                                                         │║
+│ Source: http://pastebin.com/sM2MNJZj                                        │║
+│ Created: 10/24/13                                                           │║
+│ Updated: 04/02/16                                                           │║
+│ Version: Unknown                                                            │║
+│                                                                             │║
+│ Notes: Removes the hard-coded resolution restrictions.                      │║
+│        Adapted for use in and mapped to RGSS300.dll by Gab!                 │║
+=end #════════════════════════════════════════════════════════════════════════╧╝
+
+      # ► Method Injection: Numeric -> String
+      wh = ->(w, h, off = 0){[w + off, h + off].pack('l2').scan(/..../)}
+
+      # ► Method Injection: Modify memory values relative to dll.
+      mod = ->(adr, val){ adr += @@OFF if @@DLLVersion.zero?
+         DL::CPtr.new(@@DLLHandle + adr)[0, val.size] = val}
+
+      # Initialize variables
+      wt,  ht  = width.divmod(32), height.divmod(32)
+      w,   h   = wh.(width, height)
+      ww,  hh  = wh.(width, height, 32)
+      www, hhh = wh.(wt.first, ht.first, 1)
+      zero     = [0].pack('l')
+
+      # ► Begin Memory Injection
+
+      # ○ Graphics
+      @@OFF = 0
+      mod.(0x195F, "\x90"*5) # ???
+      mod.(0x19A4,   h     ) # ???
+      mod.(0x19A9,   w     ) # ???
+      mod.(0x1A56,   h     ) # ???
+      mod.(0x1A5B,   w     ) # ???
+      mod.(0x20F6,   w     ) # Max width  (?)
+      mod.(0x20FF,   w     ) # Max width  (?)
+      mod.(0x2106,   h     ) # Max height (?)
+      mod.(0x210F,   h     ) # Max height (?)
+
+      # ○ Plane
+      @@OFF   = -0xC0
+      mod.(0x1C5E3,  zero  ) # Max height
+      mod.(0x1C5E8,  zero  ) # Max width
+
+      # ○ Tilemap
+      @@OFF = 0x1E0
+      mod.(0x211FF,  hh    ) # Tilemap render height
+      mod.(0x21204,  ww    ) # Tilemap render width
+      mod.(0x21D7D,  hhh[0]) # Tilemap max tiles on screen height
+      mod.(0x21E01,  www[0]) # Tilemap max tiles on screen width
+
+      # ○ Unknown Pointers
+      @@OFF = 0x20
+      mod.(0x1F477,  h     ) # ???
+      mod.(0x1F47C,  w     ) # ???
+
+      # ○ More Unknown Pointers
+      @@OFF = 0x140
+      mod.(0x10DEA8, h     ) # ???
+      mod.(0x10DEAD, w     ) # ???     
+      mod.(0x10DEDF, h     ) # ???
+      mod.(0x10DEE3, w     ) # ???
+      mod.(0x10DF14, h     ) # ???
+      mod.(0x10DF18, w     ) # ???
+      mod.(0x10DF48, h     ) # ???
+      mod.(0x10DF4C, w     ) # ???
+      mod.(0x10E6A7, w     ) # ???
+      mod.(0x10E6C3, h     ) # ???
+      mod.(0x10EEA9, w     ) # ???
+      mod.(0x10EEB9, h     ) # ???
+
+#╒════════════════════════════════════════════════════════════════════════════╤╗
+#│End of Hex Window by Unknown Scripter                                       │║
+#╘════════════════════════════════════════════════════════════════════════════╧╝
+    end
+  end
+
+  # Fullscreen/Window Determination and Resizing ═════════════════════════════
+  def fullscreen
+    return if @@inFullscreen
+    rect = DL::CPtr.malloc(16)
+    rect[0, 16] = 0.chr * 16
+    GetWindowRect.call([@@hWnd, rect])
+    @@windowSize = rect[0, 16].unpack("l*")
+    @@windowSize[2] -= @@windowSize[0]
+    @@windowSize[3] -= @@windowSize[1]
+    @@windowResolution = Graphics.size
+    Graphics.resize_screen(*@@screenSize)
+
+    SetWindowLong.call([@@hWnd, -16, 0x14000000])
+    SetWindowPos.call([@@hWnd, -1, 0, 0, *@@screenSize, 0])
+    @@inFullscreen = true
+    Graphics.wait(5)
+  end
+  
+  def windowed
+    return unless @@inFullscreen
+    Graphics.resize_screen(*@@windowResolution)
+    SetWindowLong.call([@@hWnd, -16, 0x14CA0000])
+    SetWindowPos.call([@@hWnd, 0, *@@windowSize, 0])
+    @@inFullscreen = false
+    Graphics.wait(5)
+  end
+
+  def fullscreen?
+    return @@inFullscreen
+  end
+
+  def windowed?
+    return !@@inFullscreen
+  end
+
+  def toggleFullscreen
+    @@inFullscreen ? self.windowed : self.fullscreen
+  end
+end
+
+class << Graphics
+  # Screen Transition Sprite ═════════════════════════════════════════════════
+  def makeTransSprite
+    @@TransSprite = Sprite.new
+    @@TransSprite.bitmap = Bitmap.new(Graphics.size)
+    @@TransSprite.bitmap.fill_rect(@@TransSprite.bitmap.rect,Color.new(0,0,0))
+    @@TransSprite.opacity = 0
+    @@TransSprite.z = 0x7FFFFFFF
+  end
+
+  # Screen Freeze Bitmap ═════════════════════════════════════════════════════
+  def makeFrozenBitmap
+    @@FrozenBitmap = Bitmap.new(Graphics.size)
+    @@FrozenBitmap.fill_rect(@@FrozenBitmap.rect, Color.new(0, 0, 0))
+  end
+
+  # Resize Screen ════════════════════════════════════════════════════════════
+  alias eclipse_resize resize_screen
+  def resize_screen(*args)
+    eclipse_resize(*args)
+    makeTransSprite
+    @@TransMode =
+      ((Graphics.size.sizeCompare(Size.new(640,480)) == 1) ? true : false)
+  end
+
+  # Graphics Transition Graphics Transition═══════════════════════════════════
+  alias eclipse_trans transition
+  def transition(time=10, image='', vague=40)
+    @@TransMode rescue @@TransMode = false
+    unless @@TransMode
+      eclipse_trans(time, image, vague)
+    else
+      @@FrozenBitmap rescue makeFrozenBitmap
+      @@TransSprite.bitmap = @@FrozenBitmap
+      @@TransSprite.opacity = 255
+
+      eclipse_trans(0)
+
+      time = 1 if time < 1
+      dec = (255.0 / time)
+      time.times {
+        @@TransSprite.opacity -= dec
+        Graphics.update
+      }
+      @@FrozenBitmap.dispose
+    end
+  end
+
+  # Graphics Brightness ══════════════════════════════════════════════════════
+  def brightness
+    @@TransSprite.opacity
+  end
+
+  def brightness=(value)
+    @@TransSprite.opacity = 255-value
+  end
+
+  # Graphics Faders ══════════════════════════════════════════════════════════
+  def prefade
+    makeTransSprite
+  end
+
+  def fadein(time)
+    makeFrozenBitmap
+    transition(time)
+  end
+
+  def fadeout(time)
+    @@TransSprite rescue makeTransSprite
+    makeTransSprite if @@TransSprite.bitmap.disposed?
+    @@TransSprite.bitmap.fill_rect(@@TransSprite.bitmap.rect,Color.new(0,0,0))
+    inc = (255.0 / time)
+    time.times {
+      @@TransSprite.opacity += inc
+      Graphics.update
+    }
+  end
+
+  # Graphics Freeze ══════════════════════════════════════════════════════════
+  alias eclipse_freeze freeze
+  def freeze(*args)
+    eclipse_freeze(*args)
+    @@FrozenBitmap rescue makeFrozenBitmap
+    @@FrozenBitmap = Graphics.snap_to_bitmap
+  end
+end; end # Close Sigma Resolution
+
+# Class: Window_Base < Window ══════════════════════════════════════════════════
+class Window_Base < Window
+  alias eclipse_update update
+  def update
+    return if @FrameCompleted == Graphics.frame_count;
+    return if self.visible == false
+    return if close? && !@opening
+    return if contents_opacity == 0
+    eclipse_update
+    @FrameCompleted = Graphics.frame_count
+  end
+
+  # Get Line Height ══════════════════════════════════════════════════════════
+  def line_height
+    return Eclipse::Window::LineHeight
+  end
+
+  # Get Standard Padding Size ════════════════════════════════════════════════
+  def standard_padding
+    return Eclipse::Window::Padding
+  end
+
+  # Create Window Contents ═══════════════════════════════════════════════════
+  def create_contents
+    contents.dispose
+    if contents_size.biggerThan?(0)
+      self.contents = Bitmap.new(contents_width, contents_height)
+    else
+      self.contents = Bitmap.new(1, 1)
+    end
+  end
+
+  # Advanced Window Open ═════════════════════════════════════════════════════
+  def open
+    @opening = true unless open?
+    @closing = false
+
+    if Eclipse::Window::AdvncdOpen
+      @storex = self.x
+      @storewidth = w
+      @openrate = 255.0 / Eclipse::Window::OpenFrames
+      @widthrate = @storewidth / (1.0 * Eclipse::Window::OpenFrames)
+      @adjwidth, @adj_open = 0,0
+    end
+    self
+  end
+
+  # Advanced Window Close ════════════════════════════════════════════════════
+  def close
+    @closing = true unless close?
+    @opening = false
+
+    if Eclipse::Window::AdvncdOpen
+      @storex = self.x
+      @storewidth = w
+      @openrate = 255.0 / Eclipse::Window::OpenFrames
+      @widthrate = @storewidth / (1.0 * Eclipse::Window::OpenFrames)
+      @adjwidth, @adj_open = @storewidth, @openrate
+    end
+    self
+  end
+
+  # Update Open Processing ═══════════════════════════════════════════════════
+  def update_open
+    @adj_open += @openrate
+    self.openness = @adj_open.round(1)
+    if Eclipse::Window::AdvncdOpen && !(self.class == Window_BattleStatus)
+      @adjwidth += @widthrate
+      self.width = @adjwidth.round(1)
+      self.x = @storex + ((@storewidth - w)/2)
+    end
+    @opening = false if open?
+  end
+
+  # Update Close Processing ══════════════════════════════════════════════════
+  def update_close
+    @adj_open -= @openrate
+    self.openness = @adj_open.round(1)
+    if Eclipse::Window::AdvncdOpen && !self.class == Window_BattleStatus
+      @adjwidth -= @widthrate
+      self.width = @adjwidth.round(1)
+      self.x = @storex + ((@storewidth - w)/2)
+    end
+    @closing = false if close?
+  end
+
+  # Get Alpha Value of Translucent Drawing ═══════════════════════════════════
+  def translucent_alpha
+    return Eclipse::Window::Semi_Alpha
+  end
+
+  # Update Tone  ═════════════════════════════════════════════════════════════
+  def update_tone
+    self.tone.set($game_system.window_tone) if Eclipse::Window::UseWinTone
+  end
+
+  # Draw Text with Control Characters ════════════════════════════════════════
+  def draw_text_ex(x, y, text, reset = true)
+    reset_font_settings if reset
+    text = convert_escape_characters(text)
+    pos = {:x => x, :y => y, :new_x => x, :height => calc_line_height(text)}
+    process_character(text.slice!(0, 1), text, pos) until text.empty?
+  end
+
+  # Preconvert Control Characters ════════════════════════════════════════════
+  def convert_escape_characters(text)
+    result = text.to_s.clone
+    result.gsub!(/\\/)            { "\e" }
+    result.gsub!(/\e\e/)          { "\\" }
+    result.gsub!(/\eV\[(\d+)\]/i) { $game_variables[$1.to_i] }
+    result.gsub!(/\eV\[(\d+)\]/i) { $game_variables[$1.to_i] }
+    result.gsub!(/\eN\[(\d+)\]/i) { actor_name($1.to_i) }
+    result.gsub!(/\eP\[(\d+)\]/i) { party_member_name($1.to_i) }
+    result.gsub!(/\eG/i)          { Vocab::currency_unit }
+    result.gsub!(/\eVc\[(\w+)\]/i){ Vocab.send($1.to_sym) }
+    result
+  end
+
+  # Normal Character Processing ══════════════════════════════════════════════
+  def process_normal_character(c, pos)
+    return unless c >= ' '
+    text_width = text_size(c).width
+    draw_text(pos[:x], pos[:y], text_width * 2, pos[:height], c)
+    pos[:x] += text_width
+  end
+
+=begin ═══════════════════════════════════════════════════════════════════════╤╗
+│ ► Word Wrap ◄                                                               │║
+│ Section Dependency: None                                                    │║
+│ Author: KiloZapit                                                           │║
+│ Modifications: Black Wyvern                                                 │║
+│ Created: 11/11/12                                                           │║
+│ Updated: 08/12/12                                                           │║
+│ Version: The Seventh                                                        │║
+=end #════════════════════════════════════════════════════════════════════════╧╝
+  if Eclipse::Window::Word_Wrap
+    def process_character(c, text, pos)
+      c = ' ' if @convert_newlines && c == "\n"
+      if @wordwrap && c =~ /[ \t]/
+        c = '' if @collapse_whitespace && @lastc =~ /[\s\n\f]/
+        if pos[:x] + get_next_word_size(c,text)>contents.width-@right_margin
+          process_new_line(text, pos)
+        else
+          process_normal_character(c, pos)
+        end
+        @lastc = c
+      else
+        @lastc = c
+        case c
+        when "\n"   # New line
+          process_new_line(text, pos)
+        when "\f"   # New page
+          process_new_page(text, pos)
+        when "\e"   # Control character
+          process_escape_character(obtain_escape_code(text), text, pos)
+        else        # Normal character
+          process_normal_character(c, pos)
+        end
+      end
+    end
+
+    def get_next_word_size(c, text)
+      nextword = text.split(/[\s\n\f]/, 2)[0]
+      if nextword
+        icons = 0
+        if nextword =~ /\e/i
+          nextword = nextword.split(/\e[oOcC]+\[\d*\]/).join
+          nextword = nextword.split(/\e[\.\|\^<>!]/).join
+          nextword = nextword.split(/\e[^iIhH]+/, 2)[0]
+          nextword.gsub!(/\e[iIhH]+\[[\d,]*\]/) do
+            icons += 1
+            ''
+          end if nextword
+        end
+        wordsize=(nextword ?text_size(c + nextword).width: text_size(c).width)
+        wordsize += icons * 24
+      else
+        wordsize = text_size( c ).width
+      end
+      return wordsize
+    end
+
+    def process_escape_character(code, text, pos)
+      case code.upcase
+      when 'WW';  @wordwrap = true
+      when 'NW';  @wordwrap = false
+      when 'WS';  @convert_newlines = true
+      when 'NL';  @convert_newlines = false
+      when 'CS';  @collapse_whitespace = true
+      when 'PRE'; @collapse_whitespace = false
+      when 'BR';  process_new_line(text, pos)
+        @lastc = "\n"
+      when 'RM';  @right_margin = obtain_escape_param(text)
+      else
+        case code.upcase
+        when 'C'
+          change_color(text_color(obtain_escape_param(text)))
+        when 'I'
+          process_draw_icon(obtain_escape_param(text), pos)
+        when '{'
+          make_font_bigger
+        when '}'
+          make_font_smaller
+        end
+      end
+      if pos[:x] + get_next_word_size('', text) > contents.width
+        process_new_line(text, pos)
+      end
+    end
+  end # Close Wordwrap Flag
+end # Close Window Base
+
+# Class: Window_Selectable < Window_Base ═══════════════════════════════════════
+# - This window class contains cursor movement and scroll functions.
+#═══════════════════════════════════════════════════════════════════════════════
+class Window_Selectable < Window_Base
+  # Get Spacing for Items Arranged Side by Side ══════════════════════════════
+  def spacing
+    Eclipse::Window::SelSpacing
+  end
+end # Close Window Selectable
+
+# Class: Window_Command < Window_Selectable ════════════════════════════════════
+# - This window deals with general command choices.
+#═══════════════════════════════════════════════════════════════════════════════
+class Window_Command < Window_Selectable
+  # Get Window Width ═════════════════════════════════════════════════════════
+  def window_width
+    Eclipse::Window::Cmd_Width
+  end
+end
+
+#Class: Window_SkillList < Window_Selectable ═══════════════════════════════════
+# - This window is for displaying a list of available skills on the skill window
+#═══════════════════════════════════════════════════════════════════════════════
+class Window_SkillList < Window_Selectable
+  # Set Column Count ═════════════════════════════════════════════════════════
+  def col_max
+    Eclipse::Window::IS_Columns
+  end
+end
+
+# Class: Window_ItemList < Window_Selectable ═══════════════════════════════════
+# - This window displays a list of party items on the item screen.
+#═══════════════════════════════════════════════════════════════════════════════
+class Window_ItemList < Window_Selectable
+  # Set Column Count ═════════════════════════════════════════════════════════
+  def col_max
+    Eclipse::Window::IS_Columns
+  end
+end
+
+# Class: Window_ActorCommand < Window_Command ══════════════════════════════════
+# - This window is for selecting an actor's action on the battle screen.
+#═══════════════════════════════════════════════════════════════════════════════
+class Window_ActorCommand < Window_Command
+  # Hide Actor Commands if they are sealed ═════════════════════════════════════
+  def add_skill_commands
+    @actor.added_skill_types.sort.each do |stype_id|
+      name = $data_system.skill_types[stype_id]
+      next if @actor.skill_type_sealed?(stype_id)
+      match = false
+      for skill in @actor.skills
+        next unless skill != nil
+        next unless skill.stype_id == stype_id
+        match = true
+      end
+      add_command(name, :skill, true, stype_id) if match
+    end
+  end
+end
+
+# Class: Game_Actor ════════════════════════════════════════════════════════════
+class Game_Actor < Game_Battler
+  # Experience Rate (For Gauges) ═══════════════════════════════════════════════
+  def xp_rate
+    a = xp_in_level
+    b = xp_to_next
+    return a / b if b > 0
+    return 1 unless b > 0
+  end
+  
+  # EXP To Next Level ══════════════════════════════════════════════════════════
+  def xp_to_next
+    return next_level_exp - current_level_exp if level != max_level
+    return 0 if level == max_level
+  end
+  
+  # EXP Into This Level ════════════════════════════════════════════════════════
+  def xp_in_level
+    exp - current_level_exp
+  end
+end
+
+=begin ═══════════════════════════════════════════════════════════════════════╤╗
+│ ► ECLIPSE - Resolution and Window Handling Improvements ◄                   │║
+│ Section Dependency: None                                                    │║
+│ Author: Black Wyvern / Yanfly                                               │║
+│ Created: 04/24/15                                                           │║
+│ Updated: 04/25/16                                                           │║
+│ Version: 1.0                                                                │║
+=end #════════════════════════════════════════════════════════════════════════╧╝
+
+# Class: Game_Troop ════════════════════════════════════════════════════════════
+class Game_Troop < Game_Unit
+  # Fix battler position issues related to resolution ════════════════════════
+  def setup(troop_id)
+    clear
+    @troop_id = troop_id
+    @enemies = []
+    troop.members.each do |member|
+      next unless $data_enemies[member.enemy_id]
+      enemy = Game_Enemy.new(@enemies.size, member.enemy_id)
+      enemy.hide if member.hidden
+      enemy.screen_x = member.x + (Graphics.width - 544)/2
+      enemy.screen_y = member.y + (Graphics.height - 416)
+      @enemies.push(enemy)
+    end
+    init_screen_tone
+    make_unique_names
+  end
+end
+
+# Class: Window_Message < Window_Base ══════════════════════════════════════════
+class Window_Message < Window_Base
+  attr_reader :fiber
+end
+
+# Class: Window_ScrollText < Window_Base ═══════════════════════════════════════
+class Window_ScrollText < Window_Base
+  attr_reader :text
+end
+
+=begin ═══════════════════════════════════════════════════════════════════════╤╗
+│ ► SNIPPET IMPORT ◄                                                          │║
+│ Snippet Name: Map Name Load Fix                                             │║
+│ Snippet Dependency: None                                                    │║
+│ Author: Crazyninjaguy                                                       │║
+│ Modifications: None                                                         │║
+│ Source: RPGMC.com /topic/674-map-name-load-fix/                             │║
+│ Created: 01/03/12                                                           │║
+│ Updated: Unknown                                                            │║
+│ Version: Unknown                                                            │║
+│                                                                             │║
+│ Notes: Shows location header on map change.                                 │║
+=end #════════════════════════════════════════════════════════════════════════╧╝
+
+# Class: Window_MapName < Window_Base ══════════════════════════════════════════
+class Window_MapName < Window_Base
+  attr_reader :show_count
+  # Reinitialize ═════════════════════════════════════════════════════════════
+  alias bugfix_wmn_init initialize
+  def initialize
+    bugfix_wmn_init
+    if $game_map.display_name
+	  self.contents_opacity = 255
+	  @show_count = 150
+    end
+  end
+
+  # Draw background ══════════════════════════════════════════════════════════
+  def draw_background(rect)
+    temp_rect = rect.clone
+    temp_rect.width /= 2
+    contents.gradient_fill_rect(temp_rect, back_color2, back_color1)
+    temp_rect.x = temp_rect.width
+    contents.gradient_fill_rect(temp_rect, back_color1, back_color2)
+  end
+
+  # Refresh ══════════════════════════════════════════════════════════════════
+  def refresh
+    contents.clear
+    unless $game_map.display_name.empty?
+      draw_background(contents.rect)
+      draw_icon(15, 0, 0)
+      draw_text(contents.rect, $game_map.display_name, 1)
+    end
+  end
+end
+
+=begin ═══════════════════════════════════════════════════════════════════════╤╗
+│ ► CODE CREDIT ◄                                                             │║
+│ Snippet Name: Text Cache                                                    │║
+│ Snippet Dependency: None                                                    │║
+│ Author: Mithran                                                             │║
+│ Modifications: Black Wyvern                                                 │║
+│ Source: http://pastebin.com/fRFFYgRt                                        │║
+│ Forums: Forums.RPGMW /index.php?/topic/1001-text-cache/                     │║
+│ Created: 03/27/12                                                           │║
+│ Updated: 07/04/14                                                           │║
+│ Version: 1.03                                                               │║
+=end #════════════════════════════════════════════════════════════════════════╧╝
+
+# Class: Bitmap ════════════════════════════════════════════════════════════════
+class Bitmap
+  # Draw Text ════════════════════════════════════════════════════════════════
+  alias bugfix_bitmap_dt draw_text
+  def draw_text(*args)
+    return bugfix_bitmap_dt(*args) unless TextCache::Enabled
+    if args[0].is_a?(Rect)
+      rect = args[0]
+      x, y, width, height = rect.x, rect.y, rect.width, rect.height
+      text = args[1].to_s.clone || ""
+      align = args[2] || 0
+    else
+      x, y, width, height = *args[0..3]
+      text = args[4].to_s.clone || ""
+      align = args[5] || 0
+    end
+    if check_squeeze_allowed(x, y, width, height, text)
+      x -= align
+      bugfix_bitmap_dt(x, y, width + 2, height, text, align)
+    else
+      draw_text_cached(x, y, width, height, text, align)
+    end
+  end
+
+  # Check Squeeze Allowed ════════════════════════════════════════════════════
+  def check_squeeze_allowed(x, y, width, height, text)
+    return false if TextCache::DisableSqueeze
+    return false if TextCache::MaxDrawWidthSoft &&
+                    width > TextCache::MaxDrawWidthSoft
+    text_width = text_size(text).width
+    return false if text_width >= TextCache::MaxDrawWidthHard
+    text_width > width * TextCache::MinSqueezeTriggerRate
+  end
+
+  # Draw Text Cached ═════════════════════════════════════════════════════════
+  def draw_text_cached(x, y, width, height, text, align, allow_squeeze = false)
+    text_rect = self.text_size(text)
+    text_width = text_rect.width
+    text_height = text_rect.height
+    if allow_squeeze && text_width > width*TextCache::MinSqueezeTriggerRate
+      ratio = width / text_width.to_f
+      ratio = 0.5 if ratio < 0.5
+      rect = Rect.new(0, 0, 0, 0)
+    else 
+      ratio = nil
+    end
+    fontkey = self.font.to_a
+    case align
+    when 1; x += (width - text_width) / 2
+    when 2; x += width - text_width
+    end
+    y += (height - text_height) / 2
+    buf = -TextCache::BufferSide
+    buf *= ratio if ratio
+    text.each_char { |char|
+    letter = TextCache.letters(fontkey, char)
+    if TextCache::SimpleFix
+      draw_text_vxa(x + buf, y, letter.rect.width + 2, letter.height, char)
+      buf += letter.rect.width - TextCache::BufferSide * 2
+    elsif ratio
+      w = (ratio * 10).to_i * letter.rect.width / 10 
+      rect.set(x + buf, y, w, text_height)
+      self.stretch_blt(rect, letter, letter.rect) 
+      buf += (letter.rect.width*ratio-TextCache::BufferSide*2*ratio).to_i
+    else
+      self.blt(x + buf, y, letter, letter.rect)
+      buf += letter.rect.width - TextCache::BufferSide * 2
+    end
+    }
+    nil
+  end
+end
+
+# Module: TextCache ════════════════════════════════════════════════════════════
+module TextCache
+  # Canvas ═══════════════════════════════════════════════════════════════════
+  def self.canvas(font = nil)
+    @canvas = Bitmap.new(32, 32) if @canvas.nil? || @canvas.disposed?
+    @canvas
+  end
+
+  # Letters ══════════════════════════════════════════════════════════════════
+  def self.letters(font, char)
+    @cache ||= {}
+    key = font + [char]
+    if include?(key)
+      return @cache[key]
+    elsif char.empty?
+      return empty_bitmap
+    else
+      return new_letter(font, char)
+    end
+  end
+
+  # Empty Bitmap ═════════════════════════════════════════════════════════════
+  def self.empty_bitmap
+    @cache[:empty] = Bitmap.new(32, 32) unless include?(:empty)
+    @cache[:empty]
+  end 
+
+  # New Letter ═══════════════════════════════════════════════════════════════
+  def self.new_letter(fontary, char)
+    font = create_font(fontary)
+    canvas.font = font
+    rect = canvas.text_size(char * 3) 
+    return @cache[key] = empty_bitmap if (rect.height == 0 || rect.width == 0)
+    b = Bitmap.new((rect.width / 3) + TextCache::BufferSide * 2, rect.height)
+    b.font = font
+    b.bugfix_bitmap_dt(rect.x-b.text_size(" ").width + TextCache::BufferSide,
+        rect.y - TextCache::BufferTop, TextCache::BufferLength, rect.height +
+        TextCache::BufferTop * 2, " #{char} ", 0)
+    key = fontary + [char]
+    @cache[key] = b    
+  end
+
+  # Create Font ══════════════════════════════════════════════════════════════
+  def self.create_font(fontary)
+    font = Font.new(*fontary[0..1])
+    font.bold = fontary[2]
+    font.italic = fontary[3]
+    font.outline = fontary[4]
+    font.shadow = fontary[5]
+    font.color.set(*fontary[6..9])
+    font.out_color.set(*fontary[10..13])
+    font
+  end
+
+  # Include? ═════════════════════════════════════════════════════════════════
+  def self.include?(key)
+    @cache[key] && !@cache[key].disposed?
+  end
+
+  # Clear ════════════════════════════════════════════════════════════════════
+  def self.clear
+    @cache ||= {}
+    @cache.clear
+    GC.start
+  end
+end
+
+# Class: Font ══════════════════════════════════════════════════════════════════
+class Font
+  # To Array ═════════════════════════════════════════════════════════════════
+  def to_a
+    [name, size, bold, italic, outline, shadow, color.red, color.green,
+      color.blue, color.alpha, out_color.red, out_color.green, out_color.blue,
+      out_color.alpha]
+  end
+
+  def use(window)
+    old_font = window.contents.font.dup
+    window.contents.font = self
+    yield
+    window.contents.font = old_font  
+  end
+end
+
+# Class: Scene_Map < Scene_Base ════════════════════════════════════════════════
+# Changes how the windows in Scene_Map are handled to reduce processing time.
+# ══════════════════════════════════════════════════════════════════════════════
+class Scene_Map < Scene_Base
+  # Update ═══════════════════════════════════════════════════════════════════
+  def update
+    if @message_window; unless @message_window.fiber
+      @message_window.dispose
+      @message_window = nil; end
+    else; if $game_message.busy? && !$game_message.scroll_mode
+      create_message_window; end
+    end
+
+    if @scroll_text_window; unless @scroll_text_window.text
+      @scroll_text_window.dispose
+      @scroll_text_window = nil; end
+    else; if $game_message.scroll_mode && $game_message.has_text?
+      create_scroll_text_window; end
+    end
+
+    if @map_name_window && @map_name_window.show_count == 0 && 
+        @map_name_window.contents_opacity == 0
+      @map_name_window.dispose
+      @map_name_window = nil
+    end
+
+    super
+    $game_map.update(true)
+    $game_player.update
+    $game_timer.update
+    @spriteset.update
+    $game_map.update_events
+    $game_map.update_vehicles
+    update_scene if scene_change_ok?
+  end
+
+  # Create All Windows ═══════════════════════════════════════════════════════
+  def create_all_windows
+    if @message_window
+      @message_window.dispose
+      @message_window = nil
+    end
+
+    if @scroll_text_window
+      @scroll_text_window.dispose
+      @scroll_text_window = nil
+    end
+
+    create_location_window unless $game_map.display_name.empty?
+  end
+
+  # Preprocessing for Transferring Player ════════════════════════════════════
+  def pre_transfer
+    case $game_temp.fade_type
+    when 0
+      Graphics.prefade
+      fadeout(fadeout_speed)
+    when 1
+      white_fadeout(fadeout_speed)
+    end
+  end
+
+  # Post Processing for Transferring Player ══════════════════════════════════
+  def post_transfer
+    case $game_temp.fade_type
+    when 0
+      Graphics.wait(fadein_speed / 2)
+      fadein(fadein_speed)
+    when 1
+      Graphics.wait(fadein_speed / 2)
+      white_fadein(fadein_speed)
+    end
+  end
+end # Close Scene Map
+
+# Class: Game_Map ══════════════════════════════════════════════════════════════
+class Game_Map
+  # Display X ════════════════════════════════════════════════════════════════
+  def display_x;  (@display_x * 32).floor.to_f / 32;  end
+
+  # Display Y ════════════════════════════════════════════════════════════════
+  def display_y;  (@display_y * 32).floor.to_f / 32;  end
+
+  # Adjust X ═════════════════════════════════════════════════════════════════
+  def adjust_x(x)
+    if loop_horizontal? && x < display_x - (width - screen_tile_x) / 2
+      x - display_x + @map.width
+    else
+      x - display_x
+    end
+  end
+
+  # Adjust Y ═════════════════════════════════════════════════════════════════
+  def adjust_y(y)
+    if loop_vertical? && y < display_y - (height - screen_tile_y) / 2
+      y - display_y + @map.height
+    else
+      y - display_y
+    end
+  end
+end
+
+# Class: Game_Interpreter ══════════════════════════════════════════════════════
+class Game_Interpreter
+  # Command 255 ══════════════════════════════════════════════════════════════
+  def command_225
+    screen.start_shake(@params[0], @params[1], @params[2])
+    wait(@params[2]) if @params[3]
+  end
+end
+
+# Class: Game_Map ══════════════════════════════════════════════════════════════
+class Game_Map
+  # Autoplay ═════════════════════════════════════════════════════════════════
+  alias bugfix_gm_autoplay autoplay
+  def autoplay
+    return unless $game_player.is_walk?
+    bugfix_gm_autoplay 
+  end
+
+  # Play Music ═══════════════════════════════════════════════════════════════
+  def play_music
+    @map.bgm.play if @map.autoplay_bgm
+    @map.bgs.play if @map.autoplay_bgs
+  end
+end
+
+# Class: Game_Player ═══════════════════════════════════════════════════════════
+class Game_Player
+  # Is Walk? ═════════════════════════════════════════════════════════════════
+  def is_walk?
+    @vehicle_type == :walk
+  end
+end
+
+# Class: Game_Vehicle < Game_Character ═════════════════════════════════════════
+class Game_Vehicle < Game_Character
+  # Get On ═══════════════════════════════════════════════════════════════════
+  alias bugfix_gv_get_on get_on
+  def get_on
+    bugfix_gv_get_on
+    @walking_map_id = $game_map.map_id
+  end
+
+  # Get Off ══════════════════════════════════════════════════════════════════
+  alias bugfix_gv_get_off get_off
+  def get_off
+    bugfix_gv_get_off
+    if $game_map.map_id != @walking_map_id
+      RPG::BGM.stop
+      $game_map.play_music
+    end
+  end
+end
+
+# Class: Game_Map ══════════════════════════════════════════════════════════════
+class Game_Map
+  # Check Passage ════════════════════════════════════════════════════════════
+  def check_passage(x, y, bit)
+    all_tiles(x, y).each do |tile_id|
+      flag = tileset.flags[tile_id]
+      if flag & 0x10 != 0                   # [☆]: No effect on passage
+        next         if flag & bit == 0     # [○] : Passable but star
+        return false if flag & bit == bit   # [×] : Impassable
+      else
+        return true  if flag & bit == 0     # [○] : Passable
+        return false if flag & bit == bit   # [×] : Impassable
+      end
+    end
+    return false                            # Impassable
+  end
+end
+
+# Class: Window_EquipStatus < Window_Base ══════════════════════════════════════
+class Window_EquipStatus
+  # Draw Arrows ══════════════════════════════════════════════════════════════
+  alias bugfix_wes_dra draw_right_arrow
+  def draw_right_arrow(x, y)
+    Font.new(["VL Gothic", "Arial"]).use(self) do
+      bugfix_wes_dra(x, y)
+    end
+  end
+end
+
+# Class: Game_Event < Game_Character ═══════════════════════════════════════════
+class Game_Event < Game_Character
+  # Near the Screen? [Custom Movement Event Update] ══════════════════════════
+  alias bugfix_ge_nts? near_the_screen?
+  def near_the_screen?(dx = 12, dy = 8)
+    dx = dy = nil unless $imported["YEA-CoreEngine"].nil?
+    return true if @event.name.include?('[update]')
+    return bugfix_ge_nts?(dx, dy)
+  end
+end
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ════╗ End Activation Handler ╔════════════════════════════════════════════════
+end # ╚════════════════════════╝ End of File - Srsly, there's nothing more here!
