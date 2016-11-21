@@ -1,0 +1,626 @@
+=begin ═════════════════════════════════════════════════════════════════════════
+│ ► CODE HEADER ◄
+│ Name:           Eclipse Debugging
+│ Author:         Black Wyvern
+│ Forum:          RPGMC.com /topic/XXXXX-eclipse-engine/
+│                 RPGMC.com == (http://www.rpgmakercentral.com/)
+│
+│ Created:        04/24/16
+│ Updated:        10/20/16
+│ Version:        1.0
+│ License:        http://creativecommons.org/licenses/by-sa/3.0/
+=end #══════════════════════════════════════════════════════════════════════════
+
+# ► CODE ACTIVATION ◄ ══════════════════════════════════════════════════════════
+  active = true # Turns this script on/off (Only if $Eclipse_GEnable is true)
+#═══════════════════════════════════════════════════════════════════════════════
+                   
+=begin ═════════════════════════════════════════════════════════════════════════
+│ ► CODE DOCUMENTATION ◄
+│
+│ Dependencies:   Eclipse Core (High Order Placement)
+│                 Eclipse Main (Given below if using the global options.)
+│
+│ Description:    Adds various debugging features and methods.
+│                 Adds and on-screen console display.
+│                 Includes cheating mode (Everything learned/owned)
+│                 Optionally can attach an external console.
+│
+│                 Adds the following methods:
+│                   ► Debug(type,title,value,fatal,backtrace,backtracelog)
+│                   ► Backtrace(count)
+│                   ► Dumpinc
+│                   ► VerifyArgs(hard,*args)
+│                   ► Display(*data)
+│                   ► DisplayWin(*data)
+│                   ► Mark
+│                   ► Benchmark_Start(bench_id, clear)
+│                   ► Benchmark_End(bench_id)
+│
+│                   ► Window_EclipseDebug.AddData(*data)
+│                   ► Window_EclipseDebug.FPS(fps)
+│                   ► Window_EclipseDebug.Scene
+│                   ► Window_EclipseDebug.Bench(op1,av,opall)
+│
+│ Configuration:  Set cheating and onscreen console options.
+│
+│ Instructions:   Plug and Play
+│
+│ Optional:       None
+│
+│ Compatability:  Base
+│
+│ Order:          High
+│
+│ Position:       ▼ Materials
+│                 ► Eclipse - Core (High)
+│                 ► Eclipse - Debugging
+│                 ► High Order Eclipse Modules
+│
+│                 (Other People's Code)
+│
+│                 ► Low Order Eclipse Modules
+│                 ▼ Main Process
+│                 ► Eclipse - Main
+=end #══════════════════════════════════════════════════════════════════════════
+
+=begin ═════════════════════════════════════════════════════════════════════════
+│ ► MAIN REPLACEMENT ◄
+│ If you would like to use the Rapid Debugging mode, you will need to replace
+│ your ► Main with the following code.
+│
+│ While there is still not a method for reloading scripts in game (That I know
+│ of). Being able to quickly tab between the Script Editor/Database and the
+│ Testplay Client without having to first close the Testplay client saves a
+│ rediculous amount of time in the long run.
+│
+│ If you enjoy debugging mechanisms in general, I cannot recommend Rikifive's
+│ RK5 Debugging Console enough to be used in tandem with this. Seriously.
+=end #══════════════════════════════════════════════════════════════════════════
+
+%Q( ■ ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ COPY BELOW THIS LINE ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ ■
+#═══════════════════════════════════════════════════════════════════════════════
+# Eclipse Main
+# -- Launch the game, enable test mode, and handle errors should they arrise.
+#═══════════════════════════════════════════════════════════════════════════════
+begin; rgss_main do
+  begin
+    if defined?($Rapid_Debug)
+      if ($TEST && $Rapid_Debug)
+        $TMT = Thread.new{system("Game.exe")}; sleep(0.01); exit
+      end
+      $TEST = $Rapid_Debug
+      attach_console if $Rapid_Debug && $AttachConsole
+      Dumpinc() if $Dump_Includes
+    end
+    SceneManager.run
+  rescue RGSSReset; Graphics.transition(10); retry
+  end; end
+rescue SystemExit; exit
+rescue Exception => error
+  Debug("Exception",error.message,error.class,true,true,error.backtrace) rescue
+    msgbox("Exception " + error.message + "\n" + error.class.to_s + 
+      "\n" + error.backtrace.join("\n"))
+end
+    ■ ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ COPY ABOVE THIS LINE ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ ■ )
+
+# ► CORE DEPENDENCY CHECK ◄ ════════════════════════════════════════════════════
+# ■ ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤  DO NOT EDIT  ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ ■
+class Eclipse; module Requirements
+  VersionRequired = 1.0
+  ScriptName      = "► Eclipse Debugging"
+
+  def self.CoreInstalled?;  return !($imported["Eclipse-Core-H"].nil?); end
+  def self.CoreActive?;     return $imported["Eclipse-Core-H"][0];      end
+  def self.CoreVersion;     return $imported["Eclipse-Core-H"][1];      end
+  def self.VersionCheck?;   return self.CoreVersion >= VersionRequired; end
+  def self.DependencyOkay?; unless CoreInstalled?
+    msgbox("Eclipse module installation error:\nFailed Requirement Check\n\n"+
+      ScriptName + " requires \n" +
+      "► Eclipse Core (High) ver. " + VersionRequired.to_s + " " +
+      "or higher\n to be installed and placed above this script.")
+    return false; else; return CoreActive? && VersionCheck? && $Eclipse_GEnable;
+  end; end; end; end; active = active && Eclipse::Requirements.DependencyOkay?
+# ■ ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤  DO NOT EDIT  ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ ■
+# ══════════════════════════════════════════════════════════════════════════════
+
+=begin ═══════════════════════════════════════════════════════════════════════╤╗
+│ ► CODE CREDIT ◄                                                             │║
+│ Script Name: Console Window                                                 │║
+│ Script Dependencies: None                                                   │║
+│ Author: Hime                                                                │║
+│ Modifications: None                                                         │║
+│ Source:  http://himeworks.com/                                              │║
+│          redirect.php?type=script&name=console_window                       │║
+│ Created: 12/03/13                                                           │║
+│ Updated: --/--/--                                                           │║
+│ Version: 1.0.0                                                              │║
+=end #════════════════════════════════════════════════════════════════════════╧╝
+
+#     ╔════════════════════════╗
+# ════╝ ► ACTIVATION HANDLER ◄ ╚════════════════════════════════════════════════
+# ■ ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤  DO NOT EDIT  ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ ■
+  ($imported||={})["Eclipse-Debugging"]=[active,1.0]; if active
+# ■ ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤  DO NOT EDIT  ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ ■
+#═══════════════════════════════════════════════════════════════════════════════
+
+#═══════════════════════════════════════════════════════════════════════════════
+#                ► START OF SAFE CODE CONFIGURATION OPTIONS ◄
+#═══════════════════════════════════════════════════════════════════════════════
+
+# Debugging Global Switches ════════════════════════════════════════════════════
+# - All these options require the Main replacement given above.
+# ══════════════════════════════════════════════════════════════════════════════
+$Dump_Includes = false  # Dumps a list of imported scripts at boot.
+$Rapid_Debug   = false   # Launches a new window in test mode and makes it
+                        # possible to code or use the DB while in game.
+$AttachConsole = false  # Attaches a console if using rapid debug mode.
+
+# Class: Eclipse ═══════════════════════════════════════════════════════════════
+class Eclipse
+  module Debug
+    # Debug Module Settings ══════════════════════════════════════════════════
+    ConsoleFadeTime = 300   # Number of frames to remain onscreen
+    ConsoleMaxLines = 5     # Number of lines to show on the debug console
+    ConsoleShow_FPS = true  # Enable a small FPS gauge
+
+    # Faster Progress ════════════════════════════════════════════════════════
+    No_Transitions = false
+    SkipTitleScene = false
+
+    # Cheatyface Mode ════════════════════════════════════════════════════════
+    Have_All_Items = true
+    HaveAllArmours = true
+    HaveAllWeapons = true
+    StartingGoldAm = 999999
+    LearnAllSkills = true
+    Begin_At_Level = nil    # Leave nil to start at default. Int to override.
+  end
+end
+
+#═══════════════════════════════════════════════════════════════════════════════
+#                ► END OF SAFE CODE CONFIGURATION OPTIONS ◄
+#═══════════════════════════════════════════════════════════════════════════════
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ☄☢☣      EXPLOSIVE, RADIOACTIVE, CLASS-4 BIOHAZARD CODE WARNING      ☣☢☄
+# ■ ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ DO NOT CROSS ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ ■
+#═══════════════════════════════════════════════════════════════════════════════
+
+# Class: Eclipse ═══════════════════════════════════════════════════════════════
+class Eclipse
+  def self.performCheating
+    $game_party.gain_all_weapons if Eclipse::Debug::HaveAllWeapons
+    $game_party.gain_all_armors if Eclipse::Debug::HaveAllArmours
+    $game_party.gain_all_items if Eclipse::Debug::Have_All_Items
+    $game_party.gain_gold(Eclipse::Debug::StartingGoldAm)
+    $game_party.members.each {|actor|
+      actor.force_learn_all_skills if Eclipse::Debug::LearnAllSkills
+      actor.change_level(Eclipse::Debug::Begin_At_Level,false) rescue nil}
+  end
+
+  module Debug
+    # Debug with Stack Backtracing ═══════════════════════════════════════════
+    def Debug(type,title,value,fatal=false,backtrace=false,backtracelog=[])
+      header = "Eclipse Debug Module\n"
+      type = "Unknown" if type == ""
+
+      msg = "Fatal " + type + " Error" if fatal
+      msg = type unless fatal
+      msg += "\n" + title.to_s if title !=""
+      msg += "\nValue: " + value.to_s if value != ""
+      
+      if backtrace
+        msg += "\nCall Backtrace:"
+        i=0;  while i <= 8
+          exam = caller
+          exam = backtracelog unless backtracelog.empty?
+          unless exam[i].nil?
+            info = exam[i].split(":")
+            script = $RGSS_SCRIPTS[info[0][1,4].to_i][1]
+            line = info[1].to_s
+            code = info[2].to_s[3..-1]
+            i = 15 if /<main>/.match(code)
+            
+            msg += "\n-- "
+            msg += code if !code.nil?
+            msg += " in " + script + " on line " + line
+            i+=1
+          else
+            msg += "\nBase"; break
+          end
+        end
+        msg += "\n"
+      end
+    
+      msg += "\nProgram will now close." if fatal
+      Display(header+msg)
+      exit if fatal
+    end
+
+    # Backtracing ════════════════════════════════════════════════════════════
+    def Backtrace(count=15)
+      header = "BWA RPGM-X Backtrace Module\n"
+      msg = "\nCall Backtrace:"
+      i = 0;  while i <= count
+        exam = caller
+        unless exam[i].nil?
+          info = exam[i].split(":")
+          script = $RGSS_SCRIPTS[info[0][1,4].to_i][1]
+          line = info[1].to_s
+          code = info[2].to_s[3..-1]
+          i = 15 if /<main>/.match(code)
+          
+          msg += "\n-- "
+          msg += code if !code.nil?
+          msg += " in " + script + " on line " + line
+          i+=1
+        else
+          msg += "\nBase"; break
+        end
+      end
+      Display(header+msg)
+    end
+
+    # Dump list of $included files ═══════════════════════════════════════════
+    def Dumpinc
+      incdump = "Eclipse Debug Module\nList of $imported scripts:\n\n"
+      $imported.keys.each do |i|
+        incdump+=i.to_s + " | "
+      end
+      Display(incdump)
+    end
+
+    # Verify list of arguments ═══════════════════════════════════════════════
+    def VerifyArgs(hard,*args)
+      verifyOK = true
+      arglist = [*args]
+      arglist.each do |value,type|
+        case type
+        when 's'
+          validate = 'String'
+          hard_val = 'both'
+        when 'i'
+          validate = 'Integer'
+          hard_val = 'nil'
+        when 'f'
+          validate = 'Float'
+          hard_val = 'nil'
+        when 'b'
+          validate = 'TrueClass'
+          hard_val = 'nil'
+        when 'a'
+          validate = 'Array'
+          hard_val = 'both'
+        when 'h'
+          validate = 'Hash'
+          hard_val = 'both'
+        end
+
+        if hard_val == 'nil'
+          verifyOK = !value.nil? && verifyOK
+        else
+          if hard
+            verifyOK = !value.nil? && verifyOK
+            verifyOK = (value.empty? rescue false) && verifyOK
+
+            unless verifyOK
+              Debug("Argument Verification","Argument is nil/empty",
+                value,hard,true)
+            end
+          end
+        end
+
+        obj_type = Object.const_get(validate)
+        verifyOK = value.is_a?(obj_type) && verifyOK
+        if type == 'b' && !verifyOK
+          obj_type = Object.const_get("FalseClass")
+          verifyOK = value.is_a?(obj_type)
+        end
+
+        unless verifyOK
+          saytype = obj_type.to_s
+          saytype = "Boolean" if type == 'b'
+          Debug("Argument Verification","Argument is not a " + saytype,
+            value,hard,true)
+        end
+      end
+      DisplayWin("VerifyArgs:: All Values PASS") if verifyOK
+      DisplayWin("VerifyARGS:: FAIL") unless verifyOK
+    end
+
+    # Display itemized message box ═══════════════════════════════════════════
+    def Display(*data)
+      datatable = [*data]
+      msg = ""
+      datatable.each {|entry| msg += entry.to_s + ", "}
+      msg = msg[0,msg.length-2]
+      msgbox(sprintf(msg)) rescue msgbox(msg)
+    end
+
+    # Display to console window ══════════════════════════════════════════════
+    def DisplayWin(*data)
+      if !$EclipseDebugWindow
+        $EclipseDebugWindow =
+          Window_EclipseDebug.new(-12,-12,Graphics.width+24,Graphics.height+24)
+      end
+      $EclipseDebugWindow.AddData(*data)
+    end
+
+    # Say 'Mark' (For quick checking if a process reached a point) ═══════════
+    def Mark; Display("Mark");  end
+
+    # Begin benchmarking service ═════════════════════════════════════════════
+    def Benchmark_Start(bench_id = 0, clear = false)
+      @Benchmarks = [[nil,0,0]]*10 unless @Benchmarks
+
+      @Benchmarks[bench_id] = [[nil,0,0]] if clear
+      @Benchmarks[bench_id][0] = Time.now.to_f
+      @Benchmarks[bench_id][1] += 1
+    end
+
+    # End and display benchmark service ══════════════════════════════════════
+    def Benchmark_End(bench_id = 0)
+      @Benchmarks[bench_id][0] = Time.now.to_f - @Benchmarks[bench_id][0]
+      @Benchmarks[bench_id][2] += @Benchmarks[bench_id][0]
+      if @Benchmarks[bench_id][1] % 10 == 0
+        operation  = @Benchmarks[bench_id][0]
+        average    = @Benchmarks[bench_id][2]/@Benchmarks[bench_id][1]
+        framespeed = (1.0 / Graphics.frame_rate).round_to(5)
+        opspeed    = (framespeed/average).round_to(5) rescue 10000
+        DisplayBench(operation,average,opspeed)
+        if !$EclipseDebugWindow
+          $EclipseDebugWindow =
+           Window_EclipseDebug.new(-12,-12,Graphics.width+24,Graphics.height+24)
+        end
+        $EclipseDebugWindow.Bench(operation,average,opspeed)
+      end
+    end
+
+    # Display client FPS w/Gauge ═════════════════════════════════════════════
+    def DisplayFPS(fps)
+      if !$EclipseDebugWindow
+        $EclipseDebugWindow =
+          Window_EclipseDebug.new(-12,-12,Graphics.width+24,Graphics.height+24)
+      end
+      $EclipseDebugWindow.FPS(fps)
+    end
+
+    def DisplayScene
+      if !$EclipseDebugWindow
+        $EclipseDebugWindow =
+          Window_EclipseDebug.new(-12,-12,Graphics.width+24,Graphics.height+24)
+      end
+      $EclipseDebugWindow.Scene
+    end
+  end
+end # Close Eclipse Debug
+include Eclipse::Debug
+
+# Class: Scene_Base ════════════════════════════════════════════════════════════
+class Scene_Base
+  alias eclipse_update update
+  def update
+    eclipse_update
+    $EclipseDebugWindow.update if $EclipseDebugWindow
+  end
+end
+
+# Class: Window_EclipseDebug < Window_Base ═════════════════════════════════════
+class Window_EclipseDebug < Window_Base
+  def initialize(x,y,h,w)
+    super
+    self.opacity = 0
+    # -- Console Vars
+    @datalog = []
+    @drawtime = 0
+    @dbcnframe = 0
+    @fadetime = ConsoleFadeTime
+    @maxitems = ConsoleMaxLines
+    self.z = 5000
+  end
+  
+  # Add data to console ══════════════════════════════════════════════════════
+  def AddData(*data)
+    datatable = [*data]
+    info = caller[2].split(":")
+    script = $RGSS_SCRIPTS[info[0][1,4].to_i][1]
+    line = info[1].to_s
+    code = info[2].to_s[3..-1]
+    datatable.each {|item|
+      @datalog.unshift [item,@drawtime,script,line,code]
+    @drawtime = 1 if @drawtime <= 0}
+  end
+
+  # Draw FPS Gauge ═══════════════════════════════════════════════════════════
+  def FPS(fps)
+    contents.clear_rect(0,-3,103,20)
+    fps_rate = fps/60.0
+    draw_gauge(3,8,100,fps_rate,
+      Color.new(150,0,0),Color.new(0,192,255))
+    draw_text_ex(3,-3,fps.to_s+" FPS ("+Graphics.frame_count.to_s+")")
+  end
+
+  def Scene
+    contents.clear_rect(0,50,150,150)
+    draw_text_ex(3,50,
+      "Main: " + SceneManager.scene.to_s + "\n" +
+      "Queue: " + SceneManager.callqueue.join("\n") + "\n" +
+      "Stack: " + $DynamicStack.join("\n"), false
+    )
+  end
+
+  # Draw Benchmark Gauge ═════════════════════════════════════════════════════
+  def Bench(op1,av,opall)
+    offset = ((@maxitems+3)*16)
+    contents.clear_rect(9,offset,Graphics.width,16)
+    benchrate = (opall / Graphics.frame_rate).clamp 0,1
+    gauge_colors(benchrate)
+    draw_gauge(10,offset+10,150,benchrate,
+      Color.new(150,0,0),Color.new(0,192,255))
+    draw_text_ex(10,offset-3,
+      "Benchmark: " + op1.round_to(5).to_s + 
+      " Avg: " + av.round_to(5).to_s +
+      " Ops/F: " + (opall / Graphics.frame_rate).round.to_s)
+  end
+  
+  # Frame Update ═════════════════════════════════════════════════════════════
+  def update
+    super
+    # -- Console Update
+    if @drawtime > 0
+      @drawtime += 1
+      @dbcnframe += 1
+      return if $FSX.Skip?(10)
+      @dbcnframe = 0 if @dbcnframe > 100
+
+      @drawn_at = @datalog[0][1].to_f
+      while @datalog.length > @maxitems*2; @datalog.pop; end
+      while !@datalog.empty? && @drawtime - @datalog[-1][1] > @fadetime
+        @datalog.pop
+      end
+      if @datalog.empty?
+        @drawtime = 0
+        return
+      end
+
+      bgsize = contents.rect
+      bgsize.height = @maxitems * 16 + 8
+      offset = (ConsoleShow_FPS ? 105 : 0)
+      bgsize.x = offset
+      bgsize.w -= offset
+      
+      rate = (1-(@drawtime - @drawn_at) / @fadetime.to_f).round(2).clamp 0,1
+      contents.gradient_fill_rect(bgsize,
+        Color.new(0,0,0,192*rate),Color.new(0,0,0,50*rate),true)
+
+      i = 0
+      for item in @datalog
+        xpos = i < @maxitems ? offset : (contents.width-offset)/2
+        draw_text_ex(xpos,((i % @maxitems)*16),
+          #"[" + item[2].to_s + " {" + item[3].to_s + "}] " +
+          # This gives a bit more information, but may exceed your screen area
+          item[4].to_s + " " + item[0].to_s,true)
+        i+=1
+      end
+    elsif @drawtime == 0
+      contents.clear
+      @drawtime -= 1
+    end
+  end # Close Update
+end # Close Window Eclipse Debug
+
+# Module: Graphics ═════════════════════════════════════════════════════════════
+# - Inject FPS Counter
+#═══════════════════════════════════════════════════════════════════════════════
+module Graphics
+  if ConsoleShow_FPS
+    @fps, @fps_tmp = 0, []
+    attr_reader :fps
+    class << self
+      alias fps_update update unless method_defined?(:fps_update)
+      def update
+        t = Time.now
+        fps_update
+        @fps_tmp[frame_count % frame_rate] = Time.now != t
+        @fps = 0
+        frame_rate.times {|i| @fps += 1 if @fps_tmp[i]}
+        DisplayFPS(@fps)
+      end
+    end
+  end
+end
+
+# Class: Game_Interpreter ══════════════════════════════════════════════════════
+# - Event Script Error Handling
+#═══════════════════════════════════════════════════════════════════════════════
+class Game_Interpreter
+  def command_355
+    script = @list[@index].parameters[0] + "\n"
+    while next_event_code == 655
+      @index += 1
+      script += @list[@index].parameters[0] + "\n"
+    end
+    eval(script) rescue
+      Debug("Event Script","Unknown method called in map event.",
+        script,true,false)
+  end
+end
+
+# Class: Game_Party ════════════════════════════════════════════════════════════
+class Game_Party < Game_Unit
+  def gain_all_items; $data_items.each {|item| gain_item(item, 99) }; end
+  def gain_all_armors; $data_armors.each {|item| gain_item(item, 99) }; end
+  def gain_all_weapons; $data_weapons.each {|item| gain_item(item, 99) }; end
+end
+
+# Class: Game_Actor ════════════════════════════════════════════════════════════
+class Game_Actor < Game_Battler
+  def force_learn_all_skills
+    for i in 0..$data_skills.size
+      learn_skill(i)
+    end
+  end
+end
+
+# Module: SceneManager ═════════════════════════════════════════════════════════
+module SceneManager
+  def self.first_scene_class
+    if Eclipse::Debug::SkipTitleScene
+      Graphics.fadeout(1)
+      DataManager.setup_new_game
+      $game_map.autoplay
+      Eclipse.performCheating
+      return Scene_Map
+    else
+      $BTEST ? Scene_Battle : Scene_Title
+    end
+  end
+end
+
+class Scene_Title < Scene_Base
+  def command_new_game
+    DataManager.setup_new_game
+    close_command_window
+    fadeout_all
+    $game_map.autoplay
+    Eclipse.performCheating
+    SceneManager.goto(Scene_Map)
+  end
+end
+
+if Eclipse::Debug::No_Transitions
+  class Scene_Base
+    def perform_transition
+      Graphics.transition(0)
+    end
+  end
+end
+
+# Attach New Console ═══════════════════════════════════════════════════════════
+def attach_console
+  # Get game window text
+  console_w = Win32API.new('user32','GetForegroundWindow','V','L').call
+  buf_len = Win32API.new('user32','GetWindowTextLength','L','I').call(console_w)
+  str = ' ' * (buf_len + 1)
+  Win32API.new(
+    'user32','GetWindowText','LPI','I').call(console_w,str,str.length)
+  
+  # Initiate console
+  Win32API.new('kernel32.dll','AllocConsole','','').call
+  Win32API.new('kernel32.dll','SetConsoleTitle','P','').call('RGSS3 Console')
+  $stdout.reopen('CONOUT$')
+  
+  # Sometimes pressing F12 will put the editor in focus first,
+  # so we have to remove the program's name
+  game_title = str.strip
+  game_title.sub! ' - RPG Maker VX Ace', ''
+  
+  # Set game window to be foreground
+  hwnd = Win32API.new('user32.dll','FindWindow','PP','N').call(0, game_title)
+  Win32API.new('user32.dll','SetForegroundWindow','P','').call(hwnd)
+end
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ════╗ End Activation Handler ╔════════════════════════════════════════════════
+end # ╚════════════════════════╝ End of File - Srsly, there's nothing more here!
