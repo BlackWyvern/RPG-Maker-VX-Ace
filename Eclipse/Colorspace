@@ -1,0 +1,355 @@
+=begin ═════════════════════════════════════════════════════════════════════════
+│ ► CODE HEADER ◄
+│ Name:           Eclipse Colorspace
+│ Author:         Black Wyvern
+│ Forum:          RPGMC.com /topic/XXXXX-eclipse-engine/
+│                 RPGMC.com == (http://www.rpgmakercentral.com/)
+│
+│ Created:        04/24/16
+│ Updated:        10/20/16
+│ Version:        1.0
+│ License:        http://creativecommons.org/licenses/by-sa/3.0/
+=end #══════════════════════════════════════════════════════════════════════════
+
+# ► CODE ACTIVATION ◄ ══════════════════════════════════════════════════════════
+  active = true # Turns this script on/off (Only if $Eclipse_GEnable is true)
+#═══════════════════════════════════════════════════════════════════════════════
+                   
+=begin ═════════════════════════════════════════════════════════════════════════
+│ ► CODE DOCUMENTATION ◄
+│
+│ Dependencies:   Eclipse Core (High Order Placement)
+│                 Colorspace Image Placed into Graphics/System
+│
+│ Description:    Manages color settings across your platform.
+│                 Modifies the existing text_color and get_color to use Eclipse.
+│
+│                 Adds the following methods:
+│                   ► Auto_Color(*args)
+│                   ► Index_Color(n,colorspace = true)
+│                   ► Window.eclipse_color(sym)
+│
+│ Configuration:  Name of file, if changed
+│
+│ Instructions:   Plug and Play
+│
+│ Optional:       None
+│
+│ Compatability:  Base
+│                 Incompatible with other scripts that change the window color
+│                 SYSTEM. Scripts that change the window color INDEXES or VALUES
+│                 are ok, but this will overwrite those values unless placed
+│                 above those scripts.
+│                 If you don't care, or just want to use mine.. This should be
+│                 placed near last in your script list.
+│
+│ Order:          Low
+│
+│ Position:       ▼ Materials
+│                 ► Eclipse - Core (High)
+│                 ► High Order Eclipse Modules
+│
+│                 (Other People's Code)
+│
+│                 ► Eclipse - Colorspace
+│                 ► Low Order Eclipse Modules
+│                 ▼ Main Process
+=end #══════════════════════════════════════════════════════════════════════════
+
+# ► CORE DEPENDENCY CHECK ◄ ════════════════════════════════════════════════════
+# ■ ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤  DO NOT EDIT  ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ ■
+class Eclipse; module Requirements
+  VersionRequired = 1.0
+  ScriptName      = "► Eclipse Colorspace"
+
+  def self.CoreInstalled?;  return !($imported["Eclipse-Core-H"].nil?); end
+  def self.CoreActive?;     return $imported["Eclipse-Core-H"][0];      end
+  def self.CoreVersion;     return $imported["Eclipse-Core-H"][1];      end
+  def self.VersionCheck?;   return self.CoreVersion >= VersionRequired; end
+  def self.DependencyOkay?; unless CoreInstalled?
+    msgbox("Eclipse module installation error:\nFailed Requirement Check\n\n"+
+      ScriptName + " requires \n" +
+      "► Eclipse Core (High) ver. " + VersionRequired.to_s + " " +
+      "or higher\n to be installed and placed above this script.")
+    return false; else; return CoreActive? && VersionCheck? && $Eclipse_GEnable;
+  end; end; end; end; active = active && Eclipse::Requirements.DependencyOkay?
+# ■ ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤  DO NOT EDIT  ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ ■
+# ══════════════════════════════════════════════════════════════════════════════
+
+#     ╔════════════════════════╗
+# ════╝ ► ACTIVATION HANDLER ◄ ╚════════════════════════════════════════════════
+# ■ ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤  DO NOT EDIT  ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ ■
+  ($imported||={})["Eclipse-Colorspace"]=[active,1.0]; if active
+# ■ ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤  DO NOT EDIT  ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ ■
+#═══════════════════════════════════════════════════════════════════════════════
+
+#═══════════════════════════════════════════════════════════════════════════════
+#                ► START OF SAFE CODE CONFIGURATION OPTIONS ◄
+#═══════════════════════════════════════════════════════════════════════════════
+
+# Class: Eclipse ═══════════════════════════════════════════════════════════════
+class Eclipse
+  module Colorspace
+    Filename = "Colorspace"
+  end
+end
+
+#═══════════════════════════════════════════════════════════════════════════════
+#                ► END OF SAFE CODE CONFIGURATION OPTIONS ◄
+#═══════════════════════════════════════════════════════════════════════════════
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ☄☢☣      EXPLOSIVE, RADIOACTIVE, CLASS-4 BIOHAZARD CODE WARNING      ☣☢☄
+# ■ ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ DO NOT CROSS ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ ■
+#═══════════════════════════════════════════════════════════════════════════════
+
+# Class: Window_Base ═══════════════════════════════════════════════════════════
+# - Extends the basic 32-space windowskin palette to a 256-space.
+#═══════════════════════════════════════════════════════════════════════════════
+class Window_Base < Window
+  attr_reader :colorspace
+  alias eclipse_colors_init initialize
+  def initialize(*args)
+    eclipse_colors_init(*args)
+    @colorspace = Cache.system(Eclipse::Colorspace::Filename)
+  
+    @eclipse_colors = {
+    :normal     =>  0,    :param_atk1 => 16,    :hp_full_l  => 32,
+    :system     =>  1,    :param_atk2 => 17,    :hp_full_r  => 33,
+    :crisis     =>  2,    :param_def1 => 18,    :hp_empt_l  => 34,
+    :knockout   =>  3,    :param_def2 => 19,    :hp_empt_r  => 35,
+    :mp_cost    =>  4,    :param_mat1 => 20,    :mp_full_l  => 36,
+    :tp_cost    =>  5,    :param_mat2 => 21,    :mp_full_r  => 37,
+    :wp_cost    =>  6,    :param_mdf1 => 22,    :mp_empt_l  => 38,
+    :vc_cost    =>  7,    :param_mfd2 => 23,    :mp_empt_r  => 39,
+    :lf_cost    =>  8,    :param_agi1 => 24,    :tp_full_l  => 40,
+    :dv_cost    =>  9,    :param_agi2 => 25,    :tp_full_r  => 41,
+    :power_up   => 10,    :param_luk1 => 26,    :tp_empt_l  => 42,
+    :power_down => 11,    :param_luk2 => 27,    :tp_empt_r  => 43,
+    :gauge_back => 12,    :param_dex1 => 28,    :wp_full_l  => 44,
+    :sg_bordr1  => 13,    :param_dex2 => 29,    :wp_full_r  => 45,
+    :sg_bordr2  => 14,    :param_foc1 => 30,    :wp_empt_l  => 46,
+    :sg_gback2  => 15,    :param_foc2 => 31,    :wp_empt_r  => 47,
+
+    :vc_full_l  => 48,    :sub_full_l => 64,
+    :vc_full_r  => 49,    :sub_full_r => 65,
+    :vc_empt_l  => 50,    :sub_empt_l => 66,
+    :vc_empt_r  => 51,    :sub_empt_l => 67,
+    :lf_full_l  => 52,    :exp_full_l => 68,
+    :lf_full_r  => 53,    :exp_full_r => 69,
+    :lf_empt_l  => 54,    :exp_empt_l => 70,
+    :lf_empt_r  => 55,    :exp_empt_r => 71,
+    :dv_full_l  => 56,    :mhpb_mhf_l => 72,
+    :dv_full_r  => 57,    :mhpb_mhf_r => 73,
+    :dv_empt_l  => 58,    :mhpb_mhe_l => 74,
+    :dv_empt_r  => 59,    :mhpb_mhe_r => 75,
+    :sp_full_l  => 60,    :mhpb_bhf_l => 76,
+    :sp_full_r  => 61,    :mhpb_bhf_r => 77,
+    :sp_empt_l  => 62,    :mhpb_bhe_l => 78,
+    :sp_empt_r  => 63,    :mhpb_bhe_r => 79,
+
+    :black_32   =>192,    :yellow_drk =>208,    :cerluean   =>224,
+    :grey_64    =>193,    :yellow_low =>209,    :aqua       =>225,
+    :grey_128   =>194,    :yellow_mid =>210,    :brown      =>226,
+    :grey_192   =>195,    :yellow_max =>211,    :forest     =>227,
+    :red_drk    =>196,    :cyan_drk   =>212,    :moss       =>228,
+    :red_low    =>197,    :cyan_low   =>213,    :navy       =>229,
+    :red_mid    =>198,    :cyan_mid   =>214,    :wine       =>230,
+    :red_max    =>199,    :cyan_max   =>215,    :violet     =>231,
+    :green_drk  =>200,    :purple_drk =>216,    :neutral    =>232,
+    :green_low  =>201,    :purple_low =>217,    :fire       =>233,
+    :green_mid  =>202,    :purple_mid =>218,    :water      =>234,
+    :green_max  =>203,    :purple_max =>219,    :earth      =>235,
+    :blue_drk   =>204,    :egglpant   =>220,    :air        =>236,
+    :blue_low   =>205,    :rose       =>221,    :ice        =>237,
+    :blue_mid   =>206,    :orange     =>222,    :bolt       =>238,
+    :blue_max   =>207,    :toxic      =>223,    :void       =>239,
+
+    :light      =>240,
+    :dark       =>241,
+    :bomb       =>242,
+    :bypass     =>243,
+    :outln_phys =>244,
+    :outln_item =>245,
+    :outln_exp  =>246,
+    :outln_gold =>247,
+    :outln_prfl =>248,
+    :outln_prty =>249,
+    :outln_qust =>250,
+    :outln_embl =>251,
+    #Free       =>252,
+    #Free       =>253,
+    #Free       =>254,
+    #Free       =>255,
+  }
+  end
+
+  # Color Fetching Methods ═══════════════════════════════════════════════════
+  def eclipse_color(sym)
+    if sym.is_a?(Symbol)
+      Index_Color(@eclipse_colors[sym])
+    elsif sym.is_a?(Integer)
+      Index_Color(@eclipse_colors.find {|key,value| value == sym })
+    else
+      return nil
+    end
+  end
+
+  def text_color(n)
+    Index_Color(n)
+  end
+
+  def get_color(n)
+    Index_Color(n)
+  end
+
+  #═══════════════════════════════════════════════════════════════════════════
+  def normal_color;     Index_Color(@eclipse_colors[:normal]);     end
+  def system_color;     Index_Color(@eclipse_colors[:system]);     end
+  def crisis_color;     Index_Color(@eclipse_colors[:crisis]);     end
+  def knockout_color;   Index_Color(@eclipse_colors[:knockout]);   end
+  def hp_cost_color;    Index_Color(@eclipse_colors[:hp_full_r]);  end
+  def mp_cost_color;    Index_Color(@eclipse_colors[:mp_cost]);    end
+  def tp_cost_color;    Index_Color(@eclipse_colors[:tp_cost]);    end
+  def wp_cost_color;    Index_Color(@eclipse_colors[:wp_cost]);    end
+  def vc_cost_color;    Index_Color(@eclipse_colors[:vc_cost]);    end
+  def lf_cost_color;    Index_Color(@eclipse_colors[:lf_cost]);    end
+  def dv_cost_color;    Index_Color(@eclipse_colors[:dv_cost]);    end
+  def power_up_color;   Index_Color(@eclipse_colors[:power_up]);   end
+  def power_down_color; Index_Color(@eclipse_colors[:power_down]); end
+  def gauge_back_color; Index_Color(@eclipse_colors[:gauge_back]); end
+  def gauge_border_1;   Index_Color(@eclipse_colors[:sg_bordr1]);  end
+  def gauge_border_2;   Index_Color(@eclipse_colors[:sg_gback2]);  end
+  def gauge_back_sgalt; Index_Color(@eclipse_colors[:sg_gback2]);  end
+  
+  def param_atk_col1;   Index_Color(@eclipse_colors[:param_atk1]); end
+  def param_atk_col2;   Index_Color(@eclipse_colors[:param_atk2]); end
+  def param_def_col1;   Index_Color(@eclipse_colors[:param_def1]); end
+  def param_def_col2;   Index_Color(@eclipse_colors[:param_def2]); end
+  def param_mat_col1;   Index_Color(@eclipse_colors[:param_mat1]); end
+  def param_mat_col2;   Index_Color(@eclipse_colors[:param_mat2]); end
+  def param_mdf_col1;   Index_Color(@eclipse_colors[:param_mdf1]); end
+  def param_mdf_col2;   Index_Color(@eclipse_colors[:param_mdf2]); end
+  def param_agi_col1;   Index_Color(@eclipse_colors[:param_agi1]); end
+  def param_agi_col2;   Index_Color(@eclipse_colors[:param_agi2]); end
+  def param_luk_col1;   Index_Color(@eclipse_colors[:param_luk1]); end
+  def param_luk_col2;   Index_Color(@eclipse_colors[:param_luk2]); end
+  def param_dex_col1;   Index_Color(@eclipse_colors[:param_dex1]); end
+  def param_dex_col2;   Index_Color(@eclipse_colors[:param_dex2]); end
+  def param_foc_col1;   Index_Color(@eclipse_colors[:param_foc1]); end
+  def param_foc_col2;   Index_Color(@eclipse_colors[:param_foc2]); end
+  
+  def hp_gauge_color1;  Index_Color(@eclipse_colors[:hp_full_l]);  end
+  def hp_gauge_color2;  Index_Color(@eclipse_colors[:hp_full_r]);  end
+  def hp_gauge_color3;  Index_Color(@eclipse_colors[:hp_empt_l]);  end
+  def hp_gauge_color4;  Index_Color(@eclipse_colors[:hp_empt_r]);  end
+  def mp_gauge_color1;  Index_Color(@eclipse_colors[:mp_full_l]);  end
+  def mp_gauge_color2;  Index_Color(@eclipse_colors[:mp_full_r]);  end
+  def mp_gauge_color3;  Index_Color(@eclipse_colors[:mp_empt_l]);  end
+  def mp_gauge_color4;  Index_Color(@eclipse_colors[:mp_empt_r]);  end
+  def tp_gauge_color1;  Index_Color(@eclipse_colors[:tp_full_l]);  end
+  def tp_gauge_color2;  Index_Color(@eclipse_colors[:tp_full_r]);  end
+  def tp_gauge_color3;  Index_Color(@eclipse_colors[:tp_empt_l]);  end
+  def tp_gauge_color4;  Index_Color(@eclipse_colors[:tp_empt_r]);  end
+  def wp_gauge_color1;  Index_Color(@eclipse_colors[:wp_gauge1]);  end
+  def wp_gauge_color2;  Index_Color(@eclipse_colors[:wp_gauge2]);  end
+  def wp_gauge_color3;  Index_Color(@eclipse_colors[:wp_empt_l]);  end
+  def wp_gauge_color4;  Index_Color(@eclipse_colors[:wp_empt_r]);  end
+  
+  def vc_gauge_color1;  Index_Color(@eclipse_colors[:vc_full_l]);  end
+  def vc_gauge_color2;  Index_Color(@eclipse_colors[:vc_full_r]);  end
+  def vc_gauge_color3;  Index_Color(@eclipse_colors[:vc_empt_l]);  end
+  def vc_gauge_color4;  Index_Color(@eclipse_colors[:vc_empt_r]);  end
+  def lf_gauge_color1;  Index_Color(@eclipse_colors[:lf_full_l]);  end
+  def lf_gauge_color2;  Index_Color(@eclipse_colors[:lf_full_r]);  end
+  def lf_gauge_color3;  Index_Color(@eclipse_colors[:lf_empt_l]);  end
+  def lf_gauge_color4;  Index_Color(@eclipse_colors[:lf_empt_r]);  end
+  def dv_gauge_color1;  Index_Color(@eclipse_colors[:dv_full_l]);  end
+  def dv_gauge_color2;  Index_Color(@eclipse_colors[:dv_full_2]);  end
+  def dv_gauge_color3;  Index_Color(@eclipse_colors[:dv_empt_l]);  end
+  def dv_gauge_color4;  Index_Color(@eclipse_colors[:dv_empt_r]);  end
+  def sp_gauge_color1;  Index_Color(@eclipse_colors[:sp_full_1]);  end
+  def sp_gauge_color2;  Index_Color(@eclipse_colors[:sp_full_2]);  end
+  def sp_gauge_color3;  Index_Color(@eclipse_colors[:sp_empt_l]);  end
+  def sp_gauge_color4;  Index_Color(@eclipse_colors[:sp_empt_r]);  end
+  
+  def subparam_color1;  Index_Color(@eclipse_colors[:sub_full_l]); end
+  def subparam_color2;  Index_Color(@eclipse_colors[:sub_full_r]); end
+  def subparam_color3;  Index_Color(@eclipse_colors[:sub_empt_r]); end
+  def subparam_color4;  Index_Color(@eclipse_colors[:sub_empt_l]); end
+  def xp_gauge_color1;  Index_Color(@eclipse_colors[:exp_full_l]); end
+  def xp_gauge_color2;  Index_Color(@eclipse_colors[:exp_full_r]); end
+  def xp_gauge_color3;  Index_Color(@eclipse_colors[:exp_empt_l]); end
+  def xp_gauge_color4;  Index_Color(@eclipse_colors[:exp_empt_r]); end
+end # Close Window Base
+
+# Auto Color (Makes Rate-Gradients) ════════════════════════════════════════════
+def Auto_Color(*args)
+  acargs = [*args]
+  case acargs.length
+  when 2
+    colors = acargs[0]
+    col1 = Index_Color(colors[0])
+    col2 = Index_Color(colors[1])
+    rate = acargs[1]
+  when 3
+    col1 = acargs[0]
+    col2 = acargs[1]
+    rate = acargs[2]
+  else; fail = true
+  end
+
+  if fail
+    Debug("Auto_Color Error","Wrong number of arguments",
+      acargs.length.to_s + " for (2..3)",false, true) rescue
+    msgbox("Auto_Color Error \n Wrong number of arguments\n",
+      acargs.length.to_s + " for (2..3)",)
+    return Color.new(0,0,0)
+  end
+
+  a_col = Color.new
+  a_col.red    = (1 - rate) * col2.red +    rate * col1.red
+  a_col.green  = (1 - rate) * col2.green +  rate * col1.green
+  a_col.blue   = (1 - rate) * col2.blue +   rate * col1.blue
+  a_col.alpha  = (1 - rate) * col2.alpha +  rate * col1.alpha
+  return a_col
+end # Close Auto_Color
+
+# Get Colorspace Color Value ═══════════════════════════════════════════════════
+def Index_Color(n,colorspace = true)
+  @ColorWindow = Window_Inactive.new unless @ColorWindow
+  if colorspace
+    row = (n / 16).to_i; col = (n % 16); off = [0,0]
+    case row
+      when 0 || 4 ||  8 || 12;  col.even? ? off = [0,0] : off = [3,0]
+      when 1 || 5 ||  9 || 13;  col.even? ? off = [3,3] : off = [0,3]
+      when 2 || 6 || 10 || 14;  col.even? ? off = [3,0] : off = [0,0]
+      when 3 || 7 || 11 || 15;  col.even? ? off = [0,3] : off = [3,3]
+    end
+    return @ColorWindow.colorspace.get_pixel(
+      (col*4)+off[0],(((row/2).floor)*4)+off[1])
+  else
+    if n.is_a?(String)
+      color = @ColorWindow.n
+    else
+      color = @ColorWindow.windowskin.get_pixel(64+(n%8)*8,96+(n/8)*8)
+    end
+    return color
+  end
+end
+
+# Class: Window_Inactive ═══════════════════════════════════════════════════════
+class Window_Inactive < Window_Base
+  def initialize
+    super(0,0,0,0)
+    opacity = openness = 0
+    active = visisble = false
+  end
+  def update; end
+  def refresh; end
+  def update_tone; end
+end # Close Window_Inactive
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ════╗ End Activation Handler ╔════════════════════════════════════════════════
+end # ╚════════════════════════╝ End of File - Srsly, there's nothing more here!
