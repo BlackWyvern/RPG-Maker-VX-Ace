@@ -1,0 +1,860 @@
+=begin ═════════════════════════════════════════════════════════════════════════
+│ ► CODE HEADER ◄
+│ Name:           Eclipse Core (Low Order Placement)
+│ Author:         Black Wyvern
+│ Forum:          RPGMC.com /topic/XXXXX-eclipse-engine/
+│                 RPGMC.com == (http://www.rpgmakercentral.com/)
+│
+│ Created:        04/24/16
+│ Updated:        10/20/16
+│ Version:        1.0
+│ License:        http://creativecommons.org/licenses/by-sa/3.0/
+=end #══════════════════════════════════════════════════════════════════════════
+
+# ► CODE ACTIVATION ◄ ══════════════════════════════════════════════════════════
+  active = true # Turns this script on/off (Only if $Eclipse_GEnable is true)
+#═══════════════════════════════════════════════════════════════════════════════
+                   
+=begin ═════════════════════════════════════════════════════════════════════════
+│ ► CODE DOCUMENTATION ◄
+│
+│ Dependencies:   Eclipse Core (High Order Placement)
+│
+│ Description:    Manages game and font settings across your platform.
+│                 Can override font settings for Yanfly and Xail scripts.
+│                 Manage game vocabulary and party size.
+│
+│                 Included public bugfixes:
+│                   ► Elemental Merger 
+│                   ► Large Sprite ☆ Display Fix
+│                   ► Picture Bug Fix
+│                   ► Dual wield / Two-handed Fix
+│                   ► Undefeated Hidden Enemies Visual Fix
+│                   ► Yanfly Engine Empty Skill Crash Fix
+│                   ► Revival and Item Animation Fix
+│                   ► Enemy Turn Count Fix
+│                   ► Yanfly State Manager Bugfix
+│                   ► Arrow Display Error Fix for Yanfly Engine
+│                   ► Theo Side Battle System MSIRC Compatability
+│
+│ Configuration:  Configuation for several of the active bugfixes.
+│                 Set font settings and if to override Yanfly and Xail systems.
+│
+│ Instructions:   Large Sprite ☆ Display Fix v1.3
+│                   Add <large sprite> to Event Notebox if Event is Oversized
+│
+│                 Dual wield / Two-handed Fix
+│                   Make two-handed weapons "seal shield".
+│
+│ Optional:       None
+│
+│ Compatability:  Base
+│                 Yanfly Engine Ace
+│                 Xail System
+│
+│ Order:          Lowest
+│
+│ Position:       ▼ Materials
+│                 ► Eclipse - Core
+│                 ► High Order Eclipse Modules
+│
+│                 (Other People's Code)
+│
+│                 ► Low Order Eclipse Modules
+│                 ► Eclipse - Core (Low)
+│                 ▼ Main Process
+=end #══════════════════════════════════════════════════════════════════════════
+
+# ► CORE DEPENDENCY CHECK ◄ ════════════════════════════════════════════════════
+# ■ ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤  DO NOT EDIT  ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ ■
+class Eclipse; module Requirements
+  VersionRequired = 1.0
+  ScriptName      = "► Eclipse Core (Low)"
+
+  def self.CoreInstalled?;  return !($imported["Eclipse-Core-H"].nil?); end
+  def self.CoreActive?;     return $imported["Eclipse-Core-H"][0];      end
+  def self.CoreVersion;     return $imported["Eclipse-Core-H"][1];      end
+  def self.VersionCheck?;   return self.CoreVersion >= VersionRequired; end
+  def self.DependencyOkay?; unless CoreInstalled?
+    msgbox("Eclipse module installation error:\nFailed Requirement Check\n\n"+
+      ScriptName + " requires \n" +
+      "► Eclipse Core (High) ver. " + VersionRequired.to_s + " " +
+      "or higher\n to be installed and placed above this script.")
+    return false; else; return CoreActive? && VersionCheck? && $Eclipse_GEnable;
+  end; end; end; end; active = active && Eclipse::Requirements.DependencyOkay?
+# ■ ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤  DO NOT EDIT  ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ ■
+# ══════════════════════════════════════════════════════════════════════════════
+
+=begin ═══════════════════════════════════════════════════════════════════════╤╗
+│ ► CODE CREDIT ◄                                                             │║
+│ Script Name: Elemental Merger                                               │║
+│ Script Dependencies: None                                                   │║
+│ Author: Craze                                                               │║
+│ Modifications: None                                                         │║
+│ Source:  https://rpgmaker.net/scripts/151/                                  │║
+│ Created: Unknown                                                            │║
+│ Updated: 01/05/12                                                           │║
+│ Version: 1.01                                                               │║
+│                                                                             │║
+│ ► CODE CREDIT ◄                                                             │║
+│ Script Name: Large Sprite ☆ Display Fix                                    │║
+│ Script Dependencies: None                                                   │║
+│ Author: Created by Neon Black                                               │║
+│ Modifications: None                                                         │║
+│ Source:  Forum.RPGMW /index.php?/topic/22243-large-sprite-☆-display-fix/   │║
+│ Created: Unknown                                                            │║
+│ Updated: 01/12/14                                                           │║
+│ Version: 1.4                                                                │║
+=end #════════════════════════════════════════════════════════════════════════╧╝
+
+=begin ═══════════════════════════════════════════════════════════════════════╤╗
+│ ► SNIPPET/BUGFIX CREDIT ◄                                                   │║
+│ Snippet Name: Picture Bug Fix                                               │║
+│ Snippet Dependency: None                                                    │║
+│ Author: Mithran                                                             │║
+│                                                                             │║
+│ ► SNIPPET/BUGFIX CREDIT ◄                                                   │║
+│ Snippet Name: Dual wield / Two-handed Fix                                   │║
+│ Snippet Dependency: None                                                    │║
+│ Author: Trihan                                                              │║
+│                                                                             │║
+│ ► SNIPPET/BUGFIX CREDIT ◄                                                   │║
+│ Snippet Name: Undefeated Hidden Enemies Visual Fix                          │║
+│ Snippet Dependency: None                                                    │║
+│ Author: DerTraveler                                                         │║
+│                                                                             │║
+│ ► SNIPPET/BUGFIX CREDIT ◄                                                   │║
+│ Snippet Name: Yanfly Engine Empty Skill Crash Fix                           │║
+│ Snippet Dependency: Yanfly Battle Engine Ace                                │║
+│ Author: Black Wyvern (Das me! :D)                                           │║
+│                                                                             │║
+│ ► SNIPPET/BUGFIX CREDIT ◄                                                   │║
+│ Snippet Name: Revival and Item Animation Fix                                │║
+│ Snippet Dependency: Yanfly Battle Engine Ace                                │║
+│ Author: Yami                                                                │║
+│                                                                             │║
+│ ► SNIPPET/BUGFIX CREDIT ◄                                                   │║
+│ Snippet Name: Enemy Turn Count Fix                                          │║
+│ Snippet Dependency: None                                                    │║
+│ Author: Lone Wolf                                                           │║
+│                                                                             │║
+│ ► SNIPPET/BUGFIX CREDIT ◄                                                   │║
+│ Snippet Name: Yanfly State Manager Bugfix                                   │║
+│ Snippet Dependency: YEA Buff & State Manager                                │║
+│ Author: Unknown                                                             │║
+│                                                                             │║
+│ ► SNIPPET/BUGFIX CREDIT ◄                                                   │║
+│ Snippet Name: Arrow Display Error Fix                                       │║
+│ Snippet Dependency: None                                                    │║
+│ Author: Mezzolan                                                            │║
+=end #════════════════════════════════════════════════════════════════════════╧╝
+
+#     ╔════════════════════════╗
+# ════╝ ► ACTIVATION HANDLER ◄ ╚════════════════════════════════════════════════
+# ■ ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤  DO NOT EDIT  ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ ■
+  ($imported||={})["Eclipse-Core-L"]=[active,1.0]; if active
+# ■ ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤  DO NOT EDIT  ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ ■
+#═══════════════════════════════════════════════════════════════════════════════
+
+#═══════════════════════════════════════════════════════════════════════════════
+#                ► START OF SAFE CODE CONFIGURATION OPTIONS ◄
+#═══════════════════════════════════════════════════════════════════════════════
+
+# Class: Eclipse ═══════════════════════════════════════════════════════════════
+class Eclipse
+  module Game_Settings
+    Max_Party_Size = 4          # Maximum Combat Party Size
+  end
+
+  module Fonts
+    DefaultFontArray    = [     # Font_List
+      "Myriad Pro",
+      "Palatino Linotype",
+      "Neuton",
+      "VL Gothic",
+      "Verdana"
+    ]
+
+    DefaultFontSize     = 18    # Font_Size
+    DefaultFontBold     = false # Font_Bold
+    DefaultFontItalic   = false # Font_Italic
+    DefaultFontShadow   = true  # Font_Shadowed
+    DefaultFontOutline  = true  # Font_Outlined
+    OverrideFonts       = true  # Overrides default fonts from other scripts.
+
+    # Default Font (Outline) Color
+    DefaultFontColor    = Color.new(255,255,255,255)
+    DefaultOutlineColor = Color.new(000,000,000,192)
+  end
+end
+
+# Module: Vocab ════════════════════════════════════════════════════════════════
+module Vocab
+  def self.xp;    "Expertise";  end   # XP
+  def self.xp_a;  "Ex";         end   # XP (short)
+
+  def self.xparam(id)
+    case id
+    when 0 ; "Accuracy Bonus"         # HIT
+    when 1 ; "Evasion Chance"         # EVA
+    when 2 ; "Critical Chance"        # CRI
+    when 3 ; "Critical Evasion"       # CEV
+    when 4 ; "Magic Evasion"          # MEV
+    when 5 ; "Magic Reflection"       # MRF
+    when 6 ; "Counter Attack"         # CNT
+    when 7 ; hp_a + " Regen / Turn"   # HRG
+    when 8 ; mp_a + " Regen / Turn"   # MRG
+    when 9 ; tp_a + " Regen / Turn"   # TRG
+    end
+  end
+  
+  def self.sparam(id)
+    case id
+    when 0 ; "Threat Modifier"        # TGR
+    when 1 ; "Guard Power"            # GRD
+    when 2 ; "Healing Power"          # REC
+    when 3 ; "Consumable Power"       # PHA
+    when 4 ; "Magic Fatigue"          # MCR
+    when 5 ; tp_a + " Restore Power"  # TCR
+    when 6 ; "Phys Damage Rate"       # PDR
+    when 7 ; "Mag Damage Rate"        # MDR
+    when 8 ; "Terrain Damage Rate"    # FDR
+    when 9 ; "Expertise Boost"        # EXR
+    end
+  end
+end
+
+# Module: EleFix ═══════════════════════════════════════════════════════════════
+module EleFix
+  FixPhysAttacks  = true  # Calculate proper elemental damage for phys atts
+  FixMagAttacks   = true  # Calculate proper elemental damage for mag atts
+  FixCertAttacks  = true  # Calculate proper elemental damage for certain hit
+  IgnoreRecovery  = true  # Do not calculate elemental bias for healing
+
+  MergeType       = 3
+  # 0: Default RMAce. Will find the best rate out of all potential elements
+  # 1: Addititive
+  # 2: Multiplicative
+  # 3: Multiplicative Psuedo-Null
+
+  NullDivision    = 10 
+  # If MergeType 3, nul elements will divide damage done by this amount.
+
+  NullThreshold   = 5
+  # Deal no damage if adjusted damage is below this percentage.
+end
+
+# Module: LargeDisplayFix ══════════════════════════════════════════════════════
+module LargeDisplayFix
+  ##------
+  ## The ID of the terrain used to display the large character above ☆ tiles.
+  ## If the player is below this tile (y position), the sprite will appear
+  ## above all tiles and events from that y position up.  If the player is on
+  ## the same tile or above (y position) the event will appear BELOW ☆ tiles
+  ## from that position up.
+  ##------
+  UpperTerrain = 7
+ 
+  ##------
+  ## This value is the pixel tuning used to check the location.  This is
+  ## because characters tagged with a '!' in their name are drawn lower than
+  ## normal characters and are considered to be lower than these.  This causes
+  ## the script to think they are on the tile below where they really are and
+  ## draw them above tiles they should appear under.
+  ##------
+  Tuning = -1
+end
+
+#═══════════════════════════════════════════════════════════════════════════════
+#                ► END OF SAFE CODE CONFIGURATION OPTIONS ◄
+#═══════════════════════════════════════════════════════════════════════════════
+
+#═══════════════════════════════════════════════════════════════════════════════
+# ☄☢☣      EXPLOSIVE, RADIOACTIVE, CLASS-4 BIOHAZARD CODE WARNING      ☣☢☄
+# ■ ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ DO NOT CROSS ◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤◢◤ ■
+#═══════════════════════════════════════════════════════════════════════════════
+
+# ══════════════════════════════════════════════════════════════════════════════
+class Eclipse
+  # MODULE Eclipse::Initialization ═════════════════════════════════════════════
+  module Initialization
+    Methods << "setFontDefaults"
+  end
+
+  module Fonts
+    FontList = [
+      DefaultFontArray,
+      DefaultFontSize,
+      DefaultFontColor,
+      DefaultFontBold,
+      DefaultFontItalic,
+      DefaultFontShadow,
+      DefaultFontOutline,
+      DefaultOutlineColor
+    ]
+  end
+
+  # Set Font Defaults ════════════════════════════════════════════════════════
+  def setFontDefaults
+    Font.default_name       = Eclipse::Fonts::FontList[0]
+    Font.default_size       = Eclipse::Fonts::FontList[1]
+    Font.default_color      = Eclipse::Fonts::FontList[2]
+    Font.default_bold       = Eclipse::Fonts::FontList[3]
+    Font.default_italic     = Eclipse::Fonts::FontList[4]
+    Font.default_shadow     = Eclipse::Fonts::FontList[5]
+    Font.default_outline    = Eclipse::Fonts::FontList[6]
+    Font.default_out_color  = Eclipse::Fonts::FontList[7]
+  end
+end
+
+# Override Font Settings ═════════════════════════════════════════════════════
+if Eclipse::Fonts::OverrideFonts
+  if defined?(YEA); module YEA
+    if defined?(CORE); module CORE; 
+      FONT_NAME           = Eclipse::Fonts::FontList[0]
+      FONT_SIZE           = Eclipse::Fonts::FontList[1]
+      FONT_COLOUR         = Eclipse::Fonts::FontList[2]
+      FONT_BOLD           = Eclipse::Fonts::FontList[3]
+      FONT_ITALIC         = Eclipse::Fonts::FontList[4]
+      FONT_SHADOW         = Eclipse::Fonts::FontList[5]
+      FONT_OUTLINE        = Eclipse::Fonts::FontList[6]
+      FONT_OUTLINE_COLOUR = Eclipse::Fonts::FontList[7]
+    end; end
+
+    if defined?(BATTLE); module BATTLE
+      DEFAULT                     = Eclipse::Fonts::FontList[0]
+      BATTLESTATUS_NAME_FONT_SIZE = Eclipse::Fonts::FontList[1]
+      BATTLESTATUS_TEXT_FONT_SIZE = Eclipse::Fonts::FontList[1]
+    end; end
+
+    if defined?(ELEMENT_POPUPS); module ELEMENT_POPUPS
+      DEFAULT = Eclipse::Fonts::FontList[0]
+    end; end
+
+    if defined?(MESSAGE); module MESSAGE
+      MESSAGE_WINDOW_FONT_NAME    = Eclipse::Fonts::FontList[0]
+      MESSAGE_WINDOW_FONT_SIZE    = Eclipse::Fonts::FontList[1]
+      MESSAGE_WINDOW_FONT_BOLD    = Eclipse::Fonts::FontList[3]
+      MESSAGE_WINDOW_FONT_ITALIC  = Eclipse::Fonts::FontList[4]
+      MESSAGE_WINDOW_FONT_OUTLINE = Eclipse::Fonts::FontList[6]
+      MESSAGE_WINDOW_FONT_SHADOW  = Eclipse::Fonts::FontList[5]
+    end; end
+  end; end
+
+  if defined?(XAIL); module XAIL
+    xailRepeated  = [ Eclipse::Fonts::FontList[0],  Eclipse::Fonts::FontList[1],
+                      Eclipse::Fonts::FontList[2],  Eclipse::Fonts::FontList[3],
+                      Eclipse::Fonts::FontList[5]
+    ]
+    xailRepeated2 = [ Eclipse::Fonts::FontList[0],  Eclipse::Fonts::FontList[1],
+                      Eclipse::Fonts::FontList[2],  Eclipse::Fonts::FontList[3],
+                      Eclipse::Fonts::FontList[4],  Eclipse::Fonts::FontList[5]
+    ]
+
+    if defined?(CORE)
+      if defined?(Eclipse::Window::UseWinTone)
+        toneTemp = Eclipse::Window::UseWinTone
+      else
+        toneTemp = CORE::USE_TONE
+      end
+
+      saveTemp = [SAVE_MAX,SAVE_FILE_VIS]
+      langTemp = JAPANESE
+      remove_const(:CORE)
+      module CORE
+        USE_TONE      = toneTemp
+        SAVE_MAX      = saveTemp[0]
+        SAVE_FILE_VIS = saveTemp[1]
+        JAPANESE      = langTemp
+      end
+    end
+
+    if defined?(PRE_TITLE); module PRE_TITLE
+      FONT = xailRepeated
+    end; end
+
+    if defined?(MSG); module MSG
+      FONT = xailRepeated
+    end; end
+
+    if defined?(HIST_BOOK); module HIST_BOOK
+      FONT = xailRepeated
+    end; end
+
+    if defined?(ATTRIBUTE_SYSTEM); module ATTRIBUTE_SYSTEM
+      FONT = Eclipse::Fonts::FontList[0]
+    end; end
+
+    if defined?(POPUP_ITEM); module POPUP_ITEM
+      FONT_ITEM = xailRepeated
+      FONT_AMT  = xailRepeated
+      FONT_DESC = xailRepeated
+    end; end
+
+    if defined?(MAP_HUD); module MAP_HUD
+      FONT = xailRepeated
+    end; end
+
+    if defined?(RECORDS); module RECORDS
+      FONT = xailRepeated2
+    end; end
+
+    if defined?(TELEPORT); module TELEPORT
+      TP_CMD_FONT  = xailRepeated2
+      TP_INFO_FONT = xailRepeated2
+    end; end
+  end; end
+end
+
+# Class: Game_Party ════════════════════════════════════════════════════════════
+class Game_Party < Game_Unit
+  def max_battle_members
+    return Eclipse::Game_Settings::Max_Party_Size
+  end
+end
+
+=begin ═══════════════════════════════════════════════════════════════════════╤╗
+│ ► SCRIPT IMPORT ◄                                                           │║
+│ Script Name: Elemental Merger                                               │║
+│ Script Dependencies: None                                                   │║
+│ Author: Craze                                                               │║
+│ Modifications: None                                                         │║
+│ Source:  https://rpgmaker.net/scripts/151/                                  │║
+│ Created: Unknown                                                            │║
+│ Updated: 01/05/12                                                           │║
+│ Version: 1.01                                                               │║
+=end #════════════════════════════════════════════════════════════════════════╧╝
+
+# Class: Game_Battler ══════════════════════════════════════════════════════════
+class Game_Battler
+  # Item Element Rate ════════════════════════════════════════════════════════
+  def item_element_rate(user, item)
+    return 1.0 if item.damage.recover? and EleFix::IgnoreRecovery
+    array = []
+    if !user.atk_elements.empty?
+      array+=user.atk_elements if item.physical? and EleFix::FixPhysAttacks
+      array+=user.atk_elements if item.magical?  and EleFix::FixMagAttacks
+      array+=user.atk_elements if item.certain?  and EleFix::FixCertAttacks
+    end
+    array.push(item.damage.element_id) if item.damage.element_id >= 0
+    return 1.0 if array.empty?
+    
+    rate = 1.0
+    case EleFix::MergeType
+      when 1 # Additive
+        for i in array
+          rate += element_rate(i) - 1.0
+        end
+      when 2 # Multiplicative
+        for i in array
+          rate *= element_rate(i)
+        end
+      when 3 # Multiplicative Psuedo-Null
+        for i in array
+          rate *= [element_rate(i),(EleFix::NullDivision / 100.0)].max
+        end
+      else # Default (0)
+        rate = elements_max_rate(user.array)
+    end
+    rate = 0 if rate <= (EleFix::NullThreshold / 100.0) and rate > 0
+    rate
+  end
+end
+
+=begin ═══════════════════════════════════════════════════════════════════════╤╗
+│ ► SCRIPT IMPORT ◄                                                           │║
+│ Script Name: Large Sprite ☆ Display Fix                                    │║
+│ Script Dependencies: None                                                   │║
+│ Author: Created by Neon Black                                               │║
+│ Modifications: None                                                         │║
+│ Source:  Forum.RPGMW /index.php?/topic/22243-large-sprite-☆-display-fix/   │║
+│ Created: Unknown                                                            │║
+│ Updated: 01/12/14                                                           │║
+│ Version: 1.4                                                                │║
+=end #════════════════════════════════════════════════════════════════════════╧╝
+
+# Class: Sprite_Character < Sprite_Base ════════════════════════════════════════
+class Sprite_Character < Sprite_Base
+  UpperTerrain  = Eclipse::LargeDisplayFix::UpperTerrain
+  Tuning        = Eclipse::LargeDisplayFix::Tuning
+
+  # Update Bitmap ════════════════════════════════════════════════════════════
+  alias :cp_011214_update_bitmap :update_bitmap
+  def update_bitmap(*args)
+    if graphic_changed? && @set_upper_area_sprite
+      @force_no_gfx_change = true
+    else
+      @force_no_gfx_change = false
+    end
+    cp_011214_update_bitmap(*args)
+  end
+
+  # Update Position ══════════════════════════════════════════════════════════
+  alias :cp_073013_update_pos :update_position
+  def update_position(*args)
+    cp_073013_update_pos(*args)
+    check_encompassed_area if sprite_is_onscreen?
+  end
+
+  # Dispose ══════════════════════════════════════════════════════════════════
+  alias :cp_073013_dispose :dispose
+  def dispose(*args)
+    @upper_area_sprite.dispose if @upper_area_sprite
+    cp_073013_dispose(*args)
+  end
+
+  # Is Sprite Onscreen? ══════════════════════════════════════════════════════
+  def sprite_is_onscreen?
+    return false if @character.is_a?(Game_Vehicle) || 
+      @character.is_a?(Game_Follower)
+    return false unless @character.is_a?(Game_Player) || @character.large_sprite
+    return false if @character.screen_z >= 200
+    top_left, bot_right = get_edge_corner_dis
+    return false if top_left[0] > Graphics.width
+    return false if top_left[1] > Graphics.height
+    return false if bot_right[0] < 0
+    return false if bot_right[1] < 0
+    return true
+  end
+
+  # Get Edge Corner Distance ═════════════════════════════════════════════════
+  def get_edge_corner_dis
+    top_left = [self.x - self.ox, self.y - self.oy]
+    bot_right = [top_left[0] + self.width, top_left[1] + self.height]
+    return [top_left, bot_right]
+  end
+
+  # Check Encompassed Area ═══════════════════════════════════════════════════
+  def check_encompassed_area
+    if @set_upper_area_sprite && !@force_no_gfx_change
+      old_src = self.src_rect.clone
+      self.bitmap = @old_bitmap
+      self.src_rect = old_src
+    end
+    @set_upper_area_sprite = false
+    top_left, bot_right = get_edge_corner_dis
+    last_x, last_y, copy_region = nil, nil, 0
+    map_xd, map_yd = $game_map.display_x * 32, $game_map.display_y * 32
+    total_height = (self.height + @character.jump_height).round
+    self.width.times do |x|
+      xp = map_xd.to_i + top_left[0] + x
+      unless xp / 32 == last_x
+        last_x = xp / 32
+        last_y, copy_region = nil, 0
+        total_height.times do |y|
+          yp = map_yd.to_i + bot_right[1] + @character.jump_height - y + Tuning
+          next if yp.to_i / 32 == last_y
+          last_y = yp.to_i / 32
+          if last_y == (@character.screen_y + @character.jump_height + Tuning +
+                        map_yd).to_i / 32
+            break if $game_map.terrain_tag(last_x, last_y) == UpperTerrain
+            next
+          end
+          next if $game_map.terrain_tag(last_x, last_y) != UpperTerrain
+          copy_region = [self.height, total_height - y + 1].min
+          set_upper_sprite
+          break
+        end
+      end
+      next if copy_region == 0
+      rect = Rect.new(src_rect.x + x, src_rect.y, 1, copy_region)
+      @upper_area_sprite.bitmap.blt(x, 0, self.bitmap, rect)
+      self.bitmap.clear_rect(rect)
+    end
+    if !@set_upper_area_sprite && @upper_area_sprite
+      @upper_area_sprite.visible = false
+    end
+  end
+
+  # Set Upper Sprite ═════════════════════════════════════════════════════════
+  def set_upper_sprite
+    return if @set_upper_area_sprite
+    @upper_area_sprite ||= Sprite.new
+    @upper_area_sprite.bitmap = Bitmap.new(self.width, self.height)
+    props = ["x", "y", "ox", "oy", "zoom_x", "zoom_y", "angle", "mirror",
+             "bush_depth", "opacity", "blend_type", "color", "tone", "visible",
+             "viewport"]
+    props.each do |meth|
+      @upper_area_sprite.method("#{meth}=").call(self.method(meth).call)
+    end
+    @upper_area_sprite.z = 200
+    @set_upper_area_sprite = true
+    @old_bitmap, old_src_rect = self.bitmap, self.src_rect.clone
+    self.bitmap = Bitmap.new(@old_bitmap.width, @old_bitmap.height)
+    self.bitmap.blt(0, 0, @old_bitmap, @old_bitmap.rect)
+    self.src_rect = old_src_rect
+  end
+end
+
+# Class: Game_Event < Game_Character ═══════════════════════════════════════════
+class Game_Event < Game_Character
+  attr_reader :large_sprite
+  # Setup Page Settings ══════════════════════════════════════════════════════
+  alias :cp_081713_setup_page_settings :setup_page_settings
+  def setup_page_settings(*args)
+    cp_081713_setup_page_settings(*args)
+    get_large_sprite_conditions
+  end
+
+  # Get Large Sprite Conditions ══════════════════════════════════════════════
+  def get_large_sprite_conditions
+    @large_sprite = false
+    return if @list.nil? || @list.empty?
+    @list.each do |line|
+      next unless line.code == 108 || line.code == 408
+      case line.parameters[0]
+      when /<large sprite>/i
+        @large_sprite = true
+      end
+    end
+  end
+end
+
+# Class: Sprite_Picture ════════════════════════════════════════════════════════
+class Sprite_Picture
+  # Update Bitmap ════════════════════════════════════════════════════════════
+  def update_bitmap
+    self.bitmap = Cache.picture(@picture.name) if @picture.name != @pic_name
+    @pic_name = @picture.name
+  end
+end
+
+# Class: Spriteset_Map ═════════════════════════════════════════════════════════
+class Spriteset_Map
+  # Update Pictures ══════════════════════════════════════════════════════════
+  def update_pictures
+    $game_map.screen.pictures.each do |pic|
+      @picture_sprites[pic.number] ||= Sprite_Picture.new(@viewport2, pic)
+      @picture_sprites[pic.number].update
+      if pic.name == ""
+        $game_map.screen.pictures.remove(pic.number)
+        @picture_sprites[pic.number].dispose
+        @picture_sprites[pic.number] = nil
+      end
+    end
+  end
+end
+
+# Class: Game_Pictures ═════════════════════════════════════════════════════════
+class Game_Pictures
+  # Remove ═══════════════════════════════════════════════════════════════════
+  def remove(index); @data[index] = nil; end
+end
+
+# Class: RPG::Weapon < RPG::EquipItem ══════════════════════════════════════════
+class RPG::Weapon < RPG::EquipItem
+  # Two Handed? ══════════════════════════════════════════════════════════════
+  def two_handed?
+    for feature in self.features
+      return true if feature.code == 54 && feature.data_id == 1
+    end
+    return false
+  end
+end
+
+# Class: Game_BattlerBase ══════════════════════════════════════════════════════
+class Game_BattlerBase
+  # Equippable? ══════════════════════════════════════════════════════════════
+  alias bugfix_gbb_equip? equippable?
+  def equippable?(item, slot = nil)
+    if slot != nil
+      if slot == 1 && dual_wield? && item.is_a?(RPG::Weapon) && 
+          equips[0] && equips[0].two_handed?
+        return false
+      end
+    end
+    bugfix_gbb_equip?(item)
+  end
+end
+
+# Class: Game_Actor < Game_Battler══════════════════════════════════════════════
+class Game_Actor < Game_Battler
+  # Release Unequippable Items ═══════════════════════════════════════════════
+  def release_unequippable_items(item_gain = true)
+    loop do
+      last_equips = equips.dup
+      @equips.each_with_index do |item, i|
+        if !equippable?(item.object, i) || item.object.etype_id != 
+            equip_slots[i]
+          trade_item_with_party(nil, item.object) if item_gain
+          item.object = nil
+        end
+      end
+      return if equips == last_equips
+    end
+  end
+end
+
+# Class: Window_EquipSlot < Window_Selectable ══════════════════════════════════
+class Window_EquipSlot < Window_Selectable
+  # Enable? ══════════════════════════════════════════════════════════════════
+  alias bugfix_wes_enable? enable?
+  def enable?(index)
+    if @actor.dual_wield? && index == 1 && @actor.equips[0] &&
+        @actor.equips[0].two_handed?
+      return false
+    end
+    bugfix_wes_enable?(index)
+  end
+end
+
+# Class: Window_EquipItem < Window_ItemList ════════════════════════════════════
+class Window_EquipItem < Window_ItemList
+  # Include? ═════════════════════════════════════════════════════════════════
+  alias bugfix_wei_include? include?
+  def include?(item)
+    if @actor.dual_wield? && item.is_a?(RPG::Weapon)
+      if @actor.equips[0] != nil && @actor.equips[0].two_handed?&&@slot_id == 1
+        return false
+      end
+      return false if item.two_handed? && @slot_id != 0
+    end
+    bugfix_wei_include?(item)
+  end
+end
+
+# Class: Game_Enemy < Game_Battler ═════════════════════════════════════════════
+class Game_Enemy < Game_Battler
+  # On Battle End ════════════════════════════════════════════════════════════
+  def on_battle_end
+    @result.clear
+    remove_battle_states
+    remove_all_buffs
+    clear_actions
+    clear_tp unless preserve_tp?
+  end
+end
+
+unless $imported["YEA-BattleEngine"].nil?
+  # Class: Game_Actor < Game_Battler ═══════════════════════════════════════════
+  class Game_Actor < Game_Battler
+    # Draw Mp? ═══════════════════════════════════════════════════════════════
+    def draw_mp?
+      return true unless draw_tp?
+      for skill in skills
+        next unless skill != nil
+        next unless added_skill_types.include?(skill.stype_id)
+        if skill.mp_cost > 0
+          return true if self.mmp > 0
+        end
+      end
+      return false
+    end
+
+    # Draw Tp? ═══════════════════════════════════════════════════════════════
+    def draw_tp?
+      return false unless $data_system.opt_display_tp
+      for skill in skills
+        next unless skill != nil
+        next unless added_skill_types.include?(skill.stype_id)
+        if skill.tp_cost > 0
+          return true if self.max_tp > 0
+        end
+      end
+      return false
+    end
+  end
+
+  # Class: Game_Actor < Game_Battler ═══════════════════════════════════════════
+  class Sprite_Battler < Sprite_Base
+    # Animation Set Sprites ══════════════════════════════════════════════════
+    alias bugfix_sb_asp animation_set_sprites
+    def animation_set_sprites(frame)
+      bugfix_sb_asp(frame)
+      cell_data = frame.cell_data
+      @ani_sprites.each_with_index do |sprite, i|
+        next unless sprite
+        pattern = cell_data[i, 0]
+        if !pattern || pattern < 0
+          sprite.visible = false
+          next
+        end
+        sprite.opacity = cell_data[i, 6]
+      end
+    end
+  end
+end
+
+# Class: BattleManager ═════════════════════════════════════════════════════════
+module BattleManager
+  # Input Start ══════════════════════════════════════════════════════════════
+  def self.input_start
+    if @phase != :input
+      @phase = :input
+      $game_troop.increase_turn
+      $game_party.make_actions
+      $game_troop.make_actions
+      clear_actor
+    end
+    return !@surprise && $game_party.inputable?
+  end
+
+  # Turn Start ═══════════════════════════════════════════════════════════════
+  def self.turn_start
+    @phase = :turn
+    clear_actor
+    make_action_orders
+    @performed_battlers = [] unless $imported["YEA-BattleEngine"].nil?
+  end
+end
+
+unless $imported["YEA-Buff&StateManager"].nil?
+  # Class: Game_Battler < Game_BattlerBase ═════════════════════════════════════
+  class Game_Battler < Game_BattlerBase
+    # Add State ══════════════════════════════════════════════════════════════
+    def add_state(state_id)
+      return if $data_states[state_id].nil?
+      state_rules = $data_states[state_id].state_reapply_rules
+      return if state_rules == 0 && state?(state_id)
+      if state_addable?(state_id)
+        add_new_state(state_id) unless state?(state_id)
+        reset_state_counts(state_id) if state_rules <= 1
+        total_state_counts(state_id) if state_rules == 2
+        @result.added_states.push(state_id).uniq!
+      end
+    end
+  end
+end
+
+unless $imported["YEA-VictoryAftermath"].nil?
+  # Class: Window_VictoryLevelUp ═══════════════════════════════════════════════
+  class Window_VictoryLevelUp
+    # Draw Arrows ════════════════════════════════════════════════════════════
+    alias bugfix_wvlu_da draw_arrows
+    def draw_arrows
+      Font.new(["VL Gothic", "Arial"])..use(self) do
+        bugfix_wvlu_da
+      end
+    end
+  end
+end
+
+if defined?(TSBS)
+  # Class: Spriteset_Battle ════════════════════════════════════════════════════
+  class Spriteset_Battle
+    # MSIRC Compatability ════════════════════════════════════════════════════
+    def create_battleback1
+      if TSBS::Looping_Background
+        @back1_sprite = Plane.new(@viewport1)
+        @back1_sprite.bitmap = battleback1_bitmap
+        @back1_sprite.z = 0
+      else
+        tsbs_backdrop_1
+      end
+    end
+
+    # MSIRC Compatability ════════════════════════════════════════════════════
+    def create_battleback2
+      if TSBS::Looping_Background
+        @back2_sprite = Plane.new(@viewport1)
+        @back2_sprite.bitmap = battleback2_bitmap
+        @back2_sprite.z = 1
+      else
+        tsbs_backdrop_2
+      end
+    end
+  end
+end
+# ══════════════════════════════════════════════════════════════════════════════
+# ════╗ End Activation Handler ╔════════════════════════════════════════════════
+end # ╚════════════════════════╝ End of File - Srsly, there's nothing more here!
