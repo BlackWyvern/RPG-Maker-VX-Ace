@@ -1,4 +1,4 @@
-Black Wyvern Arts RPGMXVA Scripts
+Black Wyvern Arts RPGMVXA Scripts
 
 All my code is published under http://creativecommons.org/licenses/by-sa/3.0/
 This means that as long as you give credit, they can be used in any project.
